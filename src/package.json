@@ -6,8 +6,9 @@
     "dev": "next dev -H 0.0.0.0 -p 3020",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3020",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "next": "^16.4.6",
