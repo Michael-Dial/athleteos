@@ -1,36 +1,90 @@
-# AthleteOS — single compose stack. App serves 0.0.0.0:3020 (reserved).
-# Open Wearables backend already runs separately at http://192.168.8.222:8000
-# and is NOT part of this compose file. Secrets live in .env (see .env.example).
-name: athleteos
+# AthleteOS deploy compose — the file the homelab Portainer git-stack tracks
+# (stack: athleteos, endpoint 4, AutoUpdate 5m) and CI validates.
+#
+#   cp .env.example .env   # fill ATHLETEOS_PASSWORD, SESSION_SECRET
+#   docker compose pull && docker compose up -d      # the published image
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#                                                     # or build from source
+#
+# No `build:` here on purpose: Portainer builds any service that has one
+# instead of pulling, and its build path fails ("listing workers for Build ...
+# frame too large"). CI publishes ghcr.io/michael-dial/athleteos:latest on
+# every push to main (MERGING TO MAIN IS THE DEPLOY STEP); the homelab
+# watchtower picks up new digests within its 5-minute schedule and the
+# Portainer git-stack AutoUpdate redeploys whenever this file changes.
+# The source build lives in docker-compose.build.yml.
+#
+# The app serves the API and the PWA on one port (3020). Port 3020 is a
+# RESERVED homelab port — see DEPLOY.md — and the app must remove the
+# athleteos-placeholder nginx container before binding it.
+#
+# All app env names mirror .env.example; secrets stay in the Portainer stack
+# Env or a local .env, never in this file. `docker compose` reads .env from
+# the project dir for interpolation, so the local flow is unchanged.
 
 services:
-  app:
-    build: ./src
-    container_name: athleteos-app
-    ports:
-      - "0.0.0.0:3020:3020"
-    env_file: .env
-    environment:
-      - PORT=3020
-      - OW_API_BASE=${OW_API_BASE:-http://192.168.8.222:8000/api/v1}
-      - DATABASE_URL=postgresql://athleteos:${POSTGRES_PASSWORD:-athleteos}@db:5432/athleteos
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
   db:
     image: postgres:16-alpine
     container_name: athleteos-db
+    restart: unless-stopped
     environment:
-      - POSTGRES_USER=athleteos
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-athleteos}
-      - POSTGRES_DB=athleteos
+      POSTGRES_USER: athleteos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-athleteos}
+      POSTGRES_DB: athleteos
     volumes:
-      - ./data/db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U athleteos"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U athleteos -d athleteos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Homelab guardrails: keep the light services from starving the box.
+    cpus: 0.5
+    mem_limit: 512m
+    memswap_limit: 1g
+    pids_limit: 128
+
+  app:
+    image: ghcr.io/michael-dial/athleteos:${IMAGE_TAG:-latest}
+    container_name: athleteos-app
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:3020:3020"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: "3020"
+      NODE_ENV: production
+      DATABASE_URL: postgresql://athleteos:${POSTGRES_PASSWORD:-athleteos}@db:5432/athleteos
+      # Sign-in (required: the app is reachable through the public tunnel).
+      ATHLETE_NAME: ${ATHLETE_NAME:-Athlete}
+      ATHLETEOS_PASSWORD: ${ATHLETEOS_PASSWORD:?ATHLETEOS_PASSWORD must be set}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set (openssl rand -hex 32)}
+      # Open Wearables backend (already running on this host).
+      OW_API_BASE: ${OW_API_BASE:-http://192.168.8.222:8000/api/v1}
+      OW_API_KEY: ${OW_API_KEY:-}
+      OW_EMAIL: ${OW_EMAIL:-}
+      OW_PASSWORD: ${OW_PASSWORD:-}
+      OW_USER_ID: ${OW_USER_ID:-}
+      # Push reminders (installed PWA); generated on first use when empty.
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      TZ: America/New_York
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3020/api/health | grep -q ok || exit 1"]
+      interval: 30s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+      start_period: 60s
+    # Homelab guardrails (see DEPLOY.md port rules): work-tier priority.
+    cpus: 1.0
+    cpu_shares: 2048
+    mem_limit: 1g
+    memswap_limit: 2g
+    pids_limit: 256
+
+volumes:
+  postgres_data:
+

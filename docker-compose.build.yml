@@ -1,0 +1,11 @@
+# Local source-build override: use with the deploy compose.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# Keeps the DEPLOY compose free of build: so Portainer always pulls the CI
+# image instead of trying to build (its build path fails on this host).
+
+services:
+  app:
+    build: ./src
+    image: athleteos:local
