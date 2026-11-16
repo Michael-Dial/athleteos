@@ -1,6 +1,6 @@
 # AthleteOS — single compose stack. App serves 0.0.0.0:3020 (reserved).
 # Open Wearables backend already runs separately at http://192.168.8.222:8000
-# and is NOT part of this compose file.
+# and is NOT part of this compose file. Secrets live in .env (see .env.example).
 name: athleteos
 
 services:
@@ -9,10 +9,11 @@ services:
     container_name: athleteos-app
     ports:
       - "0.0.0.0:3020:3020"
+    env_file: .env
     environment:
       - PORT=3020
-      - OW_API_BASE=http://192.168.8.222:8000/api/v1
-      - DATABASE_URL=postgresql://athleteos:athleteos@db:5432/athleteos
+      - OW_API_BASE=${OW_API_BASE:-http://192.168.8.222:8000/api/v1}
+      - DATABASE_URL=postgresql://athleteos:${POSTGRES_PASSWORD:-athleteos}@db:5432/athleteos
     depends_on:
       db:
         condition: service_healthy
@@ -23,7 +24,7 @@ services:
     container_name: athleteos-db
     environment:
       - POSTGRES_USER=athleteos
-      - POSTGRES_PASSWORD=athleteos
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-athleteos}
       - POSTGRES_DB=athleteos
     volumes:
       - ./data/db:/var/lib/postgresql/data
