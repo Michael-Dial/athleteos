@@ -16,6 +16,33 @@ export type ZoneSeconds = [number, number, number];
  * the time until the next one, capped at `maxGapSec` so a recording gap
  * (strap dropout, pause) is not credited to whatever zone preceded it.
  */
+/**
+ * Seconds in each band from timestamped samples. `upper` holds ascending
+ * band boundaries (n-1 values for n bands); a value equal to a boundary
+ * belongs to the lower band. Each sample stands for the time until the next,
+ * capped at `maxGapSec` and never past the window end. Samples rejected by
+ * `ignore` (stopped, sensor dropout) count toward no band.
+ */
+export function timeInBands(
+  samples: { t: number; v: number }[],
+  upper: number[],
+  opts: { maxGapSec: number; lastSampleSec: number; window?: { start: number; end: number }; ignore?: (v: number) => boolean },
+): number[] {
+  const out = new Array(upper.length + 1).fill(0);
+  const s = [...samples]
+    .filter((x) => Number.isFinite(x.v) && (!opts.window || (x.t >= opts.window.start && x.t < opts.window.end)))
+    .sort((a, c) => a.t - c.t);
+  for (let i = 0; i < s.length; i++) {
+    let dt = i + 1 < s.length ? Math.min(opts.maxGapSec, (s[i + 1].t - s[i].t) / 1000) : Math.min(opts.maxGapSec, opts.lastSampleSec);
+    if (opts.window) dt = Math.min(dt, (opts.window.end - s[i].t) / 1000);
+    if (dt <= 0 || opts.ignore?.(s[i].v)) continue;
+    let band = upper.findIndex((u) => s[i].v <= u);
+    if (band === -1) band = upper.length;
+    out[band] += dt;
+  }
+  return out;
+}
+
 export function timeInZones(
   samples: { t: number; hr: number }[],
   b: ZoneBounds,

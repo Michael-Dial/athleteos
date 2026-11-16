@@ -89,11 +89,12 @@ On first start the app migrates Postgres and seeds one athlete plus two question
 | **Readiness** | Each pillar against your own baseline, with methods and references |
 | **Weekly review** | Plan vs delivered, load and monotony, HRV mean/CV, RHR, sleep amount and timing, wellness vs previous weeks |
 | **Trends** | Weekly load, HRV, RHR, sleep, VO₂max and body mass over 3–12 months, per device |
+| **History → Time in zone** | Share of recorded time in heart-rate, running-pace, running-power and cycling-power zones (presets from LTHR/HRmax, threshold pace, CP, FTP, or custom) |
 | **History → Intensity** | Time in three HR zones per week and session, Polarization-Index |
 | **Readiness → Illness watch** | Nightly RHR, respiratory rate, skin temperature and HRV deviations vs a lagged baseline |
 | **Wearables → Coverage** | Which devices reported each night, baseline-device gaps, provider sync, questionnaire adherence |
 
-Every dashboard is also an API endpoint (`/review`, `/trends`, `/intensity`, `/illness`, `/coverage`).
+Every dashboard is also an API endpoint (`/review`, `/trends`, `/zones`, `/intensity`, `/illness`, `/coverage`).
 
 ## Phone: install as an app (PWA)
 

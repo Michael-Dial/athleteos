@@ -42,3 +42,10 @@ export const ReviewQuery = z.object({ week: DateParam.optional().describe("Any d
 export const CoverageQuery = z.object({ days: z.coerce.number().int().min(7).max(120).default(60) });
 export const TrendsQuery = z.object({ weeks: z.coerce.number().int().min(4).max(104).default(26) });
 export const IllnessQuery = z.object({ date: DateParam.optional(), days: z.coerce.number().int().min(1).max(60).default(21) });
+
+export const ZonesQuery = z.object({
+  metric: z.enum(["hr", "pace", "runpower", "bikepower"]).default("hr"),
+  sport: z.enum(["all", "run", "ride", "other"]).default("all").describe("Heart rate only; pace and power are fixed to their sport"),
+  start: DateParam.optional(),
+  end: DateParam.optional(),
+});

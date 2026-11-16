@@ -129,6 +129,15 @@ live("API v1 contract (live)", () => {
     expect((await call("GET", "/intensity?start=2025-01-01&end=2026-01-01")).status).toBe(400);
     const tr = await ok("get", "/trends?weeks=8", "/trends");
     expect(tr.weeks).toHaveLength(8);
+    const hrz = await ok("get", "/zones?metric=hr", "/zones");
+    expect(hrz.zoneSet.bands).toHaveLength(5); // %HRmax preset needs no threshold
+    const bike = await ok("get", "/zones?metric=bikepower", "/zones");
+    expect(bike.needs.settingsKey).toBe("zones.bikepower.ftpW");
+    expect(bike.zoneSet).toBeNull();
+    await ok("patch", "/settings", "/settings", { zones: { bikepower: { ftpW: 280 } } });
+    const bike2 = await ok("get", "/zones?metric=bikepower", "/zones");
+    expect(bike2.zoneSet.bands).toHaveLength(7);
+    expect((await call("GET", "/zones?metric=swim")).status).toBe(422);
     const ill = await ok("get", "/illness?days=7", "/illness");
     expect(ill.nights).toHaveLength(7);
   });

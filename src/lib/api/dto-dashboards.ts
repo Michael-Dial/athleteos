@@ -92,3 +92,17 @@ assertSame<Same<z.infer<typeof CoverageDto>, CoverageReport>>(true);
 assertSame<Same<z.infer<typeof IntensityDto>, IntensityReport>>(true);
 assertSame<Same<z.infer<typeof TrendsDto>, TrendsReport>>(true);
 assertSame<Same<z.infer<typeof IllnessDto>, IllnessReport>>(true);
+
+import type { ZoneReport } from "../domain/zone-report";
+const Band = z.object({ name: z.string(), from: n, to: n });
+export const ZonesDto = z.object({
+  metric: z.enum(["hr", "pace", "runpower", "bikepower"]), label: z.string(), unit: z.string(), start: D, end: D,
+  sport: z.enum(["all", "run", "ride", "other"]),
+  zoneSet: z.object({ model: z.string(), modelLabel: z.string(), bands: z.array(Band).describe("Pace bands in sec/km (from = slower bound); others in bpm or W") }).nullable(),
+  needs: z.object({ reason: z.string(), settingsKey: z.string() }).nullable().describe("Set when a threshold is missing; zones are then empty"),
+  total: z.object({ seconds: z.array(z.number()), recordedSec: z.number(), pct: z.array(z.number()), sessions: z.number(), sessionsWithout: z.number() }),
+  weeks: z.array(z.object({ weekStart: D, seconds: z.array(z.number()), recordedSec: z.number() })),
+  sessions: z.array(z.object({ key: z.string(), date: D, title: z.string(), sport: z.string(), durationMin: n, seconds: z.array(z.number()).nullable(), device: z.string().nullable(), reason: z.string().nullable() })),
+  owErrors: z.array(z.string()),
+});
+assertSame<Same<z.infer<typeof ZonesDto>, ZoneReport>>(true);

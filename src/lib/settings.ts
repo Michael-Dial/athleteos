@@ -125,6 +125,30 @@ export const SettingsSchema = z.object({
       maxGapSec: z.number().int().min(10).max(600).default(120),
     })
     .prefault({}),
+  zones: z
+    .object({
+      hr: z.object({
+        model: z.enum(["lthr5", "hrmax5", "three", "custom"]).default("hrmax5"),
+        lthr: z.number().min(80).max(220).nullable().default(null),
+        custom: z.array(z.number().min(40).max(230)).max(9).default([]),
+      }).prefault({}),
+      pace: z.object({
+        model: z.enum(["threshold5", "custom"]).default("threshold5"),
+        thresholdPaceSecPerKm: z.number().min(150).max(600).nullable().default(null),
+        custom: z.array(z.number().min(120).max(900)).max(9).default([]).describe("Boundaries as sec/km"),
+      }).prefault({}),
+      runpower: z.object({
+        model: z.enum(["cp5", "custom"]).default("cp5"),
+        criticalPowerW: z.number().min(50).max(800).nullable().default(null),
+        custom: z.array(z.number().min(0).max(2000)).max(9).default([]),
+      }).prefault({}),
+      bikepower: z.object({
+        model: z.enum(["ftp7", "custom"]).default("ftp7"),
+        ftpW: z.number().min(50).max(600).nullable().default(null),
+        custom: z.array(z.number().min(0).max(2500)).max(9).default([]),
+      }).prefault({}),
+    })
+    .prefault({}),
   illness: z
     .object({
       baselineDays: z.number().int().min(14).max(90).default(28),

@@ -1,11 +1,11 @@
 import "server-only";
-import { addDays, startOfWeek, todayIn, type ISODate } from "../dates";
-import { getTimeseries } from "../ow/api";
+import { addDays, startOfWeek, type ISODate } from "../dates";
 import { classify, timeInZones, type TidPattern, type ZoneBounds } from "../stats/zones";
 import type { Settings } from "../settings";
 import type { AppCtx } from "./context";
 import { errorMessage } from "./errors";
 import { getTraining, type TrainingSession } from "./training";
+import { sessionSeries } from "./session-series";
 
 export function zoneBounds(s: Settings): ZoneBounds & { source: "thresholds" | "hrmax" } {
   const i = s.intensity;
@@ -27,14 +27,13 @@ export interface IntensityReport {
 
 /**
  * Time in three HR zones per session, from the 1-minute HR series of the
- * session's primary recording (fetched by data source, so other devices'
- * HR never mixes in). One-minute means smooth short spikes, so brief Z3
+ * highest-priority recording that has HR (fetched by data source, so other
+ * devices' HR never mixes in). One-minute means smooth short spikes, so brief Z3
  * efforts are somewhat under-counted.
  */
 export async function getIntensity(ctx: AppCtx, start: ISODate, end: ISODate): Promise<IntensityReport> {
   const s = ctx.settings;
   const b = zoneBounds(s);
-  const today = todayIn(s.timezone);
   const training = await getTraining(ctx, start, end);
   const sessions = training.sessions.filter((x) => !x.excluded);
   const errors = new Set<string>();
@@ -43,23 +42,18 @@ export async function getIntensity(ctx: AppCtx, start: ISODate, end: ISODate): P
   const results: IntensityReport["sessions"] = new Array(sessions.length);
   let next = 0;
   const one = async (x: TrainingSession, i: number) => {
-    const base = { key: x.key, date: x.date, title: x.title, sport: x.family, durationMin: x.durationMin, device: x.sourceLabel };
-    const dsid = x.primary?.source.data_source_id;
-    if (!x.primary || !dsid || !ctx.ow) { results[i] = { ...base, zonesMin: null, reason: x.primary ? "No data source id" : "Logged manually (no HR)" }; return; }
+    const base = { key: x.key, date: x.date, title: x.title, sport: x.family, durationMin: x.durationMin };
+    if (!x.primary || !ctx.ow) { results[i] = { ...base, device: x.sourceLabel, zonesMin: null, reason: "Logged manually (no HR)" }; return; }
     try {
-      const settled = x.date < addDays(today, -7);
-      const hr = await getTimeseries(ctx.ow, {
-        start: x.primary.start_time, end: x.primary.end_time, types: ["heart_rate"], resolution: "1min",
-        dataSourceId: dsid, sourceSelection: "all", includeRedundantRelays: true,
-        ttl: settled ? Math.max(ctx.ow.ttl, ctx.ow.historicalTtl) : undefined,
-      });
-      if (!hr.length) { results[i] = { ...base, zonesMin: null, reason: "No HR samples from this device" }; return; }
-      const z = timeInZones(hr.map((r) => ({ t: Date.parse(r.timestamp), hr: r.value })), b, s.intensity.maxGapSec, 60,
-        { start: Date.parse(x.primary.start_time) - 60_000, end: Date.parse(x.primary.end_time) });
-      results[i] = { ...base, zonesMin: [z[0] / 60, z[1] / 60, z[2] / 60], reason: null };
+      // HR from the first recording (by device priority) that has it.
+      const ser = await sessionSeries(ctx, x, ["heart_rate"]);
+      const hr = ser.samples.heart_rate;
+      if (!hr?.length) { results[i] = { ...base, device: x.sourceLabel, zonesMin: null, reason: "No HR samples from these devices" }; return; }
+      const z = timeInZones(hr.map((r) => ({ t: r.t, hr: r.v })), b, s.intensity.maxGapSec, 60, ser.window ?? undefined);
+      results[i] = { ...base, device: ser.device.heart_rate ?? x.sourceLabel, zonesMin: [z[0] / 60, z[1] / 60, z[2] / 60], reason: null };
     } catch (e) {
       errors.add(errorMessage(e));
-      results[i] = { ...base, zonesMin: null, reason: "HR unavailable" };
+      results[i] = { ...base, device: x.sourceLabel, zonesMin: null, reason: "HR unavailable" };
     }
   };
   await Promise.all(Array.from({ length: Math.min(4, sessions.length) }, async () => {

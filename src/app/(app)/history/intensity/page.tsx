@@ -34,6 +34,7 @@ export default async function IntensityPage({ searchParams }: { searchParams: Pr
         </div>
         <div className="row">
           <div className="seg">{WINDOWS.map((w) => <Link key={w} href={`/history/intensity?weeks=${w}`} className={w === weeks ? "on" : ""}>{w} wk</Link>)}</div>
+          <Link className="btn" href="/history/zones">Time in zone</Link>
           <Link className="btn" href="/history">Sessions</Link>
         </div>
       </div>

@@ -17,6 +17,7 @@ import { invalidate } from "@/lib/cache";
 import { authorizeUrl, bootstrapApplication, createUser, getUser, syncProvider } from "@/lib/ow/api";
 import { errorMessage } from "@/lib/domain/errors";
 import { issueToken, revokeToken } from "@/lib/api/tokens";
+import { parsePace } from "@/lib/zones";
 
 // ---------- helpers ----------
 
@@ -379,4 +380,40 @@ export async function revokeApiToken(fd: FormData) {
   const { athlete } = await getCtx();
   await revokeToken(athlete.id, num(fd, "id") ?? 0);
   redirect(done("/settings/api?revoked=1"));
+}
+
+// ---------- zones ----------
+
+/** Zone settings: thresholds (pace as m:ss), model per metric, custom boundary lists. */
+export async function updateZones(fd: FormData) {
+  const { athlete } = await getCtx();
+  const numOrNull = (k: string) => { const v = str(fd, k); return v == null ? null : Number(v); };
+  const list = (k: string, pace = false): number[] | string => {
+    const v = str(fd, k);
+    if (!v) return [];
+    const parts = v.split(",").map((x) => x.trim()).filter(Boolean);
+    const out = parts.map((x) => (pace ? parsePace(x) : Number(x)));
+    return out.every((x) => x != null && Number.isFinite(x)) ? (out as number[]) : `${k}: use ${pace ? "m:ss paces" : "numbers"} separated by commas`;
+  };
+  const tp = str(fd, "pace.threshold");
+  const thresholdPace = tp ? parsePace(tp) : null;
+  const lists = { hr: list("hr.custom"), pace: list("pace.custom", true), runpower: list("runpower.custom"), bikepower: list("bikepower.custom") };
+  const bad = Object.values(lists).find((x) => typeof x === "string") as string | undefined;
+  if (bad) redirect(withParam("/settings/zones", "error", bad));
+  if (tp && thresholdPace == null) redirect(withParam("/settings/zones", "error", "Threshold pace must look like 4:05 (min:sec per km)"));
+  try {
+    await patchSettings(athlete.id, {
+      zones: {
+        hr: { model: str(fd, "hr.model"), lthr: numOrNull("hr.lthr"), custom: lists.hr },
+        pace: { model: str(fd, "pace.model"), thresholdPaceSecPerKm: thresholdPace, custom: lists.pace },
+        runpower: { model: str(fd, "runpower.model"), criticalPowerW: numOrNull("runpower.cp"), custom: lists.runpower },
+        bikepower: { model: str(fd, "bikepower.model"), ftpW: numOrNull("bikepower.ftp"), custom: lists.bikepower },
+      },
+      ...(fd.has("load.hrMax") ? { load: { hrMax: num(fd, "load.hrMax") } } : {}),
+    });
+  } catch (e) {
+    if (e instanceof z.ZodError) redirect(withParam("/settings/zones", "error", e.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")));
+    throw e;
+  }
+  redirect(done("/settings/zones?saved=1"));
 }

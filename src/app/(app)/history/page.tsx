@@ -65,6 +65,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
           <div className="seg">
             {WINDOWS.map((w) => <Link key={w} href={`/history?weeks=${w}`} className={w === weeks ? "on" : ""}>{w} wk</Link>)}
           </div>
+          <Link className="btn" href={`/history/zones?weeks=${weeks}`}>Time in zone</Link>
           <Link className="btn" href={`/history/intensity?weeks=${weeks}`}>Intensity distribution</Link>
         </div>
       </div>
