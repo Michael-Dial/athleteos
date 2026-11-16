@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, checkPassword, createSessionToken } from "@/lib/auth";
+import { relRedirect } from "@/lib/http";
 
 // Simple per-IP throttle: the login page is exposed through the public tunnel.
 const attempts = new Map<string, { n: number; reset: number }>();
@@ -24,16 +25,16 @@ export async function POST(req: NextRequest) {
   if (attempts.size > 1000) for (const [k, v] of attempts) if (v.reset <= now) attempts.delete(k);
   const a = attempts.get(ip);
   if (a && a.reset > now && a.n >= MAX) {
-    return NextResponse.redirect(new URL(`/login?error=locked&next=${encodeURIComponent(next)}`, req.url), 303);
+    return relRedirect(`/login?error=locked&next=${encodeURIComponent(next)}`);
   }
   const ok = await checkPassword(String(form.get("password") ?? ""));
   if (!ok) {
     attempts.set(ip, a && a.reset > now ? { n: a.n + 1, reset: a.reset } : { n: 1, reset: now + WINDOW_MS });
-    return NextResponse.redirect(new URL(`/login?error=1&next=${encodeURIComponent(next)}`, req.url), 303);
+    return relRedirect(`/login?error=1&next=${encodeURIComponent(next)}`);
   }
   attempts.delete(ip);
   const { token, maxAge } = await createSessionToken();
-  const res = NextResponse.redirect(new URL(next, req.url), 303);
+  const res = relRedirect(next);
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",

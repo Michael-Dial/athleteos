@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, authDisabled, verifySessionToken } from "./lib/auth";
+import { publicUrl } from "./lib/http";
 
 // Everything except the login page, the healthcheck and static assets requires
 // a session: the app is reachable from the public tunnel.
@@ -10,14 +11,13 @@ export async function proxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const url = req.nextUrl.clone();
-  url.pathname = "/login";
-  url.search = "";
   const next = req.nextUrl.pathname + req.nextUrl.search;
-  if (next !== "/") url.searchParams.set("next", next);
-  return NextResponse.redirect(url);
+  const target = next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`;
+  // Proxy redirects must be absolute; build them on the public host, not the bind address.
+  return NextResponse.redirect(publicUrl(req.headers, req.nextUrl, target), 307);
 }
 
 export const config = {
-  matcher: ["/((?!login|api/health|api/auth/login|_next/static|_next/image|favicon.ico|icon.svg).*)"],
+  // Logout stays reachable without a session so a stale cookie can always be cleared.
+  matcher: ["/((?!login|api/health|api/auth/login|api/auth/logout|_next/static|_next/image|favicon.ico|icon.svg).*)"],
 };

@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: src
+
+jobs:
+  verify:
+    name: Typecheck and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  image:
+    name: Docker image + smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SMOKE_PASSWORD: ci-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate compose file
+        working-directory: .
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Build image
+        run: docker build -t athleteos:ci .
+
+      # Mirrors docker-compose.yml: same image, Postgres 16, same env names.
+      # Open Wearables is deliberately absent, so pages must degrade gracefully.
+      - name: Start Postgres and the app
+        run: |
+          docker network create ci
+          docker run -d --name db --network ci \
+            -e POSTGRES_USER=athleteos -e POSTGRES_PASSWORD=athleteos -e POSTGRES_DB=athleteos \
+            postgres:16-alpine
+          for i in $(seq 1 30); do docker exec db pg_isready -U athleteos && break; sleep 1; done
+          docker run -d --name app --network ci -p 3020:3020 \
+            -e DATABASE_URL=postgresql://athleteos:athleteos@db:5432/athleteos \
+            -e SESSION_SECRET=ci-session-secret-ci-session-secret-0123 \
+            -e ATHLETEOS_PASSWORD="$SMOKE_PASSWORD" \
+            athleteos:ci
+
+      - name: Smoke test
+        run: SMOKE_BASE=http://127.0.0.1:3020 node scripts/smoke.mjs
+
+      - name: Container healthcheck reports healthy
+        run: |
+          for i in $(seq 1 45); do
+            s=$(docker inspect --format '{{.State.Health.Status}}' app)
+            echo "health: $s"
+            [ "$s" = healthy ] && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: App logs
+        if: always()
+        run: docker logs app 2>&1 | tail -100
