@@ -96,6 +96,16 @@ export const SettingsSchema = z.object({
       minPairs: z.number().int().min(5).max(10000).default(30),
     })
     .prefault({}),
+  reminders: z
+    .object({
+      // Morning check-in push (installed PWA). Sent once per day when a daily
+      // form is still unanswered, within lateWindowHours of the set time so a
+      // restart can't fire a 07:30 reminder at night.
+      morningEnabled: z.boolean().default(true),
+      morningTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "HH:MM, 24-hour").default("07:30"),
+      lateWindowHours: z.number().min(0.5).max(12).default(3),
+    })
+    .prefault({}),
   readiness: z
     .object({
       weights: z

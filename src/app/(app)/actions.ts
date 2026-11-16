@@ -217,13 +217,16 @@ export async function setQuestionnaireActive(fd: FormData) {
 
 // Fields that are comma-separated lists in the form.
 const LIST_FIELDS = new Set(["training.excludeTypes"]);
-// Checkbox fields: absent from FormData when unchecked, so default them to false.
-const BOOL_FIELDS = ["ow.includeRedundantRelays", "load.trimpFallback"];
-const TEXT_FIELDS = new Set(["timezone", "load.method", "load.acwrModel", "load.trimpSex"]);
+const TEXT_FIELDS = new Set(["timezone", "load.method", "load.acwrModel", "load.trimpSex", "reminders.morningTime"]);
 
-/** Form fields named like "hrv.rollingDays" become a nested patch, validated by the settings schema. */
+/**
+ * Form fields named like "hrv.rollingDays" become a nested patch, validated by
+ * the settings schema. Unchecked checkboxes are absent from FormData, so each
+ * form lists its own checkboxes in "$bools"; only those default to false.
+ */
 export async function updateSettings(fd: FormData) {
   const ctx = await getCtx();
+  const backTo = back(fd, "/settings");
   const patch: Record<string, unknown> = {};
   const set = (path: string, v: unknown) => {
     const parts = path.split(".");
@@ -231,12 +234,13 @@ export async function updateSettings(fd: FormData) {
     for (const p of parts.slice(0, -1)) o = (o[p] ??= {}) as Record<string, unknown>;
     o[parts.at(-1)!] = v;
   };
-  for (const b of BOOL_FIELDS) set(b, false);
+  const bools = new Set(String(fd.get("$bools") ?? "").split(",").filter(Boolean));
+  for (const b of bools) set(b, false);
   for (const [k, raw] of fd.entries()) {
-    if (k.startsWith("$") || typeof raw !== "string") continue;
+    if (k.startsWith("$") || k === "back" || typeof raw !== "string") continue;
     const v = raw.trim();
     if (LIST_FIELDS.has(k)) set(k, v ? v.split(",").map((x) => x.trim()).filter(Boolean) : []);
-    else if (BOOL_FIELDS.includes(k)) set(k, raw === "on");
+    else if (bools.has(k)) set(k, raw === "on");
     else if (TEXT_FIELDS.has(k)) set(k, v);
     else if (v !== "" && Number.isFinite(Number(v))) set(k, Number(v));
   }
@@ -245,10 +249,10 @@ export async function updateSettings(fd: FormData) {
     // other knob is applied locally to the cached rows.
     await patchSettings(ctx.athlete.id, patch);
   } catch (e) {
-    if (e instanceof z.ZodError) redirect(withParam("/settings", "error", e.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")));
+    if (e instanceof z.ZodError) redirect(withParam(backTo, "error", e.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")));
     throw e;
   }
-  redirect(done("/settings?saved=1"));
+  redirect(done(withParam(backTo, "saved", "1")));
 }
 
 export async function updateDevicePriority(fd: FormData) {

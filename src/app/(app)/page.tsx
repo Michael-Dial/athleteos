@@ -10,6 +10,7 @@ import { Card, Empty, SourceChip, fmt } from "@/components/ui";
 import { NightStat, ReadinessCard } from "@/components/readiness";
 import { OwErrors, SetupBanner } from "@/components/setup-banner";
 import { HrvChart, LoadCharts } from "@/components/trend-charts";
+import { InstallHint } from "@/components/pwa";
 
 export default async function TodayPage() {
   const ctx = await getCtx();
@@ -35,6 +36,7 @@ export default async function TodayPage() {
           <p className="sub">Plan, last night&apos;s recovery and this morning&apos;s check-in for {ctx.athlete.name}.</p>
         </div>
       </div>
+      <InstallHint />
       <SetupBanner ctx={ctx} />
       <OwErrors errors={r.errors} />
 

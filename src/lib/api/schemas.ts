@@ -30,3 +30,10 @@ export const AnswersBody = z.object({
 });
 
 export const SettingsPatch = z.record(z.string(), z.unknown()).describe("Deep-merge patch over the current settings");
+
+export const PushSubscriptionBody = z.object({
+  endpoint: z.string().url().max(2000),
+  keys: z.object({ p256dh: z.string().min(1).max(500), auth: z.string().min(1).max(500) }),
+}).describe("A browser PushSubscription as returned by pushManager.subscribe().toJSON()");
+
+export const EndpointQuery = z.object({ endpoint: z.string().url().max(2000) });

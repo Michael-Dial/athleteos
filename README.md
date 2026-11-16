@@ -81,6 +81,30 @@ On first start the app migrates Postgres and seeds one athlete plus two question
    SpO₂, workouts). Unranked devices fall back to the one with the most data and are labelled.
 3. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights.
 
+## Phone: install as an app (PWA)
+
+Open `https://athleteos.dialedup.info` on your phone and add it to the home screen
+(iPhone: Share → Add to Home Screen; Android: the browser offers Install). Then
+Settings → Notifications → **Turn on reminders on this device**. A morning check-in
+reminder is sent once a day, only while a daily form is unanswered (time is set there).
+On iPhone, notifications work only from the installed app (iOS 16.4+).
+
+The service worker caches static assets and an offline page only; pages and API
+responses (your health data) are never cached on the device.
+
+## API (for native apps and scripts)
+
+A versioned JSON API lives at `/api/v1`, described by `/api/v1/openapi.json`
+(generate a typed client from it). Authenticate with `Authorization: Bearer <token>`:
+create tokens in Settings → API tokens, or have an app sign in with
+`POST /api/v1/auth/token` and the AthleteOS password. Tokens are stored hashed and
+can be revoked. The web app and the API share one domain layer, so they validate
+and behave identically.
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" https://athleteos.dialedup.info/api/v1/today
+```
+
 ## How the numbers are made
 
 - **Device data is never copied into Postgres.** It is read from Open Wearables on demand
@@ -101,7 +125,8 @@ The Readiness page lists the methods and the papers behind them.
 ```bash
 cd src
 npm install
-npm test            # vitest: stats, paging, auth, questionnaire engine, dates
+npm test            # unit tests (the live API contract test is skipped without a server)
+API_BASE=http://127.0.0.1:3020 API_PASSWORD=... npx vitest run lib/api/contract.test.ts
 npm run typecheck
 DATABASE_URL=postgresql://... OW_API_BASE=... OW_API_KEY=... \
   SESSION_SECRET=$(openssl rand -base64 48) ATHLETEOS_PASSWORD=dev npm run dev

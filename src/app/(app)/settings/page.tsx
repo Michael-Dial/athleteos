@@ -31,6 +31,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       </Card>
 
       <form action={updateSettings} className="stack-lg">
+        <input type="hidden" name="$bools" value="ow.includeRedundantRelays,load.trimpFallback" />
         <Card title="General">
           <div className="form-grid">
             <label className="field">Timezone<input name="timezone" defaultValue={s.timezone} /><span className="help">IANA name; defines calendar days</span></label>

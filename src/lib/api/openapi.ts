@@ -5,7 +5,9 @@ import { SettingsSchema } from "../settings";
 import {
   LastNightDto, NightDto, PhaseDto, PlanSessionDto, QuestionnaireDto, ReadinessDto, ResponseDto, TrainingDto, WellnessDto,
 } from "./dto";
-import { AnnotationPatch, AnswersBody, DateQuery, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery } from "./schemas";
+import {
+  AnnotationPatch, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
+} from "./schemas";
 
 // The route table is written once here and drives the OpenAPI document; a
 // test checks that every route file under app/api/v1 appears in it.
@@ -59,6 +61,11 @@ export const ROUTES: RouteSpec[] = [
   { method: "get", path: "/questionnaires/{slug}/responses", tag: "questionnaires", summary: "Responses in a window", query: WindowQuery, response: Window("responses", ResponseDto) },
   { method: "put", path: "/questionnaires/{slug}/responses/{date}", tag: "questionnaires", summary: "Answer a form for a date (replaces an earlier answer)", body: AnswersBody, response: ResponseDto },
   { method: "get", path: "/wellness", tag: "questionnaires", summary: "Daily wellness composite and item scores (0-1, 1 = favourable)", query: WindowQuery, response: Window("days", WellnessDto) },
+  { method: "get", path: "/push/config", tag: "push", summary: "Web Push public key (VAPID), subscription count and reminder settings",
+    response: z.object({ publicKey: z.string(), subscriptions: z.number(), reminders: SettingsSchema.shape.reminders }) },
+  { method: "post", path: "/push/subscriptions", tag: "push", summary: "Register a browser push subscription (PWA). Native apps will use APNs/FCM instead.", body: PushSubscriptionBody, status: 204 },
+  { method: "delete", path: "/push/subscriptions", tag: "push", summary: "Remove a push subscription", query: EndpointQuery, status: 204 },
+  { method: "post", path: "/push/test", tag: "push", summary: "Send a test notification to every subscribed device", response: z.object({ sent: z.number(), failed: z.number() }) },
   { method: "get", path: "/settings", tag: "settings", summary: "All tuning knobs", response: SettingsSchema },
   { method: "patch", path: "/settings", tag: "settings", summary: "Deep-merge patch; the whole result is validated", body: SettingsPatch, response: SettingsSchema },
 ];

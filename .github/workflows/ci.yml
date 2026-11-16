@@ -43,6 +43,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+
+      # Only for the contract test runner below; the app itself runs from the image.
+      - run: npm ci
 
       - name: Validate compose file
         working-directory: .
@@ -66,10 +71,14 @@ jobs:
             -e DATABASE_URL=postgresql://athleteos:athleteos@db:5432/athleteos \
             -e SESSION_SECRET=ci-session-secret-ci-session-secret-0123 \
             -e ATHLETEOS_PASSWORD="$SMOKE_PASSWORD" \
+            -e REMINDERS_DISABLED=true \
             athleteos:ci
 
       - name: Smoke test
         run: SMOKE_BASE=http://127.0.0.1:3020 node scripts/smoke.mjs
+
+      - name: API contract test
+        run: API_BASE=http://127.0.0.1:3020 API_PASSWORD="$SMOKE_PASSWORD" npx vitest run lib/api/contract.test.ts
 
       - name: Container healthcheck reports healthy
         run: |
