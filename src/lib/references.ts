@@ -14,5 +14,12 @@ export const REFS = {
   impellizzeri2020: { cite: "Impellizzeri FM et al. Acute:Chronic Workload Ratio: Conceptual Issues and Fundamental Pitfalls. Int J Sports Physiol Perform. 2020;15(6):907–13.", url: "https://doi.org/10.1123/ijspp.2019-0864" },
   mclean2010: { cite: "McLean BD et al. Neuromuscular, endocrine, and perceptual fatigue responses during different length between-match microcycles in professional rugby league players. Int J Sports Physiol Perform. 2010;5(3):367–83.", url: "https://doi.org/10.1123/ijspp.5.3.367" },
   blandAltman1999: { cite: "Bland JM, Altman DG. Measuring agreement in method comparison studies. Stat Methods Med Res. 1999;8(2):135–60.", url: "https://doi.org/10.1177/096228029900800204" },
+  seiler2006: { cite: "Seiler KS, Kjerland GØ. Quantifying training intensity distribution in elite endurance athletes: is there evidence for an \"optimal\" distribution? Scand J Med Sci Sports. 2006;16(1):49–56.", url: "https://doi.org/10.1111/j.1600-0838.2004.00418.x" },
+  treff2019: { cite: "Treff G et al. The polarization-index: a simple calculation to distinguish polarized from non-polarized training intensity distributions. Front Physiol. 2019;10:707.", url: "https://doi.org/10.3389/fphys.2019.00707" },
+  mishra2020: { cite: "Mishra T et al. Pre-symptomatic detection of COVID-19 from smartwatch data. Nat Biomed Eng. 2020;4(12):1208–20.", url: "https://doi.org/10.1038/s41551-020-00640-6" },
+  quer2021: { cite: "Quer G et al. Wearable sensor data and self-reported symptoms for COVID-19 detection. Nat Med. 2021;27(1):73–7.", url: "https://doi.org/10.1038/s41591-020-1123-x" },
+  smarr2020: { cite: "Smarr BL et al. Feasibility of continuous fever monitoring using wearable devices. Sci Rep. 2020;10(1):21640.", url: "https://doi.org/10.1038/s41598-020-78355-6" },
+  miller2020: { cite: "Miller DJ et al. Analyzing changes in respiratory rate to predict the risk of COVID-19 infection. PLoS One. 2020;15(12):e0243693.", url: "https://doi.org/10.1371/journal.pone.0243693" },
+  fischer2021: { cite: "Fischer D, Klerman EB, Phillips AJK. Measuring sleep regularity: theoretical properties and practical usage of existing metrics. Sleep. 2021;44(10).", url: "https://doi.org/10.1093/sleep/zsab103" },
   lin1989: { cite: "Lin LI. A concordance correlation coefficient to evaluate reproducibility. Biometrics. 1989;45(1):255–68.", url: "https://pubmed.ncbi.nlm.nih.gov/2720055/" },
 } as const;

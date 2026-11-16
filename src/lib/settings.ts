@@ -96,6 +96,70 @@ export const SettingsSchema = z.object({
       minPairs: z.number().int().min(5).max(10000).default(30),
     })
     .prefault({}),
+  coverage: z
+    .object({
+      // A provider account with no sync for this long is flagged. Webhook
+      // providers may legitimately go quiet on days with no new data.
+      staleHours: z.number().min(6).max(720).default(48),
+      adherenceDays: z.number().int().min(7).max(90).default(28),
+    })
+    .prefault({}),
+  review: z
+    .object({
+      // Weekly-review observations. Monotony above ~2 preceded illness in
+      // Foster (1998); compliance is planned sessions done / not skipped.
+      monotonyFlag: z.number().min(1).max(5).default(2),
+      complianceFlagPct: z.number().min(0).max(100).default(80),
+      comparisonWeeks: z.number().int().min(1).max(8).default(3),
+    })
+    .prefault({}),
+  intensity: z
+    .object({
+      // Three-zone HR model. Set LT1/LT2 (or VT1/VT2) heart rates from testing;
+      // until then zones fall back to %HRmax approximations, labelled as such.
+      lt1Hr: z.number().min(60).max(230).nullable().default(null),
+      lt2Hr: z.number().min(60).max(230).nullable().default(null),
+      z1MaxPctHrMax: z.number().min(50).max(95).default(82),
+      z2MaxPctHrMax: z.number().min(55).max(100).default(87),
+      // Longest gap between HR samples credited to the earlier sample's zone.
+      maxGapSec: z.number().int().min(10).max(600).default(120),
+    })
+    .prefault({}),
+  zones: z
+    .object({
+      hr: z.object({
+        model: z.enum(["lthr5", "hrmax5", "three", "custom"]).default("hrmax5"),
+        lthr: z.number().min(80).max(220).nullable().default(null),
+        custom: z.array(z.number().min(40).max(230)).max(9).default([]),
+      }).prefault({}),
+      pace: z.object({
+        model: z.enum(["threshold5", "custom"]).default("threshold5"),
+        thresholdPaceSecPerKm: z.number().min(150).max(600).nullable().default(null),
+        custom: z.array(z.number().min(120).max(900)).max(9).default([]).describe("Boundaries as sec/km"),
+      }).prefault({}),
+      runpower: z.object({
+        model: z.enum(["cp5", "custom"]).default("cp5"),
+        criticalPowerW: z.number().min(50).max(800).nullable().default(null),
+        custom: z.array(z.number().min(0).max(2000)).max(9).default([]),
+      }).prefault({}),
+      bikepower: z.object({
+        model: z.enum(["ftp7", "custom"]).default("ftp7"),
+        ftpW: z.number().min(50).max(600).nullable().default(null),
+        custom: z.array(z.number().min(0).max(2500)).max(9).default([]),
+      }).prefault({}),
+    })
+    .prefault({}),
+  illness: z
+    .object({
+      baselineDays: z.number().int().min(14).max(90).default(28),
+      // Baseline ends this many days before the assessed night, so an
+      // illness that has been building for days isn't absorbed into it.
+      baselineLagDays: z.number().int().min(0).max(21).default(7),
+      minBaselineN: z.number().int().min(5).max(60).default(14),
+      z: z.number().min(0.5).max(4).default(1.5),
+      minSignals: z.number().int().min(1).max(4).default(2),
+    })
+    .prefault({}),
   reminders: z
     .object({
       // Morning check-in push (installed PWA). Sent once per day when a daily

@@ -17,6 +17,7 @@ import { invalidate } from "@/lib/cache";
 import { authorizeUrl, bootstrapApplication, createUser, getUser, syncProvider } from "@/lib/ow/api";
 import { errorMessage } from "@/lib/domain/errors";
 import { issueToken, revokeToken } from "@/lib/api/tokens";
+import { parsePace } from "@/lib/zones";
 
 // ---------- helpers ----------
 
@@ -218,6 +219,8 @@ export async function setQuestionnaireActive(fd: FormData) {
 // Fields that are comma-separated lists in the form.
 const LIST_FIELDS = new Set(["training.excludeTypes"]);
 const TEXT_FIELDS = new Set(["timezone", "load.method", "load.acwrModel", "load.trimpSex", "reminders.morningTime"]);
+// Optional numbers: an emptied field means "unset" (null), not "unchanged".
+const NULLABLE_FIELDS = new Set(["intensity.lt1Hr", "intensity.lt2Hr"]);
 
 /**
  * Form fields named like "hrv.rollingDays" become a nested patch, validated by
@@ -242,6 +245,7 @@ export async function updateSettings(fd: FormData) {
     if (LIST_FIELDS.has(k)) set(k, v ? v.split(",").map((x) => x.trim()).filter(Boolean) : []);
     else if (bools.has(k)) set(k, raw === "on");
     else if (TEXT_FIELDS.has(k)) set(k, v);
+    else if (NULLABLE_FIELDS.has(k) && v === "") set(k, null);
     else if (v !== "" && Number.isFinite(Number(v))) set(k, Number(v));
   }
   try {
@@ -376,4 +380,40 @@ export async function revokeApiToken(fd: FormData) {
   const { athlete } = await getCtx();
   await revokeToken(athlete.id, num(fd, "id") ?? 0);
   redirect(done("/settings/api?revoked=1"));
+}
+
+// ---------- zones ----------
+
+/** Zone settings: thresholds (pace as m:ss), model per metric, custom boundary lists. */
+export async function updateZones(fd: FormData) {
+  const { athlete } = await getCtx();
+  const numOrNull = (k: string) => { const v = str(fd, k); return v == null ? null : Number(v); };
+  const list = (k: string, pace = false): number[] | string => {
+    const v = str(fd, k);
+    if (!v) return [];
+    const parts = v.split(",").map((x) => x.trim()).filter(Boolean);
+    const out = parts.map((x) => (pace ? parsePace(x) : Number(x)));
+    return out.every((x) => x != null && Number.isFinite(x)) ? (out as number[]) : `${k}: use ${pace ? "m:ss paces" : "numbers"} separated by commas`;
+  };
+  const tp = str(fd, "pace.threshold");
+  const thresholdPace = tp ? parsePace(tp) : null;
+  const lists = { hr: list("hr.custom"), pace: list("pace.custom", true), runpower: list("runpower.custom"), bikepower: list("bikepower.custom") };
+  const bad = Object.values(lists).find((x) => typeof x === "string") as string | undefined;
+  if (bad) redirect(withParam("/settings/zones", "error", bad));
+  if (tp && thresholdPace == null) redirect(withParam("/settings/zones", "error", "Threshold pace must look like 4:05 (min:sec per km)"));
+  try {
+    await patchSettings(athlete.id, {
+      zones: {
+        hr: { model: str(fd, "hr.model"), lthr: numOrNull("hr.lthr"), custom: lists.hr },
+        pace: { model: str(fd, "pace.model"), thresholdPaceSecPerKm: thresholdPace, custom: lists.pace },
+        runpower: { model: str(fd, "runpower.model"), criticalPowerW: numOrNull("runpower.cp"), custom: lists.runpower },
+        bikepower: { model: str(fd, "bikepower.model"), ftpW: numOrNull("bikepower.ftp"), custom: lists.bikepower },
+      },
+      ...(fd.has("load.hrMax") ? { load: { hrMax: num(fd, "load.hrMax") } } : {}),
+    });
+  } catch (e) {
+    if (e instanceof z.ZodError) redirect(withParam("/settings/zones", "error", e.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")));
+    throw e;
+  }
+  redirect(done("/settings/zones?saved=1"));
 }

@@ -61,8 +61,12 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
           <h1>Training history</h1>
           <p className="sub">Plan vs actual, every device session and every manual log. Sessions recorded by several devices are counted once.</p>
         </div>
-        <div className="seg">
-          {WINDOWS.map((w) => <Link key={w} href={`/history?weeks=${w}`} className={w === weeks ? "on" : ""}>{w} wk</Link>)}
+        <div className="row">
+          <div className="seg">
+            {WINDOWS.map((w) => <Link key={w} href={`/history?weeks=${w}`} className={w === weeks ? "on" : ""}>{w} wk</Link>)}
+          </div>
+          <Link className="btn" href={`/history/zones?weeks=${weeks}`}>Time in zone</Link>
+          <Link className="btn" href={`/history/intensity?weeks=${weeks}`}>Intensity distribution</Link>
         </div>
       </div>
       <SetupBanner ctx={ctx} />

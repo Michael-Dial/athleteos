@@ -44,6 +44,7 @@ export default async function ReadinessPage({ searchParams }: { searchParams: Pr
       <div className="page-head">
         <div><h1>Readiness · {fmtDate(date, { weekday: "long", month: "short", day: "numeric" })}</h1><p className="sub">Each pillar against your own baseline. A decision aid from published conventions, not a validated score.</p></div>
         <div className="row">
+          <Link className="btn" href="/readiness/illness">Illness watch</Link>
           <Link className="btn" href={`/readiness?date=${addDays(date, -1)}`}>Previous day</Link>
           {date < today && <Link className="btn" href={`/readiness?date=${addDays(date, 1)}`}>Next day</Link>}
         </div>

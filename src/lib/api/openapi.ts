@@ -5,8 +5,9 @@ import { SettingsSchema } from "../settings";
 import {
   LastNightDto, NightDto, PhaseDto, PlanSessionDto, QuestionnaireDto, ReadinessDto, ResponseDto, TrainingDto, WellnessDto,
 } from "./dto";
+import { CoverageDto, IllnessDto, IntensityDto, ReviewDto, TrendsDto, ZonesDto } from "./dto-dashboards";
 import {
-  AnnotationPatch, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
+  AnnotationPatch, ZonesQuery, CoverageQuery, IllnessQuery, ReviewQuery, TrendsQuery, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
 } from "./schemas";
 
 // The route table is written once here and drives the OpenAPI document; a
@@ -38,6 +39,12 @@ export const ROUTES: RouteSpec[] = [
   { method: "get", path: "/today", tag: "athlete", summary: "Home screen: readiness, today's plan, due forms, last night per metric (all devices)", query: DateQuery,
     response: z.object({ date: z.string(), readiness: ReadinessDto, plan: z.array(PlanSessionDto), checkIn: z.object({ due: z.array(z.object({ slug: z.string(), name: z.string(), schedule: z.string(), kind: z.string() })), wellnessComposite: z.number().nullable() }), lastNight: z.record(z.enum(["sleep", "hrv", "rhr", "respiratory_rate", "spo2"]), LastNightDto) }) },
   { method: "get", path: "/readiness", tag: "athlete", summary: "Readiness with every pillar, baselines and trend series", query: ReadinessQuery, response: ReadinessDto },
+  { method: "get", path: "/review", tag: "dashboards", summary: "Weekly review: plan vs delivered, load, HRV/RHR/sleep vs previous weeks, wellness, check-ins, observations", query: ReviewQuery, response: ReviewDto },
+  { method: "get", path: "/coverage", tag: "dashboards", summary: "Data coverage and sync health: device x night grid, baseline-device gaps, sync staleness, questionnaire adherence", query: CoverageQuery, response: CoverageDto },
+  { method: "get", path: "/intensity", tag: "dashboards", summary: "Time in three HR zones per week and session, with Polarization-Index (max 182 days)", query: WindowQuery, response: IntensityDto },
+  { method: "get", path: "/zones", tag: "dashboards", summary: "Time in zone for heart rate, running pace, running power or cycling power, as a share of recorded time (max 371 days)", query: ZonesQuery, response: ZonesDto },
+  { method: "get", path: "/trends", tag: "dashboards", summary: "Weekly long-term trends per device (load, HRV, RHR, sleep, body mass, VO2max)", query: TrendsQuery, response: TrendsDto },
+  { method: "get", path: "/illness", tag: "dashboards", summary: "Illness watch: nightly multi-signal deviations vs a lagged personal baseline (not a diagnosis)", query: IllnessQuery, response: IllnessDto },
   { method: "get", path: "/nightly", tag: "wearables", summary: "One row per night per device (max 366 days)", query: WindowQuery, response: Window("nights", NightDto) },
   { method: "get", path: "/training", tag: "training", summary: "Training sessions: device workouts grouped across devices, plus manual logs (max 366 days)", query: WindowQuery, response: Window("sessions", TrainingDto) },
   { method: "patch", path: "/training/workouts/{owWorkoutId}", tag: "training", summary: "Annotate a device workout (RPE, notes, plan link, exclusion). Omitted fields are kept.", body: AnnotationPatch, status: 204 },
