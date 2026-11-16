@@ -2,7 +2,7 @@
 // Caches only static assets and an offline page. Pages and API responses
 // carry health data and are never cached, so nothing sensitive persists on
 // the device beyond what the browser already keeps for a normal visit.
-const VERSION = "aos-v1";
+const VERSION = "aos-v2"; // bump when precached assets change (new icons)
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/icon.svg"];
 
 self.addEventListener("install", (event) => {

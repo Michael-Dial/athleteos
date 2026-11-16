@@ -1,32 +1,52 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconCalendar, IconForm, IconHistory, IconPulse, IconReview, IconSettings, IconToday, IconTrend, IconWatch } from "./icons";
+import { IconCalendar, IconHistory, IconMore, IconToday, IconTrend } from "./icons";
 
-const ITEMS = [
-  { href: "/", label: "Today", icon: IconToday },
-  { href: "/readiness", label: "Readiness", icon: IconPulse },
-  { href: "/review", label: "Weekly review", icon: IconReview },
-  { href: "/trends", label: "Trends", icon: IconTrend },
-  { href: "/wearables", label: "Wearables", icon: IconWatch },
-  { href: "/plan", label: "Plan", icon: IconCalendar },
-  { href: "/history", label: "History", icon: IconHistory },
-  { href: "/wellness", label: "Questionnaires", icon: IconForm },
-  { href: "/settings", label: "Settings", icon: IconSettings },
+// Desktop top navigation. Settings and sign-out live in the top-bar tools.
+const TOP = [
+  { href: "/", label: "Today" },
+  { href: "/readiness", label: "Readiness" },
+  { href: "/review", label: "Review" },
+  { href: "/trends", label: "Trends" },
+  { href: "/history", label: "Training" },
+  { href: "/plan", label: "Plan" },
+  { href: "/wearables", label: "Body" },
+  { href: "/wellness", label: "Check-in" },
 ];
 
-export function Nav() {
+// Phone bottom tabs: the four daily destinations plus everything else under More.
+const TABS = [
+  { href: "/", label: "Today", icon: IconToday },
+  { href: "/plan", label: "Plan", icon: IconCalendar },
+  { href: "/history", label: "Training", icon: IconHistory },
+  { href: "/trends", label: "Trends", icon: IconTrend },
+  { href: "/more", label: "More", icon: IconMore },
+];
+
+function isActive(path: string, href: string): boolean {
+  if (href === "/") return path === "/";
+  if (href === "/wellness") return path.startsWith("/wellness") || path.startsWith("/questionnaires");
+  return path === href || path.startsWith(`${href}/`);
+}
+
+export function TopNav() {
   const path = usePathname();
   return (
-    <nav className="nav" aria-label="Main">
-      {ITEMS.map(({ href, label, icon: Icon }) => {
-        const active = href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`) || (href === "/wellness" && path.startsWith("/questionnaires"));
-        return (
-          <Link key={href} href={href} aria-current={active ? "page" : undefined} title={label}>
-            <Icon size={18} />
-            <span>{label}</span>
-          </Link>
-        );
+    <nav className="topnav" aria-label="Main">
+      {TOP.map((i) => <Link key={i.href} href={i.href} aria-current={isActive(path, i.href) ? "page" : undefined}>{i.label}</Link>)}
+    </nav>
+  );
+}
+
+export function TabBar() {
+  const path = usePathname();
+  const inMore = !TABS.slice(0, 4).some((t) => isActive(path, t.href));
+  return (
+    <nav className="tabbar" aria-label="Main">
+      {TABS.map(({ href, label, icon: Icon }) => {
+        const active = href === "/more" ? inMore : isActive(path, href);
+        return <Link key={href} href={href} aria-current={active ? "page" : undefined}><Icon size={22} />{label}</Link>;
       })}
     </nav>
   );

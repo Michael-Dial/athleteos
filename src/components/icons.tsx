@@ -12,8 +12,24 @@ function Svg({ size = 16, children, ...rest }: P & { children: React.ReactNode }
   );
 }
 
-export const IconLogo = (p: P) => (
-  <Svg {...p}><path d="M3 12h4l3-8 4 16 3-8h4" /></Svg>
+// Brand mark: two rising chevrons (progress), filled, not the pulse line other tools use.
+export const IconLogo = ({ size = 22, ...rest }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" {...rest}>
+    <path d="M12 3 22 13h-5.2L12 8.2 7.2 13H2z" fill="currentColor" />
+    <path d="M12 11 20 19h-4.6L12 15.6 8.6 19H4z" fill="currentColor" opacity="0.55" />
+  </svg>
+);
+export const IconSun = (p: P) => (
+  <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></Svg>
+);
+export const IconMoon = (p: P) => (
+  <Svg {...p}><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></Svg>
+);
+export const IconMore = (p: P) => (
+  <Svg {...p}><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></Svg>
+);
+export const IconRun = (p: P) => (
+  <Svg {...p}><circle cx="14" cy="4" r="2" /><path d="M8 21l3-6 3 2v4M6 12l3-3 4 1 3 4 3 1M11 15l-1-4" /></Svg>
 );
 export const IconToday = (p: P) => (
   <Svg {...p}><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></Svg>

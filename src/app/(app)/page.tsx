@@ -1,152 +1,203 @@
 import Link from "next/link";
 import { getCtx } from "@/lib/domain/context";
-import { getReadiness } from "@/lib/domain/readiness";
-import { listPlanSessions, matchPlan, plannedLoad } from "@/lib/domain/plan";
-import { getTraining } from "@/lib/domain/training";
-import { isDue, listDefs } from "@/lib/domain/questionnaires";
-import { addDays, fmtDate, fmtDuration, fmtTime, startOfWeek, todayIn } from "@/lib/dates";
-import { SPORT_LABEL, isSportFamily } from "@/lib/sports";
-import { Card, Empty, Notice, SourceChip, fmt } from "@/components/ui";
-import { NightStat, ReadinessCard } from "@/components/readiness";
-import { OwErrors, SetupBanner } from "@/components/setup-banner";
-import { HrvChart, LoadCharts } from "@/components/trend-charts";
-import { InstallHint } from "@/components/pwa";
+import { getReadiness, type Readiness } from "@/lib/domain/readiness";
 import { getIllness } from "@/lib/domain/illness";
+import { listPlanSessions, matchPlan } from "@/lib/domain/plan";
+import { getTraining } from "@/lib/domain/training";
+import { isDue, listDefs, listWellness } from "@/lib/domain/questionnaires";
+import { rankNight, seriesFor } from "@/lib/domain/nightly";
+import { getSleepEvents } from "@/lib/ow/api";
+import { deviceKey } from "@/lib/stats/sources";
+import { addDays, fmtDate, fmtDuration, fmtTime, localDateWithOffset, startOfWeek, todayIn } from "@/lib/dates";
+import { SPORT_LABEL, isSportFamily, type SportFamily } from "@/lib/sports";
+import { Card, SourceChip } from "@/components/ui";
+import { OwErrors, SetupBanner } from "@/components/setup-banner";
+import { InstallHint } from "@/components/pwa";
+import { Hypnogram } from "@/components/hypnogram";
+import { ReadinessGauge, SPORT_COLOR, Sparkline, WeekStrip, ZScale, type DayColumn, type VizState } from "@/components/viz";
+import { TimeChart } from "@/components/charts";
+
+const OVERALL: Record<Readiness["overall"], { label: string; state: VizState; line: string }> = {
+  green: { label: "Ready", state: "ok", line: "Recovery markers sit inside your normal ranges." },
+  amber: { label: "Caution", state: "watch", line: "Something is outside your normal range. Train with that in mind." },
+  red: { label: "Back off", state: "flag", line: "Several markers are well below baseline. An easy day is the safer call." },
+  unknown: { label: "Building", state: "nodata", line: "Baselines are still forming." },
+};
+const STATE_WORD: Record<VizState, string> = { ok: "Normal", watch: "Watch", flag: "Flag", nodata: "No data" };
+const STATE_COLOR: Record<VizState, string> = { ok: "var(--good)", watch: "var(--warn)", flag: "var(--bad)", nodata: "var(--muted)" };
+
+function last<T>(m: Map<string, T>, days: string[]): (T | null)[] {
+  return days.map((d) => m.get(d) ?? null);
+}
 
 export default async function TodayPage() {
   const ctx = await getCtx();
-  const tz = ctx.settings.timezone;
+  const s = ctx.settings;
+  const tz = s.timezone;
   const today = todayIn(tz);
-  const [r, plan, recent, defs, ill] = await Promise.all([
-    getReadiness(ctx, today),
-    listPlanSessions(ctx.athlete.id, today, today),
-    getTraining(ctx, addDays(today, -6), today),
-    listDefs(ctx.athlete.id),
+  const weekStart = startOfWeek(today);
+  const days14 = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13));
+  const days30 = Array.from({ length: 30 }, (_, i) => addDays(today, i - 29));
+
+  const [r, ill, plan, week, defs, wellness, events] = await Promise.all([
+    getReadiness(ctx, today, { historyDays: 30 }),
     getIllness(ctx, today, 3),
+    listPlanSessions(ctx.athlete.id, weekStart, addDays(weekStart, 6)),
+    getTraining(ctx, weekStart, today),
+    listDefs(ctx.athlete.id),
+    listWellness(ctx.athlete.id, days14[0], today),
+    ctx.ow ? getSleepEvents(ctx.ow, addDays(today, -1), today, { stages: true }).catch(() => []) : Promise.resolve([]),
   ]);
-  const due = (await Promise.all(defs.map(async (d) => ((await isDue(d, today, startOfWeek(today))) ? d : null)))).filter((d) => d != null);
-  const { matches } = matchPlan(plan, recent.sessions.filter((s) => s.date === today));
+  const due = [];
+  for (const d of defs) if (await isDue(d, today, weekStart)) due.push(d);
+  const o = OVERALL[r.overall];
+
+  // ---- pillars: one sparkline + one position on the shared SD scale each
+  const nightSeries = (metric: "hrv" | "rhr" | "sleep", key: string | undefined) => (key ? seriesFor(r.nightly, key, metric) : new Map<string, number>());
+  const hrvSer = nightSeries("hrv", r.hrv.device?.key);
+  const rhrSer = nightSeries("rhr", r.rhr.device?.key);
+  const sleepSer = nightSeries("sleep", r.sleep.device?.key);
+  const wMap = new Map(wellness.map((w) => [w.date, Number(w.composite)]));
+  const loadMap = new Map(r.load.series.map((p) => [p.date, p.load]));
+  const pillars: { name: string; href: string; values: (number | null)[]; kind?: "bars"; z: number | null; state: VizState; val: string; title: string }[] = [
+    { name: "HRV", href: "/readiness", values: last(hrvSer, days14), z: r.hrv.signed, state: r.hrv.state, val: r.hrv.point?.rmssd ? `${Math.round(r.hrv.point.rmssd)} ms` : "—", title: "Nightly RMSSD, 14 days" },
+    { name: "Resting HR", href: "/readiness", values: last(rhrSer, days14), z: r.rhr.signed, state: r.rhr.state, val: r.rhr.z?.value != null ? `${Math.round(r.rhr.z.value)} bpm` : "—", title: "Resting HR, 14 days" },
+    { name: "Sleep", href: "/wearables/sleep", values: last(sleepSer, days14), z: r.sleep.signed, state: r.sleep.state, val: r.sleep.z?.value != null ? fmtDuration(r.sleep.z.value) : "—", title: "Time asleep, 14 days" },
+    { name: "Wellness", href: "/wellness", values: last(wMap, days14), z: r.wellness.signed, state: r.wellness.state, val: r.wellness.today ? `${Math.round(Number(r.wellness.today.composite))}/100` : "—", title: "Wellness composite, 14 days" },
+    { name: "Load", href: "/history", values: last(loadMap, days14), kind: "bars", z: r.load.signed, state: r.load.state, val: r.load.point?.acwr != null ? `ACWR ${r.load.point.acwr.toFixed(2)}` : "—", title: "Daily load, 14 days" },
+  ];
+
+  // ---- last night: the sleep device's stage timeline + three vitals
+  const sleepRank = rankNight(ctx, r.nightly, today, "sleep");
+  const sp = sleepRank.primary;
+  const night = sp ? events.find((e) => !e.is_nap && deviceKey(e.source) === sp.key && localDateWithOffset(e.end_time, e.zone_offset, tz) === today) : undefined;
   const hp = r.hrv.point;
-  const shown = recent.sessions.filter((s) => !s.excluded);
-  const hidden = recent.sessions.length - shown.length;
+  const hrvBand: [number, number] | null = hp?.swcLow != null ? [Math.exp(hp.swcLow), Math.exp(hp.swcHigh!)] : null;
+  const rz = r.rhr.z;
+  const rhrBand: [number, number] | null = rz?.mean != null && rz.sd != null ? [rz.mean - rz.sd, rz.mean + rz.sd] : null;
+  const rrRank = rankNight(ctx, r.nightly, today, "respiratory_rate");
+  const rrSer = rrRank.primary ? seriesFor(r.nightly, rrRank.primary.key, "respiratory_rate") : new Map<string, number>();
+
+  // ---- this week: done (stacked by sport) vs planned (outline)
+  const { matches } = matchPlan(plan, week.sessions);
+  const dayCols: DayColumn[] = Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(weekStart, i);
+    return {
+      date: d, isToday: d === today, label: fmtDate(d, { weekday: "short" }).slice(0, 3).toUpperCase(),
+      plannedMin: plan.filter((p) => p.date === d && !p.skipped).reduce((a, p) => a + (p.planned_duration_min ?? 0), 0),
+      sessions: week.sessions.filter((x) => x.date === d && !x.excluded).map((x) => ({ family: x.family, minutes: x.durationMin ?? 0, title: x.title })),
+    };
+  });
+  const familiesThisWeek = [...new Set(dayCols.flatMap((d) => d.sessions.map((x) => x.family)))] as SportFamily[];
+  const todayPlan = matches.filter((m) => m.plan.date === today);
+  const dx = (d: string) => Date.parse(`${d}T12:00:00Z`);
+  const loadSeries = r.load.series.slice(-28);
 
   return (
     <div className="stack-lg">
       <div className="page-head">
         <div>
-          <h1>{fmtDate(today, { weekday: "long", month: "long", day: "numeric" })}</h1>
-          <p className="sub">Plan, last night&apos;s recovery and this morning&apos;s check-in for {ctx.athlete.name}.</p>
+          <div className="kicker">{fmtDate(today, { weekday: "long", month: "long", day: "numeric" })}</div>
+          <h1>Today</h1>
         </div>
       </div>
       <InstallHint />
-      {ill.latest && (ill.latest.level === "watch" || ill.latest.level === "alert") && (
-        <Notice kind={ill.latest.level === "alert" ? "bad" : "warn"}>
-          <b>Illness watch: {ill.latest.level === "alert" ? "alert" : "watch"}.</b>{" "}
-          {ill.latest.signals.filter((x) => x.firing).map((x) => ({ rhr: "resting HR up", rr: "respiratory rate up", temp: "skin temperature up", hrv: "HRV down" })[x.key]).join(", ")} vs your baseline on {fmtDate(ill.latest.date)}. <Link href="/readiness/illness">Details</Link>
-        </Notice>
-      )}
       <SetupBanner ctx={ctx} />
       <OwErrors errors={r.errors} />
+      {ill.latest && (ill.latest.level === "watch" || ill.latest.level === "alert") && (
+        <div className={`banner${ill.latest.level === "alert" ? "" : " warn"}`} role="status">
+          <span><b className="display" style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}>Illness watch · {ill.latest.level}</b>{"  "}
+            {ill.latest.signals.filter((x) => x.firing).map((x) => ({ rhr: "resting HR up", rr: "breathing rate up", temp: "skin temp up", hrv: "HRV down" })[x.key]).join(" · ")}</span>
+          <Link href="/readiness/illness">See signals</Link>
+        </div>
+      )}
 
-      <div className="grid cols-3">
-        <ReadinessCard r={r} compact />
-        <Card title="Today's plan" action={<Link className="small" href="/plan">Open plan</Link>}>
-          {matches.length === 0 ? (
-            <Empty title="Nothing planned today">Rest day, or add a session on the plan calendar.</Empty>
-          ) : (
-            <div className="stack">
-              {matches.map(({ plan: p, actual }) => (
-                <div key={p.id} className="stack" style={{ gap: 2, paddingBottom: 8, borderBottom: "1px solid var(--line)" }}>
-                  <div className="row between">
-                    <b>{p.title}</b>
-                    <span className={`pill ${actual ? "ok" : p.skipped ? "nodata" : "watch"}`}>{actual ? "Done" : p.skipped ? "Skipped" : "To do"}</span>
-                  </div>
-                  <span className="small ink2">
-                    {isSportFamily(p.sport) ? SPORT_LABEL[p.sport] : p.sport}
-                    {p.planned_duration_min ? ` · ${fmtDuration(p.planned_duration_min)}` : ""}
-                    {p.intensity ? ` · ${p.intensity}` : ""}
-                    {plannedLoad(p) != null ? ` · ${fmt(plannedLoad(p))} AU` : ""}
-                  </span>
-                  {p.description && <span className="small muted">{p.description}</span>}
-                  {actual && <span className="small">Done: {fmtDuration(actual.durationMin)} · <SourceChip name={actual.sourceLabel} /></span>}
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-        <Card title="Check-in" action={<Link className="small" href="/wellness">All forms</Link>}>
-          <div className="stack">
-            {r.wellness.today && (
-              <div className="stack" style={{ gap: 2 }}>
-                <div className="stat-value">{fmt(r.wellness.today.composite)}<span className="unit">/100</span></div>
-                <span className="small ink2">Wellness composite{r.wellness.z?.z != null ? ` · z ${r.wellness.z.z.toFixed(1)} vs ${ctx.settings.baselines.windowDays}-day baseline` : ""}</span>
-                {r.wellness.lowItems.length > 0 && <span className="small">Low today: {r.wellness.lowItems.map((i) => i.key.replace(/_/g, " ")).join(", ")}</span>}
-              </div>
-            )}
-            {due.map((d) => (
-              <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary">Answer {d.name}</Link>
-            ))}
-            {due.length > 0 && !r.wellness.today && <p className="small muted">Answer before training so it reflects how you woke up.</p>}
-            {!due.length && !r.wellness.today && <Empty title="All forms answered" />}
+      <div className="today-hero">
+        <Card>
+          <div className="stack" style={{ alignItems: "center", gap: 6 }}>
+            <ReadinessGauge index={r.index} state={o.state} label={o.label} zFlag={s.baselines.zFlag} watchZ={s.readiness.watchZ} />
+            <p className="small ink2" style={{ textAlign: "center", maxWidth: 280 }}>{o.line}</p>
+            <Link className="small" href="/readiness">How this is worked out</Link>
           </div>
+        </Card>
+        <Card title="Pillars" hint="14 days · position vs your baseline">
+          {pillars.map((p) => (
+            <div key={p.name} className="pillar">
+              <Link className="name" href={p.href}>{p.name}</Link>
+              <div className="spark"><Sparkline values={p.values} kind={p.kind} width={260} height={34} color={p.state === "nodata" ? "var(--muted)" : "var(--graph)"} title={p.title} /></div>
+              <div className="z"><ZScale z={p.z} state={p.state} watchZ={s.readiness.watchZ} title={`${p.name}: ${p.z == null ? "no baseline yet" : `${p.z > 0 ? "+" : ""}${p.z.toFixed(1)} SD vs baseline`}`} /></div>
+              <div className="val"><span className="state" style={{ color: STATE_COLOR[p.state] }}>{p.state === "nodata" && p.val !== "—" ? "Building" : STATE_WORD[p.state]}</span><div>{p.val}</div></div>
+            </div>
+          ))}
         </Card>
       </div>
 
       {ctx.ow && (
-        <>
-          <h2>Last night</h2>
-          <div className="grid cols-5">
-            <NightStat ctx={ctx} rows={r.nightly} date={today} metric="sleep" label="Sleep" unit="" />
-            <NightStat ctx={ctx} rows={r.nightly} date={today} metric="hrv" label="HRV (RMSSD)" unit="ms">
-              {hp?.rollingMs != null && (
-                <span className="small ink2">
-                  7-day {fmt(hp.rollingMs)} ms (ln {hp.rollingLn!.toFixed(2)})
-                  {hp.swcLow != null && ` · normal ${fmt(Math.exp(hp.swcLow))}–${fmt(Math.exp(hp.swcHigh!))}`}
-                </span>
-              )}
-            </NightStat>
-            <NightStat ctx={ctx} rows={r.nightly} date={today} metric="rhr" label="Resting HR" unit="bpm">
-              {r.rhr.z?.mean != null && <span className="small ink2">baseline {fmt(r.rhr.z.mean)} bpm</span>}
-            </NightStat>
-            <NightStat ctx={ctx} rows={r.nightly} date={today} metric="respiratory_rate" label="Respiratory rate" unit="br/min" digits={1} />
-            <NightStat ctx={ctx} rows={r.nightly} date={today} metric="spo2" label="SpO₂" unit="%" digits={1} />
+        <Card title="Last night" action={sp ? <SourceChip name={sp.name} fallback={sleepRank.fallback} /> : undefined}>
+          <div className="night">
+            <div className="stack">
+              <div className="row" style={{ alignItems: "baseline", gap: 14 }}>
+                <span className="big">{sp?.sleepMin != null ? fmtDuration(sp.sleepMin) : "—"}</span>
+                {sp?.start && sp.end && <span className="ink2">{fmtTime(sp.start, tz)} → {fmtTime(sp.end, tz)}</span>}
+              </div>
+              {night?.sleep_stage_intervals?.length ? <Hypnogram intervals={night.sleep_stage_intervals} tz={tz} height={110} /> : <p className="small muted">No stage timeline from this device last night.</p>}
+            </div>
+            <div>
+              {[
+                { name: "HRV", ser: hrvSer, band: hrvBand, now: hp?.rmssd ?? null, unit: "ms", d: 0, dev: r.hrv.device },
+                { name: "Resting HR", ser: rhrSer, band: rhrBand, now: r.rhr.z?.value ?? null, unit: "bpm", d: 0, dev: r.rhr.device },
+                { name: "Breathing", ser: rrSer, band: null, now: rrRank.primary?.rr ?? null, unit: "br/min", d: 1, dev: rrRank.primary ? { name: rrRank.primary.name, fallback: rrRank.fallback } : null },
+              ].map((v) => (
+                <div key={v.name} className="vital">
+                  <div>
+                    <div className="stat-label">{v.name}</div>
+                    <div className="mid">{v.now != null ? v.now.toFixed(v.d) : "—"}<span className="u">{v.unit}</span></div>
+                  </div>
+                  <div style={{ width: 170 }}><Sparkline values={last(v.ser, days30)} band={v.band} width={170} height={44} title={`${v.name}, 30 days${v.band ? " · band = your normal range" : ""}${v.dev ? ` · ${v.dev.name}` : ""}`} /></div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid cols-2">
-            <Card title="HRV trend" hint={r.hrv.device ? undefined : "no HRV device yet"} action={r.hrv.device && <SourceChip name={r.hrv.device.name} fallback={r.hrv.device.fallback} />}>
-              <HrvChart series={r.hrv.series} />
-            </Card>
-            <Card title="Training load" hint={`${ctx.settings.load.method.toUpperCase()} · ${ctx.settings.load.acwrModel.toUpperCase()} ACWR`}>
-              <LoadCharts series={r.load.series} low={ctx.settings.readiness.acwrLow} high={ctx.settings.readiness.acwrHigh} compact />
-              {r.load.note && <p className="small muted mt-sm">{r.load.note}</p>}
-            </Card>
-          </div>
-        </>
+        </Card>
       )}
 
-      <Card title="Last 7 days" hint={hidden ? `${hidden} non-training recording${hidden === 1 ? "" : "s"} hidden` : undefined} action={<Link className="small" href="/history">History</Link>} className="flush">
-        {shown.length === 0 ? (
-          <Empty title="No sessions in the last 7 days" action={<Link className="btn sm" href="/history#log">Log a session</Link>} />
-        ) : (
-          <div className="table-wrap">
-            <table className="t">
-              <thead><tr><th>Date</th><th>Session</th><th className="num">Duration</th><th className="num">Avg HR</th><th className="num">RPE</th><th className="num">Load</th><th>Source</th></tr></thead>
-              <tbody>
-                {[...shown].reverse().map((s) => (
-                  <tr key={s.key}>
-                    <td style={{ whiteSpace: "nowrap" }}>{fmtDate(s.date)}{s.start && <div className="small muted">{fmtTime(s.start, tz)}</div>}</td>
-                    <td>{s.title}</td>
-                    <td className="num">{fmtDuration(s.durationMin)}</td>
-                    <td className="num">{fmt(s.avgHr)}</td>
-                    <td className="num">{s.rpe ?? <Link href={`/history/session?key=${encodeURIComponent(s.key)}`}>Rate</Link>}</td>
-                    <td className="num">{s.load != null ? `${fmt(s.load)}${s.loadMethod === "trimp" ? " T" : ""}` : "—"}</td>
-                    <td><SourceChip name={s.sourceLabel} />{s.recordings.length > 1 && <span className="small muted"> +{s.recordings.length - 1}</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="grid cols-2">
+        <Card title="This week" hint="done, stacked by sport · dashed = planned" action={<Link className="small" href="/review">Weekly review</Link>}>
+          <WeekStrip days={dayCols} />
+          {familiesThisWeek.length > 0 && (
+            <div className="legend-dots mt-sm">{familiesThisWeek.map((f) => <span key={f}><i style={{ background: SPORT_COLOR[f] }} />{SPORT_LABEL[f]}</span>)}</div>
+          )}
+        </Card>
+        <Card title="Up next">
+          <div className="stack">
+            {todayPlan.length === 0 ? (
+              <p className="ink2">Nothing planned today. <Link href="/plan">Open the plan</Link></p>
+            ) : todayPlan.map(({ plan: p, actual }) => (
+              <div key={p.id} className="row between" style={{ gap: 12 }}>
+                <div className="row" style={{ gap: 12 }}>
+                  <span style={{ width: 6, alignSelf: "stretch", borderRadius: 3, background: isSportFamily(p.sport) ? SPORT_COLOR[p.sport] : "var(--line-strong)" }} />
+                  <div>
+                    <div className="mid" style={{ fontSize: 24 }}>{p.title}</div>
+                    <div className="small ink2">{[isSportFamily(p.sport) ? SPORT_LABEL[p.sport] : p.sport, p.planned_duration_min ? fmtDuration(p.planned_duration_min) : null, p.intensity].filter(Boolean).join(" · ")}</div>
+                  </div>
+                </div>
+                <span className="kicker" style={{ color: actual ? "var(--good)" : "var(--muted)" }}>{actual ? "Done" : p.skipped ? "Skipped" : "To do"}</span>
+              </div>
+            ))}
+            {due.length > 0 && (
+              <div className="stack mt-sm">
+                {due.map((d) => <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary" style={{ minHeight: 44 }}>{d.schedule === "daily" ? "Morning check-in" : d.name}</Link>)}
+              </div>
+            )}
           </div>
-        )}
-      </Card>
+        </Card>
+      </div>
+
+      {loadSeries.some((p) => p.load > 0) && (
+        <Card title="Load" hint="daily, 4 weeks" action={<Link className="small" href="/trends">Trends</Link>}>
+          <TimeChart ariaLabel="Daily training load, 4 weeks" height={150} series={[{ id: "load", label: "Load", color: "var(--graph)", kind: "bar", points: loadSeries.map((p) => [dx(p.date), p.load || null]) }]} />
+        </Card>
+      )}
     </div>
   );
 }
