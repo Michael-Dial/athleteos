@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
   const next = safeNext(form.get("next"));
   const ip = clientIp(req);
   const now = Date.now();
+  if (attempts.size > 1000) for (const [k, v] of attempts) if (v.reset <= now) attempts.delete(k);
   const a = attempts.get(ip);
   if (a && a.reset > now && a.n >= MAX) {
     return NextResponse.redirect(new URL(`/login?error=locked&next=${encodeURIComponent(next)}`, req.url), 303);

@@ -314,8 +314,9 @@ export async function updateSettings(fd: FormData) {
       redirect(withParam("/settings", "error", "Unknown timezone. Use an IANA name like America/New_York."));
     }
   }
+  // No cache flush: OW cache keys already include the relay flag, and every
+  // other knob is applied locally to the cached rows.
   await saveSettings(ctx.athlete.id, parsed.data);
-  invalidate("ow:");
   redirect(done("/settings?saved=1"));
 }
 

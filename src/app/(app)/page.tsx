@@ -65,22 +65,20 @@ export default async function TodayPage() {
           )}
         </Card>
         <Card title="Check-in" action={<Link className="small" href="/wellness">All forms</Link>}>
-          {due.length ? (
-            <div className="stack">
-              {due.map((d) => (
-                <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary">Answer {d.name}</Link>
-              ))}
-              <p className="small muted">Answer before training so it reflects how you woke up.</p>
-            </div>
-          ) : r.wellness.today ? (
-            <div className="stack">
-              <div className="stat-value">{fmt(r.wellness.today.composite)}<span className="unit">/100</span></div>
-              <span className="small ink2">Wellness composite{r.wellness.z?.z != null ? ` · z ${r.wellness.z.z.toFixed(1)} vs ${ctx.settings.baselines.windowDays}-day baseline` : ""}</span>
-              {r.wellness.lowItems.length > 0 && <span className="small">Low today: {r.wellness.lowItems.map((i) => i.key.replace(/_/g, " ")).join(", ")}</span>}
-            </div>
-          ) : (
-            <Empty title="All forms answered" />
-          )}
+          <div className="stack">
+            {r.wellness.today && (
+              <div className="stack" style={{ gap: 2 }}>
+                <div className="stat-value">{fmt(r.wellness.today.composite)}<span className="unit">/100</span></div>
+                <span className="small ink2">Wellness composite{r.wellness.z?.z != null ? ` · z ${r.wellness.z.z.toFixed(1)} vs ${ctx.settings.baselines.windowDays}-day baseline` : ""}</span>
+                {r.wellness.lowItems.length > 0 && <span className="small">Low today: {r.wellness.lowItems.map((i) => i.key.replace(/_/g, " ")).join(", ")}</span>}
+              </div>
+            )}
+            {due.map((d) => (
+              <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary">Answer {d.name}</Link>
+            ))}
+            {due.length > 0 && !r.wellness.today && <p className="small muted">Answer before training so it reflects how you woke up.</p>}
+            {!due.length && !r.wellness.today && <Empty title="All forms answered" />}
+          </div>
         </Card>
       </div>
 

@@ -20,7 +20,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const s = ctx.settings;
   return (
     <div className="stack-lg">
-      {sp.saved && <p className="small" style={{ color: "var(--good)" }} role="status">Settings saved. Cached device data was cleared.</p>}
+      {sp.saved && <p className="small" style={{ color: "var(--good)" }} role="status">Settings saved.</p>}
       {sp.error && <Notice kind="bad">{sp.error}</Notice>}
 
       <Card title="Athlete">
