@@ -82,6 +82,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div className="form-grid">
             <N name="training.minDurationMin" label="Ignore shorter than (min)" value={s.training.minDurationMin} min={0} max={120} />
             <N name="training.maxDurationHours" label="Ignore longer than (h)" value={s.training.maxDurationHours} min={1} max={48} step={0.5} help="overnight captures logged as workouts" />
+            <N name="training.sameSessionOverlap" label="Same-session overlap" value={s.training.sameSessionOverlap} min={0.1} max={1} step={0.05} help="fraction of the shorter recording" />
             <label className="field wide">Exclude workout types<input name="training.excludeTypes" defaultValue={s.training.excludeTypes.join(", ")} placeholder="e.g. chores, lifestyle, meditation" /><span className="help">OW type names, comma-separated. Exclude whole devices on the Device priority tab.</span></label>
           </div>
         </Card>
@@ -105,6 +106,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <N name="readiness.acwrLow" label="ACWR band low" value={s.readiness.acwrLow} step={0.05} min={0} max={2} />
             <N name="readiness.acwrHigh" label="ACWR band high" value={s.readiness.acwrHigh} step={0.05} min={0.5} max={3} />
             <N name="readiness.sleepTargetMin" label="Sleep target (min)" value={s.readiness.sleepTargetMin} min={180} max={720} step={5} />
+            <N name="readiness.watchZ" label="“Watch” at |z| ≥" value={s.readiness.watchZ} step={0.1} min={0.1} max={2} />
           </div>
         </Card>
         <div className="row"><button className="btn primary" type="submit">Save settings</button></div>

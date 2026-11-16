@@ -56,10 +56,10 @@ export interface Readiness {
   errors: string[];
 }
 
-function stateFrom(signed: number | null, zFlag: number): CompState {
+function stateFrom(signed: number | null, zFlag: number, watchZ: number): CompState {
   if (signed == null) return "nodata";
   if (signed <= -zFlag) return "flag";
-  if (signed <= -0.5) return "watch";
+  if (signed <= -watchZ) return "watch";
   return "ok";
 }
 
@@ -96,13 +96,13 @@ export async function getReadiness(ctx: AppCtx, date: ISODate, opts: { historyDa
     let note: string | null = null;
     if (point && point.status !== "insufficient" && point.baselineSd) {
       const z = (point.rollingLn! - point.baselineLn!) / point.baselineSd;
-      if (point.status === "below") signed = Math.min(z, -0.5);
+      if (point.status === "below") signed = Math.min(z, -s.readiness.watchZ);
       else signed = 0;
       if (point.status === "above") note = "Above the normal range: often benign, but a sustained rise can accompany parasympathetic saturation in heavy training.";
     } else if (point) {
       note = `Building baseline: ${point.baselineN}/${s.hrv.minBaselineN} nights from this device.`;
     }
-    hrv = { state: stateFrom(signed, s.baselines.zFlag), signed, note, device: hDev, point, series };
+    hrv = { state: stateFrom(signed, s.baselines.zFlag, s.readiness.watchZ), signed, note, device: hDev, point, series };
   }
 
   const zComp = (metric: "rhr" | "sleep", orient: 1 | -1): ZComp => {
@@ -115,7 +115,7 @@ export async function getReadiness(ctx: AppCtx, date: ISODate, opts: { historyDa
     const z = zAgainstBaseline(ser, at, s.baselines.windowDays, s.baselines.minN);
     const signed = z.z != null ? orient * z.z : null;
     const note = z.z == null ? `Building baseline: ${z.n}/${s.baselines.minN} nights from this device.` : null;
-    return { state: stateFrom(signed, s.baselines.zFlag), signed, note, device: dev, z, stale: at !== date && ser.has(at) ? at : null };
+    return { state: stateFrom(signed, s.baselines.zFlag, s.readiness.watchZ), signed, note, device: dev, z, stale: at !== date && ser.has(at) ? at : null };
   };
   const rhr = zComp("rhr", -1);
   const sleep = zComp("sleep", 1);
@@ -139,7 +139,7 @@ export async function getReadiness(ctx: AppCtx, date: ISODate, opts: { historyDa
   }
   const wSigned = wz.z;
   const wellnessComp: WellnessComp = {
-    state: today ? stateFrom(wSigned, s.baselines.zFlag) : "nodata",
+    state: today ? stateFrom(wSigned, s.baselines.zFlag, s.readiness.watchZ) : "nodata",
     signed: today ? wSigned : null,
     note: !today ? "No wellness response today." : wz.z == null ? `Building baseline: ${wz.n}/${s.baselines.minN} days.` : null,
     z: wz, today, lowItems,
@@ -163,7 +163,7 @@ export async function getReadiness(ctx: AppCtx, date: ISODate, opts: { historyDa
   if (lp && lp.acute == null) loadNotes.push(`Needs ${s.load.chronicDays} days of history.`);
   else if (lp && !lp.chronic) loadNotes.push(`No rated load in the last ${s.load.chronicDays} days, so there is no ratio yet.`);
   const load: LoadComp = {
-    state: stateFrom(lSigned, s.baselines.zFlag), signed: lSigned, note: loadNotes.join(" ") || null,
+    state: stateFrom(lSigned, s.baselines.zFlag, s.readiness.watchZ), signed: lSigned, note: loadNotes.join(" ") || null,
     point: lp, series, methods: [...methods], unrated, monotony: ms.monotony, strain: ms.strain, weekLoad: ms.load,
   };
 
@@ -176,7 +176,7 @@ export async function getReadiness(ctx: AppCtx, date: ISODate, opts: { historyDa
   const index = used.length >= 2 && totalW > 0 ? used.reduce((a, [v, wt]) => a + Math.max(-3, Math.min(3, v)) * wt, 0) / totalW : null;
   const anyFlag = [hrv, rhr, sleep, wellnessComp, load].some((c) => c.state === "flag");
   const overall: Readiness["overall"] =
-    index == null ? "unknown" : index <= -s.baselines.zFlag ? "red" : anyFlag || index <= -0.5 ? "amber" : "green";
+    index == null ? "unknown" : index <= -s.baselines.zFlag ? "red" : anyFlag || index <= -s.readiness.watchZ ? "amber" : "green";
 
   return { date, hrv, rhr, sleep, wellness: wellnessComp, load, index, overall, nightly: rows, errors };
 }

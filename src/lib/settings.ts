@@ -74,6 +74,9 @@ export const SettingsSchema = z.object({
       excludeTypes: z.array(z.string()).default([]),
       minDurationMin: z.number().min(0).max(120).default(5),
       maxDurationHours: z.number().min(1).max(48).default(6),
+      // Recordings overlapping by at least this fraction of the shorter one
+      // are treated as the same session from different devices.
+      sameSessionOverlap: z.number().min(0.1).max(1).default(0.5),
     })
     .prefault({}),
   matching: z
@@ -109,6 +112,8 @@ export const SettingsSchema = z.object({
       acwrLow: z.number().min(0).max(2).default(0.8),
       acwrHigh: z.number().min(0.5).max(3).default(1.3),
       sleepTargetMin: z.number().min(180).max(720).default(480),
+      // |z| at which a pillar (and the index) moves from normal to "watch".
+      watchZ: z.number().min(0.1).max(2).default(0.5),
     })
     .prefault({}),
 });

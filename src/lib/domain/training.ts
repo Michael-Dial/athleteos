@@ -116,7 +116,7 @@ export async function getTraining(ctx: AppCtx, start: ISODate, end: ISODate): Pr
 
   const sessions: TrainingSession[] = [];
   const priority = ctx.settings.devicePriority.workouts ?? [];
-  const groups = clusterByOverlap(workouts, (w) => ({ start: Date.parse(w.start_time), end: Date.parse(w.end_time) }));
+  const groups = clusterByOverlap(workouts, (w) => ({ start: Date.parse(w.start_time), end: Date.parse(w.end_time) }), ctx.settings.training.sameSessionOverlap);
   for (const group of groups) {
     const ranked = rankBySource(group, (w) => w.source, priority);
     const p = ranked.primary!;
