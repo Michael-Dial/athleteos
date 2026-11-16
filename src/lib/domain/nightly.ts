@@ -1,5 +1,5 @@
 import "server-only";
-import type { ISODate } from "../dates";
+import { addDays, type ISODate } from "../dates";
 import { getRecoverySummaries, getSleepSummaries } from "../ow/api";
 import type { OwSource } from "../ow/types";
 import { deviceKey, deviceName, rankBySource, type Ranked } from "../stats/sources";
@@ -26,6 +26,7 @@ export interface NightRow {
   spo2: number | null;
   start: string | null;
   end: string | null;
+  zoneOffset: string | null;
 }
 
 export const METRIC_VALUE: Record<Exclude<Metric, "workouts">, (r: NightRow) => number | null> = {
@@ -57,7 +58,7 @@ export async function getNightly(ctx: AppCtx, start: ISODate, end: ISODate): Pro
     const blank = (date: ISODate, source: OwSource): NightRow => ({
       date, key: deviceKey(source), name: deviceName(source), source,
       hrv: null, rhr: null, sleepMin: null, inBedMin: null, efficiency: null,
-      deep: null, rem: null, light: null, awake: null, rr: null, spo2: null, start: null, end: null,
+      deep: null, rem: null, light: null, awake: null, rr: null, spo2: null, start: null, end: null, zoneOffset: null,
     });
     for (const s of sleep) {
       const k = `${s.date}|${deviceKey(s.source)}`;
@@ -75,6 +76,7 @@ export async function getNightly(ctx: AppCtx, start: ISODate, end: ISODate): Pro
       r.spo2 ??= s.avg_spo2_percent;
       r.start ??= s.start_time;
       r.end ??= s.end_time;
+      r.zoneOffset ??= s.zone_offset;
       rows.set(k, r);
     }
     for (const s of recovery) {
@@ -93,12 +95,25 @@ export async function getNightly(ctx: AppCtx, start: ISODate, end: ISODate): Pro
   }
 }
 
-/** Devices ordered by how many nights they report `metric` (the unranked fallback order). */
-export function coverageOrder(rows: NightRow[], metric: Exclude<Metric, "workouts">): string[] {
+/**
+ * The unranked fallback always counts nights over the same window ending at
+ * the date in question, whatever range a page happens to load, so the same
+ * metric resolves to the same device on every page. Pages must load at least
+ * this many nights (they do: >= 60).
+ */
+export const FALLBACK_WINDOW_DAYS = 60;
+
+/** Devices ordered by how many nights they report `metric` in the fallback window ending at `asOf` (all rows when omitted). */
+export function coverageOrder(rows: NightRow[], metric: Exclude<Metric, "workouts">, asOf?: ISODate): string[] {
   const get = METRIC_VALUE[metric];
+  const from = asOf ? addDays(asOf, -(FALLBACK_WINDOW_DAYS - 1)) : "";
   const counts = new Map<string, number>();
-  for (const r of rows) if (get(r) != null) counts.set(r.key, (counts.get(r.key) ?? 0) + 1);
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+  for (const r of rows) {
+    if (asOf && (r.date < from || r.date > asOf)) continue;
+    if (get(r) != null) counts.set(r.key, (counts.get(r.key) ?? 0) + 1);
+  }
+  // Ties break by device key so the choice is stable across requests.
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k]) => k);
 }
 
 /**
@@ -109,7 +124,7 @@ export function coverageOrder(rows: NightRow[], metric: Exclude<Metric, "workout
 export function rankNight(ctx: AppCtx, rows: NightRow[], date: ISODate, metric: Exclude<Metric, "workouts">): Ranked<NightRow> {
   const get = METRIC_VALUE[metric];
   const day = rows.filter((r) => r.date === date && get(r) != null);
-  return rankBySource(day, (r) => r.source, ctx.settings.devicePriority[metric] ?? [], coverageOrder(rows, metric));
+  return rankBySource(day, (r) => r.source, ctx.settings.devicePriority[metric] ?? [], coverageOrder(rows, metric, date));
 }
 
 /**
@@ -133,7 +148,7 @@ export function baselineDevice(
     if (hit) return { key: k, name: hit.name, fallback: false };
   }
   const recentKeys = new Set(recent.map((r) => r.key));
-  const best = coverageOrder(rows, metric).find((k) => recentKeys.has(k));
+  const best = coverageOrder(rows, metric, asOf).find((k) => recentKeys.has(k));
   const hit = best ? recent.find((r) => r.key === best) : undefined;
   return hit ? { key: hit.key, name: hit.name, fallback: true } : null;
 }

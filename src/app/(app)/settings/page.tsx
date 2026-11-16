@@ -79,6 +79,37 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
         </Card>
 
+        <div id="intensity" />
+        <Card title="Intensity zones" hint="three-zone HR model">
+          <div className="form-grid">
+            <label className="field">LT1 / VT1 heart rate<input type="number" name="intensity.lt1Hr" defaultValue={s.intensity.lt1Hr ?? ""} min={60} max={230} /><span className="help">top of Z1, from testing</span></label>
+            <label className="field">LT2 / VT2 heart rate<input type="number" name="intensity.lt2Hr" defaultValue={s.intensity.lt2Hr ?? ""} min={60} max={230} /><span className="help">top of Z2</span></label>
+            <N name="intensity.z1MaxPctHrMax" label="Fallback Z1 top (%HRmax)" value={s.intensity.z1MaxPctHrMax} min={50} max={95} help="used until LT1/LT2 are set" />
+            <N name="intensity.z2MaxPctHrMax" label="Fallback Z2 top (%HRmax)" value={s.intensity.z2MaxPctHrMax} min={55} max={100} />
+            <N name="intensity.maxGapSec" label="Max HR gap credited (s)" value={s.intensity.maxGapSec} min={10} max={600} />
+          </div>
+        </Card>
+
+        <Card title="Illness watch" hint="multi-signal overnight deviations">
+          <div className="form-grid">
+            <N name="illness.baselineDays" label="Baseline (nights)" value={s.illness.baselineDays} min={14} max={90} />
+            <N name="illness.baselineLagDays" label="Baseline ends (days before)" value={s.illness.baselineLagDays} min={0} max={21} />
+            <N name="illness.minBaselineN" label="Min baseline nights" value={s.illness.minBaselineN} min={5} max={60} />
+            <N name="illness.z" label="Signal fires at z ≥" value={s.illness.z} step={0.1} min={0.5} max={4} />
+            <N name="illness.minSignals" label="Signals needed to flag" value={s.illness.minSignals} min={1} max={4} />
+          </div>
+        </Card>
+
+        <Card title="Weekly review and coverage">
+          <div className="form-grid">
+            <N name="review.comparisonWeeks" label="Compare with previous (weeks)" value={s.review.comparisonWeeks} min={1} max={8} />
+            <N name="review.monotonyFlag" label="Note monotony above" value={s.review.monotonyFlag} step={0.1} min={1} max={5} />
+            <N name="review.complianceFlagPct" label="Note compliance below (%)" value={s.review.complianceFlagPct} min={0} max={100} />
+            <N name="coverage.staleHours" label="Sync is quiet after (h)" value={s.coverage.staleHours} min={6} max={720} />
+            <N name="coverage.adherenceDays" label="Adherence window (days)" value={s.coverage.adherenceDays} min={7} max={90} />
+          </div>
+        </Card>
+
         <Card title="Which device workouts count as training">
           <div className="form-grid">
             <N name="training.minDurationMin" label="Ignore shorter than (min)" value={s.training.minDurationMin} min={0} max={120} />

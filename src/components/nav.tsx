@@ -1,15 +1,17 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconCalendar, IconForm, IconHistory, IconPulse, IconSettings, IconToday, IconWatch } from "./icons";
+import { IconCalendar, IconForm, IconHistory, IconPulse, IconReview, IconSettings, IconToday, IconTrend, IconWatch } from "./icons";
 
 const ITEMS = [
   { href: "/", label: "Today", icon: IconToday },
+  { href: "/readiness", label: "Readiness", icon: IconPulse },
+  { href: "/review", label: "Weekly review", icon: IconReview },
+  { href: "/trends", label: "Trends", icon: IconTrend },
   { href: "/wearables", label: "Wearables", icon: IconWatch },
   { href: "/plan", label: "Plan", icon: IconCalendar },
   { href: "/history", label: "History", icon: IconHistory },
   { href: "/wellness", label: "Questionnaires", icon: IconForm },
-  { href: "/readiness", label: "Readiness", icon: IconPulse },
   { href: "/settings", label: "Settings", icon: IconSettings },
 ];
 

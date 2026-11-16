@@ -218,6 +218,8 @@ export async function setQuestionnaireActive(fd: FormData) {
 // Fields that are comma-separated lists in the form.
 const LIST_FIELDS = new Set(["training.excludeTypes"]);
 const TEXT_FIELDS = new Set(["timezone", "load.method", "load.acwrModel", "load.trimpSex", "reminders.morningTime"]);
+// Optional numbers: an emptied field means "unset" (null), not "unchanged".
+const NULLABLE_FIELDS = new Set(["intensity.lt1Hr", "intensity.lt2Hr"]);
 
 /**
  * Form fields named like "hrv.rollingDays" become a nested patch, validated by
@@ -242,6 +244,7 @@ export async function updateSettings(fd: FormData) {
     if (LIST_FIELDS.has(k)) set(k, v ? v.split(",").map((x) => x.trim()).filter(Boolean) : []);
     else if (bools.has(k)) set(k, raw === "on");
     else if (TEXT_FIELDS.has(k)) set(k, v);
+    else if (NULLABLE_FIELDS.has(k) && v === "") set(k, null);
     else if (v !== "" && Number.isFinite(Number(v))) set(k, Number(v));
   }
   try {

@@ -81,6 +81,20 @@ On first start the app migrates Postgres and seeds one athlete plus two question
    SpO₂, workouts). Unranked devices fall back to the one with the most data and are labelled.
 3. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights.
 
+## Dashboards
+
+| Page | What it answers |
+|---|---|
+| **Today** | Plan, last night per device, check-in, readiness; an illness-watch notice when signals agree |
+| **Readiness** | Each pillar against your own baseline, with methods and references |
+| **Weekly review** | Plan vs delivered, load and monotony, HRV mean/CV, RHR, sleep amount and timing, wellness vs previous weeks |
+| **Trends** | Weekly load, HRV, RHR, sleep, VO₂max and body mass over 3–12 months, per device |
+| **History → Intensity** | Time in three HR zones per week and session, Polarization-Index |
+| **Readiness → Illness watch** | Nightly RHR, respiratory rate, skin temperature and HRV deviations vs a lagged baseline |
+| **Wearables → Coverage** | Which devices reported each night, baseline-device gaps, provider sync, questionnaire adherence |
+
+Every dashboard is also an API endpoint (`/review`, `/trends`, `/intensity`, `/illness`, `/coverage`).
+
 ## Phone: install as an app (PWA)
 
 Open `https://athleteos.dialedup.info` on your phone and add it to the home screen

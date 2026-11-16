@@ -96,6 +96,46 @@ export const SettingsSchema = z.object({
       minPairs: z.number().int().min(5).max(10000).default(30),
     })
     .prefault({}),
+  coverage: z
+    .object({
+      // A provider account with no sync for this long is flagged. Webhook
+      // providers may legitimately go quiet on days with no new data.
+      staleHours: z.number().min(6).max(720).default(48),
+      adherenceDays: z.number().int().min(7).max(90).default(28),
+    })
+    .prefault({}),
+  review: z
+    .object({
+      // Weekly-review observations. Monotony above ~2 preceded illness in
+      // Foster (1998); compliance is planned sessions done / not skipped.
+      monotonyFlag: z.number().min(1).max(5).default(2),
+      complianceFlagPct: z.number().min(0).max(100).default(80),
+      comparisonWeeks: z.number().int().min(1).max(8).default(3),
+    })
+    .prefault({}),
+  intensity: z
+    .object({
+      // Three-zone HR model. Set LT1/LT2 (or VT1/VT2) heart rates from testing;
+      // until then zones fall back to %HRmax approximations, labelled as such.
+      lt1Hr: z.number().min(60).max(230).nullable().default(null),
+      lt2Hr: z.number().min(60).max(230).nullable().default(null),
+      z1MaxPctHrMax: z.number().min(50).max(95).default(82),
+      z2MaxPctHrMax: z.number().min(55).max(100).default(87),
+      // Longest gap between HR samples credited to the earlier sample's zone.
+      maxGapSec: z.number().int().min(10).max(600).default(120),
+    })
+    .prefault({}),
+  illness: z
+    .object({
+      baselineDays: z.number().int().min(14).max(90).default(28),
+      // Baseline ends this many days before the assessed night, so an
+      // illness that has been building for days isn't absorbed into it.
+      baselineLagDays: z.number().int().min(0).max(21).default(7),
+      minBaselineN: z.number().int().min(5).max(60).default(14),
+      z: z.number().min(0.5).max(4).default(1.5),
+      minSignals: z.number().int().min(1).max(4).default(2),
+    })
+    .prefault({}),
   reminders: z
     .object({
       // Morning check-in push (installed PWA). Sent once per day when a daily

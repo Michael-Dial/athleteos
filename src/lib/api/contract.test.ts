@@ -117,6 +117,22 @@ live("API v1 contract (live)", () => {
     await ok("patch", "/settings", "/settings", { hrv: { swcSd: before.hrv.swcSd } });
   });
 
+  it("dashboard endpoints match their schemas", async () => {
+    const review = await ok("get", "/review", "/review");
+    expect(review.hrv.weeks).toHaveLength(4);
+    await ok("get", `/review?week=2026-01-07`, "/review");
+    expect((await call("GET", "/review?week=2999-01-05")).status).toBe(400);
+    const cov = await ok("get", "/coverage?days=30", "/coverage");
+    expect(cov.dates).toHaveLength(30);
+    expect(cov.questionnaires.length).toBeGreaterThan(0);
+    await ok("get", "/intensity", "/intensity");
+    expect((await call("GET", "/intensity?start=2025-01-01&end=2026-01-01")).status).toBe(400);
+    const tr = await ok("get", "/trends?weeks=8", "/trends");
+    expect(tr.weeks).toHaveLength(8);
+    const ill = await ok("get", "/illness?days=7", "/illness");
+    expect(ill.nights).toHaveLength(7);
+  });
+
   it("publishes the OpenAPI document without auth", async () => {
     const res = await fetch(`${BASE}/api/v1/openapi.json`);
     expect(res.status).toBe(200);

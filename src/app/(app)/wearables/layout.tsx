@@ -15,6 +15,7 @@ export default async function WearablesLayout({ children }: { children: React.Re
         { href: "/wearables/explore", label: "Timeseries" },
         { href: "/wearables/compare", label: "Compare devices" },
         { href: "/wearables/devices", label: "Devices" },
+        { href: "/wearables/coverage", label: "Coverage" },
       ]} />
       {ctx.ow ? children : <SetupBanner ctx={ctx} />}
     </div>

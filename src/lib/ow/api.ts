@@ -153,6 +153,8 @@ export interface TimeseriesOpts {
   /** `all` keeps every source so AthleteOS can choose and label explicitly. */
   sourceSelection?: "all" | "per_range" | "per_period" | "reconcile";
   includeRedundantRelays?: boolean;
+  /** Cache lifetime override, e.g. the historical TTL for windows that can no longer change. */
+  ttl?: number;
 }
 
 export async function getTimeseries(ctx: OwCtx, o: TimeseriesOpts): Promise<OwTimeSeriesSample[]> {
@@ -165,7 +167,7 @@ export async function getTimeseries(ctx: OwCtx, o: TimeseriesOpts): Promise<OwTi
     source_selection: o.sourceSelection ?? "all",
     ...relay(ctx, o.includeRedundantRelays),
   };
-  return cached(key(ctx, "ts", query), ctx.ttl, () =>
+  return cached(key(ctx, "ts", query), o.ttl ?? ctx.ttl, () =>
     owPaginate<OwTimeSeriesSample>(userPath(ctx, "/timeseries"), query, PAGE_LIMIT.timeseries),
   );
 }

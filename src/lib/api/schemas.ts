@@ -37,3 +37,8 @@ export const PushSubscriptionBody = z.object({
 }).describe("A browser PushSubscription as returned by pushManager.subscribe().toJSON()");
 
 export const EndpointQuery = z.object({ endpoint: z.string().url().max(2000) });
+
+export const ReviewQuery = z.object({ week: DateParam.optional().describe("Any date in the week; defaults to this week (Monday start)") });
+export const CoverageQuery = z.object({ days: z.coerce.number().int().min(7).max(120).default(60) });
+export const TrendsQuery = z.object({ weeks: z.coerce.number().int().min(4).max(104).default(26) });
+export const IllnessQuery = z.object({ date: DateParam.optional(), days: z.coerce.number().int().min(1).max(60).default(21) });

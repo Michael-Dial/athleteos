@@ -6,21 +6,23 @@ import { getTraining } from "@/lib/domain/training";
 import { isDue, listDefs } from "@/lib/domain/questionnaires";
 import { addDays, fmtDate, fmtDuration, fmtTime, startOfWeek, todayIn } from "@/lib/dates";
 import { SPORT_LABEL, isSportFamily } from "@/lib/sports";
-import { Card, Empty, SourceChip, fmt } from "@/components/ui";
+import { Card, Empty, Notice, SourceChip, fmt } from "@/components/ui";
 import { NightStat, ReadinessCard } from "@/components/readiness";
 import { OwErrors, SetupBanner } from "@/components/setup-banner";
 import { HrvChart, LoadCharts } from "@/components/trend-charts";
 import { InstallHint } from "@/components/pwa";
+import { getIllness } from "@/lib/domain/illness";
 
 export default async function TodayPage() {
   const ctx = await getCtx();
   const tz = ctx.settings.timezone;
   const today = todayIn(tz);
-  const [r, plan, recent, defs] = await Promise.all([
+  const [r, plan, recent, defs, ill] = await Promise.all([
     getReadiness(ctx, today),
     listPlanSessions(ctx.athlete.id, today, today),
     getTraining(ctx, addDays(today, -6), today),
     listDefs(ctx.athlete.id),
+    getIllness(ctx, today, 3),
   ]);
   const due = (await Promise.all(defs.map(async (d) => ((await isDue(d, today, startOfWeek(today))) ? d : null)))).filter((d) => d != null);
   const { matches } = matchPlan(plan, recent.sessions.filter((s) => s.date === today));
@@ -37,6 +39,12 @@ export default async function TodayPage() {
         </div>
       </div>
       <InstallHint />
+      {ill.latest && (ill.latest.level === "watch" || ill.latest.level === "alert") && (
+        <Notice kind={ill.latest.level === "alert" ? "bad" : "warn"}>
+          <b>Illness watch: {ill.latest.level === "alert" ? "alert" : "watch"}.</b>{" "}
+          {ill.latest.signals.filter((x) => x.firing).map((x) => ({ rhr: "resting HR up", rr: "respiratory rate up", temp: "skin temperature up", hrv: "HRV down" })[x.key]).join(", ")} vs your baseline on {fmtDate(ill.latest.date)}. <Link href="/readiness/illness">Details</Link>
+        </Notice>
+      )}
       <SetupBanner ctx={ctx} />
       <OwErrors errors={r.errors} />
 

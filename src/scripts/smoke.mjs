@@ -8,7 +8,7 @@ const PASSWORD = process.env.SMOKE_PASSWORD;
 if (!PASSWORD) throw new Error("SMOKE_PASSWORD is required");
 
 const PAGES = [
-  "/", "/history", "/plan", "/plan/phases", "/wellness", "/wellness/morning-wellness",
+  "/", "/review", "/trends", "/history", "/history/intensity", "/readiness/illness", "/wearables/coverage", "/plan", "/plan/phases", "/wellness", "/wellness/morning-wellness",
   "/questionnaires/morning-wellness", "/questionnaires/new", "/readiness",
   "/wearables", "/wearables/sleep", "/wearables/explore", "/wearables/compare", "/wearables/devices",
   "/settings", "/settings/devices", "/settings/connections", "/settings/api", "/settings/notifications",

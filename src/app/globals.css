@@ -23,6 +23,8 @@
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
   --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
   --st-awake: #eb6834; --st-light: #86b6ef; --st-deep: #1c5cab; --st-rem: #6250d6; --st-unknown: #c3c2b7;
+  /* Ordered intensity zones: one hue, light (easy) to dark (hard). */
+  --z1: #86b6ef; --z2: #2a78d6; --z3: #104281;
   --radius: 8px;
   --radius-sm: 6px;
   --shadow: 0 1px 2px rgba(11, 11, 11, 0.04);
@@ -38,6 +40,7 @@
     --good: #2fbf2f; --good-weak: #12280f; --warn: #fab219; --warn-weak: #2c230c; --bad: #e66767; --bad-weak: #2e1414;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
     --st-light: #5598e7; --st-deep: #9ec5f4; --st-rem: #9085e9; --st-awake: #d95926; --st-unknown: #52514e;
+    --z1: #184f95; --z2: #3987e5; --z3: #9ec5f4;
     --shadow: none;
   }
 }
@@ -49,6 +52,7 @@
   --good: #2fbf2f; --good-weak: #12280f; --warn: #fab219; --warn-weak: #2c230c; --bad: #e66767; --bad-weak: #2e1414;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
   --st-light: #5598e7; --st-deep: #9ec5f4; --st-rem: #9085e9; --st-awake: #d95926; --st-unknown: #52514e;
+  --z1: #184f95; --z2: #3987e5; --z3: #9ec5f4;
   --shadow: none;
 }
 
@@ -256,3 +260,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 @media (prefers-reduced-motion: no-preference) {
   .btn, .nav a, .seg a, .sess { transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
 }
+
+/* ---------- coverage heatmap ---------- */
+.heat { --c0: var(--surface-2); --c1: #86b6ef; --c2: #256abf; display: grid; gap: 2px; align-items: center; font-size: 12px; min-width: max-content; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .heat { --c1: #1c5cab; --c2: #6da7ec; } }
+:root[data-theme="dark"] .heat { --c1: #1c5cab; --c2: #6da7ec; }
+.heat .cell { width: 9px; height: 16px; border-radius: 2px; background: var(--c0); }
+.heat .cell.s1 { background: var(--c1); }
+.heat .cell.s2 { background: var(--c2); }
+.heat .name { padding-right: 10px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
+.heat .tick { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.legend-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
