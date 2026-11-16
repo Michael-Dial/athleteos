@@ -18,3 +18,24 @@ describe("session tokens", () => {
     expect(await checkPassword("wrong")).toBe(false);
   });
 });
+
+import { createTrustToken, maskEmail, verifyTrustToken, codeHash } from "./auth";
+
+describe("trusted-device tokens", () => {
+  it("verify, expire, and die when the epoch moves", async () => {
+    const { token } = await createTrustToken(3, 1_000);
+    expect(await verifyTrustToken(token, 3, 2_000)).toBe(true);
+    expect(await verifyTrustToken(token, 4, 2_000)).toBe(false); // "forget all devices"
+    expect(await verifyTrustToken(token, 3, 1_000 + 31 * 86400_000)).toBe(false);
+    const parts = token.split(".");
+    parts[2] = "4";
+    expect(await verifyTrustToken(parts.join("."), 4, 2_000)).toBe(false); // can't forge a new epoch
+  });
+  it("code hashes are bound to their challenge", async () => {
+    expect(await codeHash("a", "123456")).not.toBe(await codeHash("b", "123456"));
+    expect(await codeHash("a", "123456")).toBe(await codeHash("a", "123456"));
+  });
+  it("masks the email address", () => {
+    expect(maskEmail("someone@example.com")).toBe("s•••@e•••.com");
+  });
+});

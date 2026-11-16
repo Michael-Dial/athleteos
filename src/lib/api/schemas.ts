@@ -49,3 +49,8 @@ export const ZonesQuery = z.object({
   start: DateParam.optional(),
   end: DateParam.optional(),
 });
+
+export const TokenVerifyRequest = z.object({
+  challengeId: z.string().uuid(),
+  code: z.string().min(6).max(7).describe("The 6-digit code from the email"),
+});

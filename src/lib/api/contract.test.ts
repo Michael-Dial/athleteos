@@ -40,6 +40,7 @@ live("API v1 contract (live)", () => {
     expect(bad.data.error.code).toBe("bad_credentials");
     const good = await call("POST", "/auth/token", { password: PASSWORD, name: "contract-test" }, false);
     expect(good.status).toBe(201);
+    // CI runs without emailed codes, so the password alone returns a token.
     token = (spec("post", "/auth/token").parse(good.data) as { token: string }).token;
     expect(token).toMatch(/^aos_/);
   });

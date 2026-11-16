@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // pg is a Node-only driver; keep it out of the bundler so its native/optional
   // requires resolve at runtime instead of being traced into chunks.
-  serverExternalPackages: ["pg", "web-push"],
+  serverExternalPackages: ["pg", "web-push", "nodemailer"],
   async headers() {
     return [
       {

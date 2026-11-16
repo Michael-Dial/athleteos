@@ -96,6 +96,18 @@ On first start the app migrates Postgres and seeds one athlete plus two question
 
 Every dashboard is also an API endpoint (`/review`, `/trends`, `/zones`, `/intensity`, `/illness`, `/coverage`).
 
+## Sign-in codes by email (optional second factor)
+
+Set `LOGIN_2FA=email`, `LOGIN_EMAIL` and the `SMTP_*` settings in `.env` (see
+`.env.example`; Gmail works with an app password) and restart. Signing in then
+needs the password plus a 6-digit code emailed to `LOGIN_EMAIL`. Codes expire in
+10 minutes and allow 5 tries, and only a keyed hash of each code is stored. A
+device you choose to trust skips the code for 30 days. Settings → Security sends a
+test email and can forget every trusted device. Native apps get the same check:
+`POST /api/v1/auth/token` returns a `challengeId`, then `POST
+/api/v1/auth/token/verify` exchanges the emailed code for a token. Locked out?
+Remove `LOGIN_2FA` from `.env` and restart.
+
 ## Phone: install as an app (PWA)
 
 Open `https://athleteos.dialedup.info` on your phone and add it to the home screen
