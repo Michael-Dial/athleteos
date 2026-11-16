@@ -3,3 +3,6 @@ node_modules/
 __pycache__/
 *.env
 data/db/
+*.tsbuildinfo
+src/next-env.d.ts
+.env

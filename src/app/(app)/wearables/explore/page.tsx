@@ -1,0 +1,107 @@
+import type { Metadata } from "next";
+import { getCtx } from "@/lib/domain/context";
+import { getTimeseries } from "@/lib/ow/api";
+import type { OwTimeSeriesSample } from "@/lib/ow/types";
+import { addDays, diffDays, isISODate, todayIn } from "@/lib/dates";
+import { deviceKey, deviceName } from "@/lib/stats/sources";
+import { COMMON_SERIES, isSeriesType, seriesLabel, seriesUnit } from "@/lib/series-types";
+import { errorMessage } from "@/lib/domain/errors";
+import { Card, Notice, fmt } from "@/components/ui";
+import { OwErrors } from "@/components/setup-banner";
+import { TimeChart } from "@/components/charts";
+import { IconDownload } from "@/components/icons";
+
+export const metadata: Metadata = { title: "Timeseries" };
+
+const RES = ["raw", "1min", "5min", "15min", "1hour", "1day"] as const;
+type Res = (typeof RES)[number];
+const SLOTS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)", "var(--s6)", "var(--s7)", "var(--s8)"];
+// Raw rows per day can reach tens of thousands; cap the window per resolution.
+const MAX_DAYS: Record<Res, number> = { raw: 2, "1min": 3, "5min": 14, "15min": 31, "1hour": 120, "1day": 730 };
+
+export default async function ExplorePage({ searchParams }: { searchParams: Promise<{ type?: string; start?: string; end?: string; res?: string; relays?: string }> }) {
+  const sp = await searchParams;
+  const ctx = await getCtx();
+  const tz = ctx.settings.timezone;
+  const today = todayIn(tz);
+  const type = sp.type && isSeriesType(sp.type) ? sp.type : "heart_rate";
+  const end = isISODate(sp.end) ? sp.end : today;
+  const start = isISODate(sp.start) && sp.start <= end ? sp.start : addDays(end, -1);
+  const res: Res = (RES as readonly string[]).includes(sp.res ?? "") ? (sp.res as Res) : "15min";
+  const relays = sp.relays === "1";
+  const span = diffDays(end, start) + 1;
+  const tooLong = span > MAX_DAYS[res];
+
+  let data: OwTimeSeriesSample[] = [];
+  let err: string | null = null;
+  if (!tooLong) {
+    try {
+      data = await getTimeseries(ctx.ow!, { start, end, types: [type], resolution: res, sourceSelection: "all", includeRedundantRelays: relays || undefined });
+    } catch (e) {
+      err = errorMessage(e);
+    }
+  }
+  const groups = new Map<string, { name: string; dsid: string | null; pts: [number, number | null][] }>();
+  for (const s of data) {
+    const k = s.source?.data_source_id ?? deviceKey(s.source);
+    const g = groups.get(k) ?? { name: deviceName(s.source), dsid: s.source?.data_source_id ?? null, pts: [] };
+    g.pts.push([Date.parse(s.timestamp), s.value]);
+    groups.set(k, g);
+  }
+  const ordered = [...groups.entries()].sort((a, b) => b[1].pts.length - a[1].pts.length);
+  const unit = data[0]?.unit ?? seriesUnit(type);
+  const exportEnd = addDays(end, 1); // export end_time is exclusive
+
+  return (
+    <div className="stack-lg">
+      <Card>
+        <form className="form-grid" method="get">
+          <label className="field">Series
+            <select name="type" defaultValue={type}>
+              {COMMON_SERIES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              {!COMMON_SERIES.some(([k]) => k === type) && <option value={type}>{type}</option>}
+            </select>
+          </label>
+          <label className="field">From<input type="date" name="start" defaultValue={start} /></label>
+          <label className="field">To<input type="date" name="end" defaultValue={end} /></label>
+          <label className="field">Resolution
+            <select name="res" defaultValue={res}>{RES.map((r) => <option key={r} value={r}>{r} (≤ {MAX_DAYS[r]} d)</option>)}</select>
+          </label>
+          <label className="row" style={{ fontSize: 13, alignSelf: "end", minHeight: 36 }}><input type="checkbox" name="relays" value="1" defaultChecked={relays} /> Include aggregator relays</label>
+          <div className="row" style={{ alignSelf: "end" }}><button className="btn primary" type="submit">Show</button></div>
+        </form>
+      </Card>
+      {tooLong && <Notice>{res} resolution is limited to {MAX_DAYS[res]} days here. Pick a coarser resolution or a shorter window, or use the bulk export below.</Notice>}
+      <OwErrors errors={[err]} />
+      <Card title={`${seriesLabel(type)}${unit ? ` (${unit})` : ""}`} hint={`${data.length.toLocaleString()} rows · ${groups.size} source${groups.size === 1 ? "" : "s"}${groups.size > 8 ? " · chart shows the 8 with most data" : ""}`}
+        action={<a className="btn sm" href={`/api/export/series?types=${type}&start=${start}&end=${exportEnd}&format=csv`}><IconDownload size={14} />Raw CSV</a>}>
+        <TimeChart ariaLabel={`${seriesLabel(type)} by source`} xKind={span <= 1 ? "time" : "datetime"} tz={tz} unit={unit} digits={1} height={300}
+          series={ordered.slice(0, 8).map(([k, g], i) => ({ id: k, label: g.name, color: SLOTS[i], kind: "line" as const, points: g.pts }))} />
+      </Card>
+      {ordered.length > 0 && (
+        <Card title="Sources" className="flush">
+          <div className="table-wrap">
+            <table className="t">
+              <thead><tr><th>Source</th><th className="num">Rows</th><th className="num">Mean</th><th className="num">Min</th><th className="num">Max</th><th>Data source id</th></tr></thead>
+              <tbody>
+                {ordered.map(([k, g], i) => {
+                  const vals = g.pts.map((p) => p[1]).filter((v): v is number => v != null);
+                  return (
+                    <tr key={k}>
+                      <td><span className="row" style={{ gap: 6 }}>{i < 8 && <span className="dot" style={{ background: SLOTS[i] }} />}{g.name}</span></td>
+                      <td className="num">{g.pts.length.toLocaleString()}</td>
+                      <td className="num">{fmt(vals.reduce((a, b) => a + b, 0) / (vals.length || 1), 1)}</td>
+                      <td className="num">{fmt(Math.min(...vals), 1)}</td>
+                      <td className="num">{fmt(Math.max(...vals), 1)}</td>
+                      <td className="mono">{g.dsid ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
