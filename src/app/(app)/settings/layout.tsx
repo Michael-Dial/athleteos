@@ -8,6 +8,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         { href: "/settings", label: "Analysis" },
         { href: "/settings/devices", label: "Device priority" },
         { href: "/settings/connections", label: "Open Wearables" },
+        { href: "/settings/notifications", label: "Notifications" },
+        { href: "/settings/api", label: "API tokens" },
       ]} />
       {children}
     </div>
