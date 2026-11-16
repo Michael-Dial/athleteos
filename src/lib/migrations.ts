@@ -181,4 +181,26 @@ CREATE TABLE reminder_log (
 );
 `,
   },
+  {
+    version: 4,
+    name: "email sign-in challenges",
+    sql: `
+-- One pending second-factor check. Only an HMAC of the code is stored; codes
+-- expire, allow a few attempts, and can be resent a limited number of times.
+CREATE TABLE auth_challenge (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  purpose       text NOT NULL CHECK (purpose IN ('web', 'token')),
+  code_hash     text NOT NULL,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  expires_at    timestamptz NOT NULL,
+  attempts      int NOT NULL DEFAULT 0,
+  sends         int NOT NULL DEFAULT 1,
+  last_sent_at  timestamptz NOT NULL DEFAULT now(),
+  consumed_at   timestamptz,
+  ip            text,
+  meta          jsonb NOT NULL DEFAULT '{}'
+);
+CREATE INDEX auth_challenge_expires ON auth_challenge (expires_at);
+`,
+  },
 ];

@@ -4,7 +4,7 @@ import { join, relative, sep } from "node:path";
 import { ROUTES, openApiDocument } from "./openapi";
 
 const ROOT = join(__dirname, "../../app/api/v1");
-const PUBLIC_FILES = new Set(["auth/token/route.ts", "openapi.json/route.ts"]);
+const PUBLIC_FILES = new Set(["auth/token/route.ts", "auth/token/verify/route.ts", "openapi.json/route.ts"]);
 
 function routeFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {

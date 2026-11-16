@@ -7,7 +7,7 @@ import {
 } from "./dto";
 import { CoverageDto, IllnessDto, IntensityDto, ReviewDto, TrendsDto, ZonesDto } from "./dto-dashboards";
 import {
-  AnnotationPatch, ZonesQuery, CoverageQuery, IllnessQuery, ReviewQuery, TrendsQuery, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
+  AnnotationPatch, TokenVerifyRequest, ZonesQuery, CoverageQuery, IllnessQuery, ReviewQuery, TrendsQuery, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
 } from "./schemas";
 
 // The route table is written once here and drives the OpenAPI document; a
@@ -29,9 +29,13 @@ export interface RouteSpec {
 const Window = (key: string, item: z.ZodType) => z.object({ start: z.string(), end: z.string(), [key]: z.array(item), owError: z.string().nullable().optional() });
 const Token = z.object({ token: z.string().describe("Shown once; store it securely"), id: z.number(), name: z.string(), createdAt: z.string() });
 const Created = z.object({ id: z.number() });
+const Challenge = z.object({ challengeId: z.string(), delivery: z.literal("email"), destination: z.string().describe("Masked address the code went to"), expiresInSec: z.number() });
 
 export const ROUTES: RouteSpec[] = [
-  { method: "post", path: "/auth/token", tag: "auth", public: true, summary: "Exchange the AthleteOS password for a bearer token (native app sign-in)", body: TokenRequest, response: Token, status: 201 },
+  { method: "post", path: "/auth/token", tag: "auth", public: true,
+    summary: "Native app sign-in. Returns 201 with a token, or 202 with a challengeId when emailed codes are on (then call /auth/token/verify)",
+    body: TokenRequest, response: z.union([Token, Challenge]), status: 201 },
+  { method: "post", path: "/auth/token/verify", tag: "auth", public: true, summary: "Second step: exchange the emailed 6-digit code for a token", body: TokenVerifyRequest, response: Token, status: 201 },
   { method: "get", path: "/auth/tokens", tag: "auth", summary: "List active tokens", response: z.object({ tokens: z.array(z.object({ id: z.number(), name: z.string(), prefix: z.string(), createdAt: z.string().nullable(), lastUsedAt: z.string().nullable() })) }) },
   { method: "post", path: "/auth/tokens", tag: "auth", summary: "Create a token for the signed-in athlete", body: TokenCreate, response: Token, status: 201 },
   { method: "delete", path: "/auth/tokens/{id}", tag: "auth", summary: "Revoke a token", status: 204 },

@@ -10,6 +10,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         { href: "/settings/zones", label: "Zones" },
         { href: "/settings/connections", label: "Open Wearables" },
         { href: "/settings/notifications", label: "Notifications" },
+        { href: "/settings/security", label: "Security" },
         { href: "/settings/api", label: "API tokens" },
       ]} />
       {children}
