@@ -11,7 +11,7 @@ const PAGES = [
   "/", "/history", "/plan", "/plan/phases", "/wellness", "/wellness/morning-wellness",
   "/questionnaires/morning-wellness", "/questionnaires/new", "/readiness",
   "/wearables", "/wearables/sleep", "/wearables/explore", "/wearables/compare", "/wearables/devices",
-  "/settings", "/settings/devices", "/settings/connections",
+  "/settings", "/settings/devices", "/settings/connections", "/settings/api",
 ];
 
 let failed = 0;

@@ -4,8 +4,8 @@ import type { ISODate } from "../dates";
 import { srpe } from "../stats/load";
 import type { TrainingSession } from "./training";
 
-export const PHASE_KINDS = ["base", "build", "peak", "taper", "race", "recovery", "transition"] as const;
-export type PhaseKind = (typeof PHASE_KINDS)[number];
+import { PHASE_KINDS, type PhaseKind } from "./plan-kinds";
+export { PHASE_KINDS, type PhaseKind };
 
 export interface PlanPhase {
   id: number;

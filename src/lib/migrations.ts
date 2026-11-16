@@ -140,4 +140,45 @@ CREATE TABLE daily_wellness (
 ALTER TABLE manual_session ADD COLUMN excluded boolean NOT NULL DEFAULT false;
 `,
   },
+  {
+    version: 3,
+    name: "api tokens and push subscriptions",
+    sql: `
+-- Bearer tokens for the JSON API (native apps, scripts). Only a SHA-256 of
+-- the token is stored; the token itself is shown once at creation.
+CREATE TABLE api_token (
+  id            serial PRIMARY KEY,
+  athlete_id    int  NOT NULL REFERENCES athlete(id) ON DELETE CASCADE,
+  name          text NOT NULL,
+  token_hash    text NOT NULL UNIQUE,
+  prefix        text NOT NULL,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  last_used_at  timestamptz,
+  revoked_at    timestamptz
+);
+CREATE INDEX api_token_athlete ON api_token (athlete_id);
+
+-- Web Push subscriptions (one per browser/device that enabled reminders).
+CREATE TABLE push_subscription (
+  id            serial PRIMARY KEY,
+  athlete_id    int  NOT NULL REFERENCES athlete(id) ON DELETE CASCADE,
+  endpoint      text NOT NULL UNIQUE,
+  p256dh        text NOT NULL,
+  auth          text NOT NULL,
+  user_agent    text,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  last_success_at timestamptz,
+  failures      int  NOT NULL DEFAULT 0
+);
+
+-- One row per reminder actually sent, so a restart never double-sends.
+CREATE TABLE reminder_log (
+  athlete_id    int  NOT NULL REFERENCES athlete(id) ON DELETE CASCADE,
+  kind          text NOT NULL,
+  date          date NOT NULL,
+  sent_at       timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (athlete_id, kind, date)
+);
+`,
+  },
 ];

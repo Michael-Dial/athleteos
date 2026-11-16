@@ -19,11 +19,21 @@ export interface AppCtx {
   owConfigured: boolean;
 }
 
-// Single-user today: the first athlete. Family mode will resolve this from the
-// session instead; every query already filters by athlete_id.
+// Web session: single-user today, so the first athlete. API tokens carry their
+// own athlete_id (loadCtx), which is the path family mode will use.
 export const getCtx = cache(async (): Promise<AppCtx> => {
   const athlete = await q1<Athlete>("SELECT id, name, ow_user_id FROM athlete ORDER BY id LIMIT 1");
   if (!athlete) throw new Error("No athlete row; database seed did not run");
+  return build(athlete);
+});
+
+export const loadCtx = cache(async (athleteId: number): Promise<AppCtx> => {
+  const athlete = await q1<Athlete>("SELECT id, name, ow_user_id FROM athlete WHERE id = $1", [athleteId]);
+  if (!athlete) throw new Error(`athlete ${athleteId} not found`);
+  return build(athlete);
+});
+
+async function build(athlete: Athlete): Promise<AppCtx> {
   const settings = await getSettings(athlete.id);
   const configured = owConfigured();
   const ow: OwCtx | null =
@@ -31,4 +41,4 @@ export const getCtx = cache(async (): Promise<AppCtx> => {
       ? { userId: athlete.ow_user_id, includeRedundantRelays: settings.ow.includeRedundantRelays, ttl: settings.ow.cacheTtlSeconds, historicalTtl: settings.ow.historicalCacheTtlSeconds }
       : null;
   return { athlete, settings, ow, owConfigured: configured };
-});
+}

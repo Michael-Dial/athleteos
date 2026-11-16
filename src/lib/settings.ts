@@ -152,3 +152,31 @@ export async function saveSettings(athleteId: number, next: Partial<Settings>): 
   }
   return merged;
 }
+
+function deepMerge(a: Record<string, unknown> | undefined, b: Record<string, unknown>): Record<string, unknown> {
+  const o: Record<string, unknown> = { ...(a ?? {}) };
+  for (const [k, v] of Object.entries(b)) {
+    o[k] = v && typeof v === "object" && !Array.isArray(v) ? deepMerge(o[k] as Record<string, unknown>, v as Record<string, unknown>) : v;
+  }
+  return o;
+}
+
+/**
+ * Apply a partial, possibly nested change (e.g. {hrv: {swcSd: 0.6}}) over the
+ * current settings, validate the result, and persist the touched sections.
+ * Throws a ZodError when the merged settings are invalid; nothing is saved then.
+ */
+export async function patchSettings(athleteId: number, patch: Record<string, unknown>): Promise<Settings> {
+  const current = (await getSettings(athleteId)) as unknown as Record<string, unknown>;
+  const merged = deepMerge(current, patch);
+  if (typeof merged.timezone === "string") {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: merged.timezone });
+    } catch {
+      throw new z.ZodError([{ code: "custom", path: ["timezone"], message: "unknown timezone; use an IANA name like America/New_York", input: merged.timezone }]);
+    }
+  }
+  const valid = SettingsSchema.parse(merged);
+  const touched = Object.keys(patch).filter((k): k is SettingsKey => k in valid);
+  return saveSettings(athleteId, Object.fromEntries(touched.map((k) => [k, valid[k]])) as Partial<Settings>);
+}

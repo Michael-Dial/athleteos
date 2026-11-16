@@ -1,0 +1,32 @@
+import { z } from "zod";
+import { AnnotationInput } from "../domain/inputs";
+import { DateParam } from "./params";
+
+// Request schemas shared by the route handlers and the OpenAPI generator.
+
+export const TokenRequest = z.object({
+  password: z.string().min(1),
+  name: z.string().trim().min(1).max(80).describe("Shown in Settings so you can revoke it, e.g. 'iPhone'"),
+});
+
+export const TokenCreate = z.object({ name: z.string().trim().min(1).max(80) });
+
+export const ReadinessQuery = z.object({
+  date: DateParam.optional(),
+  days: z.coerce.number().int().min(7).max(180).default(42).describe("Length of the trend series"),
+});
+
+export const DateQuery = z.object({ date: DateParam.optional() });
+
+export const WindowQuery = z.object({
+  start: DateParam.optional().describe("Inclusive; defaults to a window ending at end"),
+  end: DateParam.optional().describe("Inclusive; defaults to today in the athlete's timezone"),
+});
+
+export const AnnotationPatch = AnnotationInput.omit({ owWorkoutId: true });
+
+export const AnswersBody = z.object({
+  answers: z.record(z.string(), z.union([z.number(), z.boolean(), z.string(), z.null()])).describe("Keyed by item key"),
+});
+
+export const SettingsPatch = z.record(z.string(), z.unknown()).describe("Deep-merge patch over the current settings");
