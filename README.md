@@ -226,7 +226,7 @@ docker exec athleteos-db psql -U athleteos -c "UPDATE app_user SET password_hash
 
 ## Phone: install as an app (PWA)
 
-Open `https://athleteos.dialedup.info` on your phone and add it to the home screen
+Open `https://athleteos.michaeldialphd.com` on your phone and add it to the home screen
 (iPhone: Share → Add to Home Screen; Android: the browser offers Install). Then
 Settings → Notifications → **Turn on reminders on this device**. A morning check-in
 reminder is sent once a day, only while a daily form is unanswered (time is set there).
@@ -246,7 +246,7 @@ can be revoked. The web app and the API share one domain layer, so they validate
 and behave identically.
 
 ```bash
-curl -s -H "Authorization: Bearer $TOKEN" https://athleteos.dialedup.info/api/v1/today
+curl -s -H "Authorization: Bearer $TOKEN" https://athleteos.michaeldialphd.com/api/v1/today
 ```
 
 ## How the numbers are made

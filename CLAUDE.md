@@ -10,7 +10,7 @@ data backend — never call vendor APIs directly.**
   `/opt/data/docker/athleteos/` on that host; this repo mirrors it.
 - **App port: 3020** (reserved — do not reuse; 3000/3011/3012/5555/6565/6569/
   7878/7879/8000/8082/8083/8191/9696 are taken).
-- Public URL: `https://athleteos.dialedup.info` (Cloudflare Tunnel → 192.168.8.222:3020).
+- Public URL: `https://athleteos.michaeldialphd.com` (Cloudflare Tunnel → 192.168.8.222:3020).
 - Open Wearables API base: `http://192.168.8.222:8000/api/v1` (docs at
   `/docs`, OpenAPI at `/openapi.json`). The deployed backend is the
   `dial203/open-wearables` fork.

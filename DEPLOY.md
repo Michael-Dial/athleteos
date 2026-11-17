@@ -18,7 +18,7 @@
      -f docker-compose.build.yml up -d --build`.
 - Open Wearables backend is NOT part of this stack: it runs separately at
   `http://192.168.8.222:8000` (API at `/api/v1`, OpenAPI at `/openapi.json`).
-- Public URL `https://athleteos.dialedup.info` → Cloudflare Tunnel →
+- Public URL `https://athleteos.michaeldialphd.com` → Cloudflare Tunnel →
   `http://192.168.8.222:3020` (tunnel 181a3b12-f681-4f69-a58c-b148eec426fe).
 - Postgres data lives in the named volume `postgres_data` (compose project
   `athleteos`), not a host bind.
