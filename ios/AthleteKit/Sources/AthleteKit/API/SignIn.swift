@@ -8,6 +8,13 @@ public struct GrantedToken: Codable, Hashable, Sendable {
     public let id: Double
     public let name: String
     public let createdAt: String
+
+    public init(token: String, id: Double, name: String, createdAt: String) {
+        self.token = token
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+    }
 }
 
 public struct EmailChallenge: Codable, Hashable, Sendable {

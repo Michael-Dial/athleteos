@@ -35,8 +35,14 @@ jobs:
         run: xcodegen
       - name: Build app (simulator, unsigned)
         working-directory: ios
+        # Every compiler error, from every file, not the last screen of output.
         run: |
           set -o pipefail
           xcodebuild -project AthleteOS.xcodeproj -scheme AthleteOS \
             -destination 'generic/platform=iOS Simulator' \
-            -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO build | tail -80
+            -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || {
+            grep -E "error:|note:" build.log | sort -u | head -200
+            tail -30 build.log
+            exit 1
+          }
+          tail -5 build.log

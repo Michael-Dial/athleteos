@@ -118,7 +118,7 @@ struct AccountsView: View {
 
 /// ASWebAuthenticationSession as an async call. It catches the athleteos:// return itself.
 @MainActor
-final class WebAuth: NSObject, ASWebAuthenticationPresentationContextProviding {
+final class WebAuth: NSObject, @preconcurrency ASWebAuthenticationPresentationContextProviding {
     private var session: ASWebAuthenticationSession?
 
     func start(url: URL, callbackScheme: String) async throws -> URL {
@@ -132,9 +132,8 @@ final class WebAuth: NSObject, ASWebAuthenticationPresentationContextProviding {
         }
     }
 
-    nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        MainActor.assumeIsolated {
-            UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first ?? ASPresentationAnchor()
-        }
+    /// The system asks on the main thread; the conformance is @preconcurrency so this can stay main-actor isolated.
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first ?? ASPresentationAnchor()
     }
 }

@@ -10,7 +10,7 @@ struct CheckInView: View {
     let date: String
     @Environment(\.dismiss) private var dismiss
 
-    struct Loaded { let def: QuestionnairesBySlugResponse; let existing: [String: JSONScalar] }
+    struct Loaded: Sendable { let def: QuestionnairesBySlugResponse; let existing: [String: JSONScalar] }
 
     var body: some View {
         LoadingView(load: load) { l in CheckInForm(client: client, def: l.def, date: date, initial: l.existing) { dismiss() } }

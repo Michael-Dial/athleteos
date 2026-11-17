@@ -9,7 +9,8 @@ enum Loadable<T> {
 }
 
 /// Loads with `load` on appear and on pull-to-refresh; shows a spinner only on the first load.
-struct LoadingView<T, Content: View>: View {
+/// T is Sendable because the load runs off the main actor and its result comes back to it.
+struct LoadingView<T: Sendable, Content: View>: View {
     let load: () async throws -> T
     @ViewBuilder let content: (T) -> Content
     @State private var state: Loadable<T> = .loading
