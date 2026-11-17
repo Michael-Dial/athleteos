@@ -417,23 +417,3 @@ export async function updateZones(fd: FormData) {
   }
   redirect(done("/settings/zones?saved=1"));
 }
-
-// ---------- security ----------
-
-export async function sendTestEmail() {
-  const { loginEmail: to, mailConfigured: ok, sendMail: send } = await import("@/lib/mail");
-  if (!ok()) redirect("/settings/security?error=" + encodeURIComponent("Email isn't set up: set SMTP_HOST, SMTP_FROM and LOGIN_EMAIL."));
-  try {
-    await send(to()!, "AthleteOS test email", "Email from AthleteOS is working. Sign-in codes will arrive like this.",
-      "<p style=\"font-family:system-ui,sans-serif\">Email from AthleteOS is working. Sign-in codes will arrive like this.</p>");
-  } catch (e) {
-    redirect("/settings/security?error=" + encodeURIComponent(`Sending failed: ${e instanceof Error ? e.message : String(e)}`));
-  }
-  redirect("/settings/security?sent=1");
-}
-
-export async function forgetAllDevices() {
-  const { forgetTrustedDevices } = await import("@/lib/login-challenge");
-  await forgetTrustedDevices();
-  redirect("/settings/security?forgot=1");
-}

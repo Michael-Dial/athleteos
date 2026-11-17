@@ -2,7 +2,7 @@ import { OwError, OwNotConfiguredError } from "../ow/client";
 
 /** User-facing message for a failed OW read; never blames the user. */
 export function errorMessage(e: unknown): string {
-  if (e instanceof OwNotConfiguredError) return "Open Wearables isn't configured yet. Add its URL and credentials to the app environment.";
+  if (e instanceof OwNotConfiguredError) return "Open Wearables isn't configured yet. Add its URL and an API key or developer login in Settings → Credentials.";
   if (e instanceof OwError) {
     if (e.status === 401 || e.status === 403) return "Open Wearables rejected AthleteOS's credentials. Check OW_API_KEY or the developer login in the environment.";
     if (e.status === 404) return "Open Wearables couldn't find this user. Re-link the athlete in Settings.";

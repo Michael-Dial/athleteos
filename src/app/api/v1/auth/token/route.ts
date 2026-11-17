@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
-import { checkPassword, loginCodeRequired, maskEmail } from "@/lib/auth";
+import { maskEmail } from "@/lib/auth";
+import { checkPassword, loginCodeRequired } from "@/lib/signin";
 import { issueToken } from "@/lib/api/tokens";
 import { ApiError, body, json, toErrorResponse } from "@/lib/api/http";
 import { q1 } from "@/lib/db";
@@ -20,15 +21,15 @@ export async function POST(req: NextRequest) {
       throw new ApiError(401, "bad_credentials", "Password did not match");
     }
     clearFailures(ip);
-    if (loginCodeRequired()) {
-      if (!mailConfigured()) throw new ApiError(503, "mail_not_configured", "Email codes are on but email isn't set up on the server");
+    if (await loginCodeRequired()) {
+      if (!(await mailConfigured())) throw new ApiError(503, "mail_not_configured", "Email codes are on but email isn't set up on the server");
       const { id, code } = await createChallenge("token", ip, { name: b.name });
       try {
         await sendLoginCode(code, { ip, purpose: "token", device: b.name });
       } catch {
         throw new ApiError(502, "mail_failed", "The sign-in code couldn't be emailed");
       }
-      return json({ challengeId: id, delivery: "email", destination: maskEmail(loginEmail()!), expiresInSec: 600 }, 202);
+      return json({ challengeId: id, delivery: "email", destination: maskEmail((await loginEmail())!), expiresInSec: 600 }, 202);
     }
     const athlete = await q1<{ id: number }>("SELECT id FROM athlete ORDER BY id LIMIT 1");
     if (!athlete) throw new ApiError(500, "no_athlete", "No athlete exists yet");

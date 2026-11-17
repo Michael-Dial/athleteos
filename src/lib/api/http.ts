@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { SESSION_COOKIE, authDisabled, verifySessionToken } from "../auth";
 import { q1 } from "../db";
+import { sessionEpoch } from "../session-epoch";
 import { addDays, diffDays, todayIn } from "../dates";
 import { loadCtx, type AppCtx } from "../domain/context";
 import { NotFoundError } from "../domain/writes";
@@ -46,7 +47,8 @@ async function authenticate(req: NextRequest): Promise<{ athleteId: number; auth
     if (!t) throw new ApiError(401, "unauthorized", "Token is invalid or revoked");
     return { athleteId: t.athleteId, auth: "token" };
   }
-  if (authDisabled() || (await verifySessionToken(req.cookies.get(SESSION_COOKIE)?.value))) {
+  const cookie = req.cookies.get(SESSION_COOKIE)?.value;
+  if (authDisabled() || (cookie && (await verifySessionToken(cookie, await sessionEpoch())))) {
     // Web sessions are single-user today: the first athlete.
     const a = await q1<{ id: number }>("SELECT id FROM athlete ORDER BY id LIMIT 1");
     if (!a) throw new ApiError(500, "no_athlete", "No athlete exists yet");

@@ -67,6 +67,15 @@ services:
       OW_EMAIL: ${OW_EMAIL:-}
       OW_PASSWORD: ${OW_PASSWORD:-}
       OW_USER_ID: ${OW_USER_ID:-}
+      # Optional fallbacks: these can all be entered in Settings → Credentials
+      # instead. LOGIN_2FA=off overrides the app setting (lockout recovery).
+      LOGIN_2FA: ${LOGIN_2FA:-}
+      LOGIN_EMAIL: ${LOGIN_EMAIL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       # Push reminders (installed PWA); generated on first use when empty.
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}

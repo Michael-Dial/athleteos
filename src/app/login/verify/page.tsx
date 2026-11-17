@@ -18,7 +18,7 @@ const ERRORS: Record<string, string> = {
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; sent?: string; wait?: string }> }) {
   const sp = await searchParams;
   if (!(await cookies()).get(CHALLENGE_COOKIE)) redirect("/login");
-  const to = loginEmail();
+  const to = await loginEmail();
   const next = sp.next ?? "/";
   return (
     <main className="auth-wrap">

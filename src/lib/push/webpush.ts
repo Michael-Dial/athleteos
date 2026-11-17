@@ -1,6 +1,7 @@
 import "server-only";
 import webpush from "web-push";
 import { q, q1 } from "../db";
+import { cred } from "../credentials";
 import { startOfWeek, todayIn } from "../dates";
 import { loadCtx } from "../domain/context";
 import { isDue, listDefs } from "../domain/questionnaires";
@@ -64,7 +65,7 @@ export interface PushMessage {
 /** Send to every subscription of an athlete; gone subscriptions are pruned. */
 export async function sendToAthlete(athleteId: number, msg: PushMessage): Promise<{ sent: number; failed: number }> {
   const keys = await vapidKeys();
-  const subject = process.env.VAPID_SUBJECT || "mailto:admin@localhost";
+  const subject = (await cred("VAPID_SUBJECT")) || "mailto:admin@localhost";
   const subs = await q<{ id: number; endpoint: string; p256dh: string; auth: string }>(
     "SELECT id, endpoint, p256dh, auth FROM push_subscription WHERE athlete_id = $1", [athleteId]);
   let sent = 0, failed = 0;

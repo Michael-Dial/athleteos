@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
-import { TRUST_COOKIE, checkPassword, loginCodeRequired, verifyTrustToken } from "@/lib/auth";
+import { TRUST_COOKIE, verifyTrustToken } from "@/lib/auth";
+import { checkPassword, loginCodeRequired } from "@/lib/signin";
 import { relRedirect } from "@/lib/http";
 import { clearFailures, clientIp, isLocked, recordFailure } from "@/lib/throttle";
 import { safeNext } from "@/lib/safe-next";
@@ -21,8 +22,8 @@ export async function POST(req: NextRequest) {
   clearFailures(ip);
 
   // Second factor: a trusted device skips it; otherwise email a code.
-  if (loginCodeRequired() && !(await verifyTrustToken(req.cookies.get(TRUST_COOKIE)?.value, await trustEpoch()))) {
-    if (!mailConfigured()) return back("mailconfig");
+  if ((await loginCodeRequired()) && !(await verifyTrustToken(req.cookies.get(TRUST_COOKIE)?.value, await trustEpoch()))) {
+    if (!(await mailConfigured())) return back("mailconfig");
     const { id, code } = await createChallenge("web", ip, { next });
     try {
       await sendLoginCode(code, { ip, purpose: "web" });

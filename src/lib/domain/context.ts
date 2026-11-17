@@ -35,7 +35,7 @@ export const loadCtx = cache(async (athleteId: number): Promise<AppCtx> => {
 
 async function build(athlete: Athlete): Promise<AppCtx> {
   const settings = await getSettings(athlete.id);
-  const configured = owConfigured();
+  const configured = await owConfigured();
   const ow: OwCtx | null =
     configured && athlete.ow_user_id
       ? { userId: athlete.ow_user_id, includeRedundantRelays: settings.ow.includeRedundantRelays, ttl: settings.ow.cacheTtlSeconds, historicalTtl: settings.ow.historicalCacheTtlSeconds }

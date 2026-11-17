@@ -1,12 +1,13 @@
 import type { NextRequest, NextResponse } from "next/server";
 import { CHALLENGE_COOKIE, SESSION_COOKIE, TRUST_COOKIE, createSessionToken, createTrustToken } from "./auth";
+import { sessionEpoch } from "./session-epoch";
 
 function secure(req: NextRequest): boolean {
   return req.nextUrl.protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
 }
 
 export async function setSession(res: NextResponse, req: NextRequest): Promise<void> {
-  const { token, maxAge } = await createSessionToken();
+  const { token, maxAge } = await createSessionToken(await sessionEpoch());
   res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: secure(req), path: "/", maxAge });
 }
 

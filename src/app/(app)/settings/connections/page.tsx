@@ -1,7 +1,9 @@
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
+import Link from "next/link";
 import { getConnections, getUser, listProviders, searchUsers, storedApplication } from "@/lib/ow/api";
+import { owConfig } from "@/lib/ow/client";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
 import { Card, Notice } from "@/components/ui";
@@ -22,13 +24,14 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
   const origin = `${proto}://${host}`;
   const tz = ctx.settings.timezone;
 
-  if (!ctx.owConfigured) {
+  const cfg = await owConfig();
+  if (!cfg) {
     return (
       <Card title="Open Wearables">
-        <Notice>Not configured. Set these in the app environment (docker-compose / .env) and restart:</Notice>
-        <pre className="mono mt-sm">{`OW_API_BASE=http://192.168.8.222:8000/api/v1
-OW_API_KEY=...            # preferred, or:
-OW_EMAIL=...  OW_PASSWORD=...   # developer login`}</pre>
+        <div className="stack">
+          <Notice>Not connected yet. Add the Open Wearables URL and an API key (or developer login) in Credentials.</Notice>
+          <div><Link className="btn primary" href="/settings/credentials">Open Credentials</Link></div>
+        </div>
       </Card>
     );
   }
@@ -57,8 +60,8 @@ OW_EMAIL=...  OW_PASSWORD=...   # developer login`}</pre>
       <div className="grid cols-2">
         <Card title="Backend">
           <dl className="kv">
-            <dt>API</dt><dd className="mono">{process.env.OW_API_BASE}</dd>
-            <dt>Auth</dt><dd>{process.env.OW_API_KEY ? "API key" : "Developer login"}</dd>
+            <dt>API</dt><dd className="mono">{cfg.base}</dd>
+            <dt>Auth</dt><dd>{cfg.apiKey ? "API key" : "Developer login"} · <Link href="/settings/credentials">change</Link></dd>
             <dt>Reachable</dt><dd>{providers.e ? <span style={{ color: "var(--bad)" }}>{providers.e}</span> : "Yes"}</dd>
             <dt>Application</dt><dd>{app.v ? <>{app.v.name} · <span className="mono">{app.v.app_id}</span></> : "Not set up"}</dd>
           </dl>

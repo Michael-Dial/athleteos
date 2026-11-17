@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, authDisabled, verifySessionToken } from "./lib/auth";
 import { publicUrl } from "./lib/http";
+import { sessionEpoch } from "./lib/session-epoch";
 
 // Everything except the login page, the healthcheck and static assets requires
 // a session: the app is reachable from the public tunnel.
 export async function proxy(req: NextRequest) {
   if (authDisabled()) return NextResponse.next();
-  const ok = await verifySessionToken(req.cookies.get(SESSION_COOKIE)?.value);
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
+  // The epoch lookup is skipped when there is no cookie at all.
+  const ok = Boolean(token) && (await verifySessionToken(token, await sessionEpoch()));
   if (ok) return NextResponse.next();
   if (req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

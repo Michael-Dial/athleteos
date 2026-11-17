@@ -1,5 +1,5 @@
-// Single-user session: a password from the environment and an HMAC-signed
-// cookie. Uses Web Crypto so the same code runs in proxy.ts and route handlers.
+// Single-user session: an HMAC-signed cookie. Uses Web Crypto so the same code
+// runs in proxy.ts and route handlers. Password checks live in signin.ts.
 
 export const SESSION_COOKIE = "aos_session";
 const SESSION_DAYS = 30;
@@ -30,27 +30,28 @@ function timingSafeEqual(a: string, b: string): boolean {
   return r === 0;
 }
 
-export async function createSessionToken(now = Date.now()): Promise<{ token: string; maxAge: number }> {
+/**
+ * Session tokens carry the session epoch; bumping it (password change, "sign
+ * out other devices") ends every session issued before. v1 tokens predate the
+ * epoch and are honoured only while it has never been bumped.
+ */
+export async function createSessionToken(epoch: number, now = Date.now()): Promise<{ token: string; maxAge: number }> {
   const exp = now + SESSION_DAYS * 86400_000;
-  const payload = `v1.${exp}`;
+  const payload = `v2.${exp}.${epoch}`;
   return { token: `${payload}.${await hmac(payload)}`, maxAge: SESSION_DAYS * 86400 };
 }
 
-export async function verifySessionToken(token: string | undefined, now = Date.now()): Promise<boolean> {
+export async function verifySessionToken(token: string | undefined, epoch: number, now = Date.now()): Promise<boolean> {
   if (!token) return false;
   const parts = token.split(".");
-  if (parts.length !== 3 || parts[0] !== "v1") return false;
+  if (parts[0] === "v1" && parts.length === 3) {
+    if (epoch !== 0) return false;
+  } else if (parts[0] !== "v2" || parts.length !== 4 || Number(parts[2]) !== epoch) {
+    return false;
+  }
   const exp = Number(parts[1]);
   if (!Number.isFinite(exp) || exp < now) return false;
-  return timingSafeEqual(parts[2], await hmac(`${parts[0]}.${parts[1]}`));
-}
-
-export async function checkPassword(candidate: string): Promise<boolean> {
-  const expected = process.env.ATHLETEOS_PASSWORD;
-  if (!expected) return false;
-  // Compare digests so the comparison length doesn't leak the password length.
-  const [a, b] = await Promise.all([hmac(`pw:${candidate}`), hmac(`pw:${expected}`)]);
-  return timingSafeEqual(a, b);
+  return timingSafeEqual(parts[parts.length - 1], await hmac(parts.slice(0, -1).join(".")));
 }
 
 // ---------- email sign-in codes ----------
@@ -58,11 +59,6 @@ export async function checkPassword(candidate: string): Promise<boolean> {
 export const TRUST_COOKIE = "aos_trust";
 export const CHALLENGE_COOKIE = "aos_challenge";
 export const TRUST_DAYS = 30;
-
-/** Second factor is opt-in: LOGIN_2FA=email turns on emailed sign-in codes. */
-export function loginCodeRequired(): boolean {
-  return process.env.LOGIN_2FA === "email";
-}
 
 /**
  * A device that completed a code is trusted for TRUST_DAYS. The token carries
