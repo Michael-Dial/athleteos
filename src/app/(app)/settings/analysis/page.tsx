@@ -37,8 +37,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <label className="field">Timezone<input name="timezone" defaultValue={s.timezone} autoCapitalize="off" spellCheck={false} /><span className="help">Sets where each calendar day starts and ends, e.g. America/New_York</span></label>
           </div>
           {/* Data-plumbing knobs most people never touch, kept out of the way. */}
-          <details className="mt">
-            <summary className="small">Advanced</summary>
+          <details className="adv mt">
+            <summary className="small">Advanced: caching and relays</summary>
             <div className="form-grid mt-sm">
               <N name="ow.cacheTtlSeconds" label="Cache: recent data (s)" value={s.ow.cacheTtlSeconds} min={0} max={3600} help="0 disables caching" />
               <N name="ow.historicalCacheTtlSeconds" label="Cache: settled months (s)" value={s.ow.historicalCacheTtlSeconds} min={0} max={86400} />

@@ -46,7 +46,7 @@ export function TabBar() {
     <nav className="tabbar" aria-label="Main">
       {TABS.map(({ href, label, icon: Icon }) => {
         const active = href === "/more" ? inMore : isActive(path, href);
-        return <Link key={href} href={href} aria-current={active ? "page" : undefined}><Icon size={22} />{label}</Link>;
+        return <Link key={href} href={href} aria-label={label} aria-current={active ? "page" : undefined}><Icon size={22} /><span className="tab-label">{label}</span></Link>;
       })}
     </nav>
   );

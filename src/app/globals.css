@@ -226,7 +226,7 @@ textarea.code { font-family: var(--mono); font-size: 12px; min-height: 420px; }
 input[type="checkbox"], input[type="radio"] { width: auto; min-height: 0; accent-color: var(--accent); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 .field-error { color: var(--bad); font-size: 12px; font-weight: 500; }
-.form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); }
 .form-grid .wide { grid-column: 1 / -1; }
 
 .btn {
@@ -380,19 +380,23 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 
 /* Links inside running text carry an underline, not just a colour. */
-:is(p, li, .notice, .help, .sub, dd) a:not(.btn) { text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+/* Prose only: list rows, chips and segmented controls are links too but are
+   clearly controls, so they stay plain. */
+:is(p, .notice, .help, .sub, dd, .steps li) a:not(.btn) { text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
 
 /* ---------- tables become cards on phones ----------
    components/responsive-tables.tsx copies each column header into its cells'
    data-label, so a row reads as "label: value" pairs without sideways scroll. */
 @media (max-width: 600px) {
-  table.t:not(.keep-table) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  /* Headers are repeated in each cell's label (read by VoiceOver too), so the header row can go. */
+  table.t:not(.keep-table) thead { display: none; }
   table.t:not(.keep-table), table.t:not(.keep-table) tbody { display: block; }
   table.t:not(.keep-table) tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
   table.t:not(.keep-table) tr:last-child { border-bottom: 0; }
   table.t:not(.keep-table) td { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 3px 0; border: 0; text-align: right; }
   table.t:not(.keep-table) td::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 600; text-align: left; flex: none; max-width: 50%; }
-  table.t:not(.keep-table) td:first-child { justify-content: flex-start; text-align: left; font-weight: 600; font-size: 14px; padding-bottom: 4px; }
+  /* The first cell is the card's title and may hold a name, a tag and a description: let it flow as a block. */
+  table.t:not(.keep-table) td:first-child { display: block; text-align: left; font-weight: 600; font-size: 14px; padding-bottom: 6px; }
   table.t:not(.keep-table) td:first-child::before, table.t:not(.keep-table) td:not([data-label])::before, table.t:not(.keep-table) td[data-label=""]::before { content: none; }
   table.t:not(.keep-table) td:empty { display: none; }
   table.t:not(.keep-table) td.num { justify-content: space-between; }
@@ -434,3 +438,32 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; line-height: 1.45; }
 .connect-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 0; }
 .connect-row + .connect-row { border-top: 1px solid var(--line); }
+
+details.adv > summary { cursor: pointer; list-style: none; color: var(--accent-text); font-weight: 500; }
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary::before { content: "▸ "; }
+details.adv[open] > summary::before { content: "▾ "; }
+
+/* Rating picker in session lists: compact on desktop, full size on phones. */
+.rate-select { width: 64px; min-height: 28px; padding: 2px 6px; font-size: 13px; }
+
+/* ---------- small screens and large text ----------
+   At the largest text sizes the layout is only ~190 pt wide: graphics shrink
+   to fit, buttons wrap their labels, and tab labels give way to icons (the
+   links keep their names for VoiceOver). */
+main svg { max-width: 100%; }
+main svg:not([width]) { height: auto; }
+.night .row { flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .rate-select { width: 72px; min-height: 44px; font-size: 16px; }
+  .brand { min-height: 44px; }
+  .banner a, a.small, .pillar .name, td a, .card-head a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+@media (max-width: 360px) {
+  .btn { white-space: normal; text-align: center; }
+  .onboard-top { flex-wrap: wrap; }
+}
+@media (max-width: 300px) {
+  .tabbar a .tab-label { display: none; }
+  .tabbar a { min-height: 52px; }
+}

@@ -41,12 +41,12 @@ export function QuestionnaireForm({ slug, date, items, initial, continueHref, hi
               </div>
             )}
             {it.type === "choice" && (
-              <select id={id} name={`a_${it.key}`} defaultValue={v(it.key)} style={{ maxWidth: 360 }}>
+              <select id={id} name={`a_${it.key}`} aria-label={it.label} defaultValue={v(it.key)} style={{ maxWidth: 360 }}>
                 <option value="">Choose…</option>
                 {it.options!.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             )}
-            {it.type === "text" && <textarea id={id} name={`a_${it.key}`} defaultValue={v(it.key)} style={{ maxWidth: 640 }} />}
+            {it.type === "text" && <textarea id={id} name={`a_${it.key}`} aria-label={it.label} defaultValue={v(it.key)} style={{ maxWidth: 640 }} />}
             {err && <p id={`${id}-err`} className="field-error" style={{ marginTop: 4 }}>{err}</p>}
           </fieldset>
         );
