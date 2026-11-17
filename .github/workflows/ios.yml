@@ -1,0 +1,42 @@
+name: iOS
+
+# Builds the iPhone app and runs AthleteKit's tests. A public repository, so
+# GitHub's hosted macOS runner (org CI policy rule 3).
+on:
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  push:
+    branches: [main]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: AthleteKit tests and app build
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 16
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)" && xcodebuild -version
+      - name: AthleteKit tests
+        working-directory: ios/AthleteKit
+        run: swift test
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen
+      - name: Build app (simulator, unsigned)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -project AthleteOS.xcodeproj -scheme AthleteOS \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO build | tail -80

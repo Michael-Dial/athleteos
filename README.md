@@ -160,6 +160,23 @@ for a token.
 docker exec athleteos-db psql -U athleteos -c "DELETE FROM credential WHERE name = 'APP_PASSWORD_HASH'"
 ```
 
+## iPhone app
+
+`ios/` holds the native app (SwiftUI, iOS 18). Invited athletes and the admin
+use it for Today, Training, Plan, Trends, check-ins and connected accounts; it
+also turns on Apple Health sync, which runs OW's iOS SDK and reaches OW through
+this server's `/ow/api/v1` proxy.
+
+- `ios/project.yml` is the XcodeGen spec (`cd ios && xcodegen`); the release
+  pipeline signs and uploads from it.
+- `ios/AthleteKit` is the testable core: the API client, session, invite codes
+  and the phone sync rules (`swift test` on a Mac). Its models in
+  `Generated/API.swift` are generated from the server's route table; after an
+  API change run `cd src && UPDATE_SWIFT=1 npx vitest run lib/api/swift-gen`
+  and commit `ios/`, or the server's unit tests fail.
+- CI builds the app and runs AthleteKit's tests on a hosted macOS runner
+  (`.github/workflows/ios.yml`).
+
 ## Phone: install as an app (PWA)
 
 Open `https://athleteos.dialedup.info` on your phone and add it to the home screen

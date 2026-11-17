@@ -1,0 +1,90 @@
+# The AthleteOS iPhone app. XcodeGen writes AthleteOS.xcodeproj from this
+# file; the project is not committed. The release pipeline
+# (Michael-Dial/app-store-release) runs XcodeGen when a repo has exactly one
+# project.yml, then signs and uploads.
+#
+#   cd ios && xcodegen && open AthleteOS.xcodeproj
+#
+# AthleteKit's API models are generated from the server's route table
+# (src/lib/api/swift-gen.ts); the server's unit tests fail when they drift.
+name: AthleteOS
+options:
+  bundleIdPrefix: info.dialedup
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+packages:
+  AthleteKit:
+    path: AthleteKit
+  # OW's iOS SDK: the lab's fork, pinned to the commit the HPC Validation Hub
+  # ships (reports sdkVersion 0.17.0). It reaches OW through this server's
+  # /ow/api/v1 proxy, whose allowlist (src/lib/ow/sdk-proxy.ts) names exactly
+  # the paths this commit calls: check them before moving the pin.
+  OpenWearablesHealthSDK:
+    url: https://github.com/Michael-Dial/open_wearables_ios_sdk
+    revision: 915af2758bfb790b5dcd3f695400df895a1285d0
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  AthleteOS:
+    type: application
+    platform: iOS
+    sources: [AthleteOS]
+    dependencies:
+      - package: AthleteKit
+      - package: OpenWearablesHealthSDK
+    entitlements:
+      path: AthleteOS/AthleteOS.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        com.apple.developer.healthkit.background-delivery: true
+    info:
+      path: AthleteOS/Info.plist
+      properties:
+        CFBundleDisplayName: AthleteOS
+        # From the build settings, so the release pipeline's CURRENT_PROJECT_VERSION is the build number.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        # athleteos://invite/CODE opens the app on the sign-in screen with the code filled in. Provider
+        # sign-in returns on the same scheme through ASWebAuthenticationSession, which catches it first.
+        CFBundleURLTypes:
+          - CFBundleURLName: info.dialedup.athleteos
+            CFBundleURLSchemes: [athleteos]
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        # A server run at home during development is plain http on the local network.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSHealthShareUsageDescription: AthleteOS reads your workouts, sleep, heart rate, heart-rate variability, activity and body measurements from Apple Health and sends them to your AthleteOS server, so your dashboard and readiness include them.
+        NSHealthUpdateUsageDescription: AthleteOS does not write to Apple Health.
+        # OW's SDK: background refresh and processing tasks deliver Health samples while the app is closed.
+        UIBackgroundModes: [fetch, processing]
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.openwearables.healthsdk.task.refresh
+          - com.openwearables.healthsdk.task.process
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: info.dialedup.athleteos
+        # iPhone only: an iPad holds the iPhone's Health samples by iCloud sync and must never relay them twice.
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  AthleteOS:
+    build:
+      targets:
+        AthleteOS: all
+    run:
+      config: Debug
+    archive:
+      config: Release
