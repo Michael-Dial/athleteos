@@ -203,4 +203,20 @@ CREATE TABLE auth_challenge (
 CREATE INDEX auth_challenge_expires ON auth_challenge (expires_at);
 `,
   },
+  {
+    version: 5,
+    name: "credential store",
+    sql: `
+-- Credentials entered in Settings. Each value is AES-256-GCM sealed with a key
+-- derived from SESSION_SECRET, so a database dump alone doesn't reveal them.
+CREATE TABLE credential (
+  name        text PRIMARY KEY,
+  sealed      text NOT NULL,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+-- 'setup' codes confirm the address before emailed sign-in codes are switched on.
+ALTER TABLE auth_challenge DROP CONSTRAINT auth_challenge_purpose_check;
+ALTER TABLE auth_challenge ADD CONSTRAINT auth_challenge_purpose_check CHECK (purpose IN ('web', 'token', 'setup'));
+`,
+  },
 ];

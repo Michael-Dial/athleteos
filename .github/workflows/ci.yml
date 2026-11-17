@@ -51,8 +51,10 @@ jobs:
 
       - name: Validate compose file
         working-directory: .
+        # docker-compose.yml requires SESSION_SECRET (":?"), which .env.example
+        # leaves blank on purpose; give the throwaway .env a dummy one.
         run: |
-          cp .env.example .env
+          sed 's/^SESSION_SECRET=.*/SESSION_SECRET=ci-only-not-a-secret-0123456789abcdef/' .env.example > .env
           docker compose config --quiet
 
       - name: Build image

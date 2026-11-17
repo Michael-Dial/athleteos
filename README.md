@@ -65,21 +65,26 @@ every table is already keyed by athlete.
 
 ## Deploy (homelab)
 
+Merging to `main` is the deploy step (CI publishes the image; see DEPLOY.md). For a
+first install or a local source build:
+
 ```bash
 cd /opt/data/docker/athleteos
-cp .env.example .env   # set ATHLETEOS_PASSWORD, SESSION_SECRET, OW_API_KEY (or OW_EMAIL/OW_PASSWORD)
-docker compose up -d --build
+cp .env.example .env   # set ATHLETEOS_PASSWORD and SESSION_SECRET; everything else can be entered in the app
+docker compose up -d
 curl -s localhost:3020/api/health   # {"status":"ok"}
 ```
 
 On first start the app migrates Postgres and seeds one athlete plus two questionnaires
 (McLean-style morning wellness, weekly check-in). Then, in the app:
 
-1. **Settings → Open Wearables**: link your OW user (search by name) and, if you want,
+1. **Settings → Credentials**: Open Wearables URL and API key (or developer login),
+   SMTP for emailed codes, push contact. Each is tested before it is saved.
+2. **Settings → Open Wearables**: link your OW user (search by name) and, if you want,
    create the AthleteOS application and connect providers.
-2. **Settings → Device priority**: rank devices per metric (HRV, RHR, sleep, respiratory rate,
+3. **Settings → Device priority**: rank devices per metric (HRV, RHR, sleep, respiratory rate,
    SpO₂, workouts). Unranked devices fall back to the one with the most data and are labelled.
-3. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights.
+4. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights.
 
 ## Dashboards
 
@@ -96,17 +101,56 @@ On first start the app migrates Postgres and seeds one athlete plus two question
 
 Every dashboard is also an API endpoint (`/review`, `/trends`, `/zones`, `/intensity`, `/illness`, `/coverage`).
 
+## Credentials in the app
+
+Settings → Credentials holds the Open Wearables URL and API key (or developer
+login), the SMTP settings and the push contact. Settings → Security holds the
+sign-in password and emailed codes. Nothing needs a restart.
+
+- **Stored sealed.** Values are AES-256-GCM encrypted in Postgres with a key
+  derived from `SESSION_SECRET`, so a database dump alone doesn't reveal them.
+  The OW application secret is kept the same way. The sign-in password is kept
+  only as a scrypt hash. Secrets are write-only: after saving, the page shows at
+  most the last four characters of a key.
+- **App over `.env`.** A value saved in the app wins. Remove it and the `.env`
+  value applies again, so an existing `.env` keeps working unchanged. Only
+  `SESSION_SECRET`, the first `ATHLETEOS_PASSWORD` and the database password have
+  to live in `.env`.
+- **Tested before saving.** Open Wearables settings are tried with one signed-in
+  request, and SMTP with a login to the mail server (nothing is sent). Settings
+  that fail aren't stored unless you tick "Save without testing".
+- **Your password guards every change.** A stolen session cookie can't point the
+  stored keys at another server.
+- **Changing `SESSION_SECRET`** makes saved values unreadable. The page says so,
+  and sign-in falls back to `ATHLETEOS_PASSWORD`.
+
 ## Sign-in codes by email (optional second factor)
 
-Set `LOGIN_2FA=email`, `LOGIN_EMAIL` and the `SMTP_*` settings in `.env` (see
-`.env.example`; Gmail works with an app password) and restart. Signing in then
-needs the password plus a 6-digit code emailed to `LOGIN_EMAIL`. Codes expire in
-10 minutes and allow 5 tries, and only a keyed hash of each code is stored. A
-device you choose to trust skips the code for 30 days. Settings → Security sends a
-test email and can forget every trusted device. Native apps get the same check:
-`POST /api/v1/auth/token` returns a `challengeId`, then `POST
-/api/v1/auth/token/verify` exchanges the emailed code for a token. Locked out?
-Remove `LOGIN_2FA` from `.env` and restart.
+Set up email in Settings → Credentials. Then turn codes on in Settings → Security:
+a confirmation code goes to the address first, so a typo can't lock you out.
+Signing in then needs the password plus a 6-digit code. Codes expire in 10 minutes
+and allow 5 tries, and only a keyed hash of each code is stored. A device you
+choose to trust skips the code for 30 days.
+
+Settings → Security also covers the rest:
+- change the password, which signs out every other device;
+- sign out other devices;
+- forget every trusted device.
+
+Native apps get the same check: `POST /api/v1/auth/token` returns a
+`challengeId`, then `POST /api/v1/auth/token/verify` exchanges the emailed code
+for a token.
+
+**Locked out?**
+- If email broke while codes were on, set `LOGIN_2FA=off` in the server
+  environment (Portainer stack env or `.env`) and restart. It overrides the app
+  setting.
+- If you forgot a password you set in the app, remove the stored hash so
+  `ATHLETEOS_PASSWORD` applies again:
+
+```bash
+docker exec athleteos-db psql -U athleteos -c "DELETE FROM credential WHERE name = 'APP_PASSWORD_HASH'"
+```
 
 ## Phone: install as an app (PWA)
 
@@ -155,8 +199,8 @@ npm install
 npm test            # unit tests (the live API contract test is skipped without a server)
 API_BASE=http://127.0.0.1:3020 API_PASSWORD=... npx vitest run lib/api/contract.test.ts
 npm run typecheck
-DATABASE_URL=postgresql://... OW_API_BASE=... OW_API_KEY=... \
-  SESSION_SECRET=$(openssl rand -base64 48) ATHLETEOS_PASSWORD=dev npm run dev
+DATABASE_URL=postgresql://... SESSION_SECRET=$(openssl rand -base64 48) ATHLETEOS_PASSWORD=dev npm run dev
+# then add Open Wearables in Settings → Credentials (or set OW_API_BASE / OW_API_KEY)
 ```
 
 Layout: `src/lib/ow` (Open Wearables client and fetchers), `src/lib/stats` (pure analysis),

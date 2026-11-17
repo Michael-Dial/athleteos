@@ -6,8 +6,8 @@ export function SetupBanner({ ctx }: { ctx: AppCtx }) {
   if (!ctx.owConfigured) {
     return (
       <Notice>
-        Open Wearables isn&apos;t configured, so device data is hidden. Set <code>OW_API_BASE</code> and either <code>OW_API_KEY</code> or{" "}
-        <code>OW_EMAIL</code>/<code>OW_PASSWORD</code> in the app environment, then restart. Plan, history and questionnaires work without it.
+        Open Wearables isn&apos;t connected, so device data is hidden. <Link href="/settings/credentials">Add its URL and API key</Link>.
+        Plan, history and questionnaires work without it.
       </Notice>
     );
   }

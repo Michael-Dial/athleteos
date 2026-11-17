@@ -12,14 +12,17 @@ function newCode(): string {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
+/** web/token: second factor at sign-in. setup: confirms an address before codes are switched on. */
+export type ChallengePurpose = "web" | "token" | "setup";
+
 export interface Challenge {
   id: string;
-  purpose: "web" | "token";
+  purpose: ChallengePurpose;
   meta: Record<string, string>;
 }
 
 /** Start a challenge; returns the plaintext code for sending (never stored). */
-export async function createChallenge(purpose: "web" | "token", ip: string, meta: Record<string, string>): Promise<{ id: string; code: string }> {
+export async function createChallenge(purpose: ChallengePurpose, ip: string, meta: Record<string, string>): Promise<{ id: string; code: string }> {
   // Opportunistic cleanup keeps the table to recent rows.
   await q("DELETE FROM auth_challenge WHERE expires_at < now() - interval '1 day'");
   const row = await q1<{ id: string }>(
@@ -36,9 +39,9 @@ export type VerifyResult = { ok: true; challenge: Challenge } | { ok: false; rea
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
-export async function verifyChallenge(id: string | undefined, code: string, purpose: "web" | "token"): Promise<VerifyResult> {
+export async function verifyChallenge(id: string | undefined, code: string, purpose: ChallengePurpose): Promise<VerifyResult> {
   if (!id || !UUID.test(id)) return { ok: false, reason: "unknown" };
-  const c = await q1<{ id: string; purpose: "web" | "token"; code_hash: string; expired: boolean; attempts: number; consumed: boolean; meta: Record<string, string> }>(
+  const c = await q1<{ id: string; purpose: ChallengePurpose; code_hash: string; expired: boolean; attempts: number; consumed: boolean; meta: Record<string, string> }>(
     `SELECT id, purpose, code_hash, expires_at < now() AS expired, attempts, consumed_at IS NOT NULL AS consumed, meta
      FROM auth_challenge WHERE id = $1`, [id]);
   if (!c || c.purpose !== purpose || c.consumed) return { ok: false, reason: "unknown" };
@@ -61,7 +64,7 @@ export async function verifyChallenge(id: string | undefined, code: string, purp
 export type ResendResult = { ok: true; code: string; meta: Record<string, string> } | { ok: false; reason: "unknown" | "too_soon" | "too_many"; waitSec?: number };
 
 /** New code for a live challenge (the old one stops working); rate limited. */
-export async function resendChallenge(id: string | undefined, purpose: "web" | "token"): Promise<ResendResult> {
+export async function resendChallenge(id: string | undefined, purpose: ChallengePurpose): Promise<ResendResult> {
   if (!id || !UUID.test(id)) return { ok: false, reason: "unknown" };
   const c = await q1<{ sends: number; since: number; meta: Record<string, string> }>(
     `SELECT sends, EXTRACT(EPOCH FROM now() - last_sent_at)::int AS since, meta FROM auth_challenge

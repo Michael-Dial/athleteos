@@ -57,4 +57,11 @@ data backend — never call vendor APIs directly.**
 - HRV aggregates computed on log(RMSSD); display both raw and log-derived.
 - Keep every tuning knob (lag tolerance, device priority, metric windows) in
   settings, not hardcoded.
+- Credentials and secrets (OW, SMTP, sign-in, and any future integration) must
+  be editable in Settings → Credentials, not only via `.env`. Add new ones to
+  the registry in `src/lib/credentials.ts` and read them with `cred()`. Store
+  them sealed (`lib/vault.ts`) and never send them back to the browser. Test
+  them before saving, and require the current password to change them. `.env`
+  is the fallback, plus the bootstrap-only `SESSION_SECRET`, first
+  `ATHLETEOS_PASSWORD` and `DATABASE_URL`.
 - Comments explain why; no TODO left in a merged commit.

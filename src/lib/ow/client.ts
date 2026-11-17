@@ -1,4 +1,6 @@
 import "server-only";
+import { createHash } from "node:crypto";
+import { cred } from "../credentials";
 
 // Thin, strict HTTP client for the Open Wearables API. AthleteOS never talks to
 // vendor APIs; everything device-related goes through here.
@@ -16,7 +18,7 @@ export class OwError extends Error {
 }
 
 export class OwNotConfiguredError extends Error {
-  constructor(message = "Open Wearables is not configured: set OW_API_BASE and OW_API_KEY or OW_EMAIL/OW_PASSWORD.") {
+  constructor(message = "Open Wearables is not configured: add its URL and an API key or developer login in Settings → Credentials.") {
     super(message);
     this.name = "OwNotConfiguredError";
   }
@@ -43,14 +45,28 @@ const GET_RETRIES = 2;
 type Scalar = string | number | boolean | null | undefined;
 export type Query = Record<string, Scalar | Scalar[]>;
 
-export function owBase(): string {
-  const base = process.env.OW_API_BASE;
-  if (!base) throw new OwNotConfiguredError();
-  return base.replace(/\/+$/, "");
+export interface OwConfig {
+  base: string;
+  apiKey?: string;
+  email?: string;
+  password?: string;
 }
 
-export function owConfigured(): boolean {
-  return Boolean(process.env.OW_API_BASE && (process.env.OW_API_KEY || (process.env.OW_EMAIL && process.env.OW_PASSWORD)));
+/** Credentials as entered in Settings, falling back to the environment. */
+export async function owConfig(): Promise<OwConfig | null> {
+  const [base, apiKey, email, password] = await Promise.all([cred("OW_API_BASE"), cred("OW_API_KEY"), cred("OW_EMAIL"), cred("OW_PASSWORD")]);
+  if (!base || !(apiKey || (email && password))) return null;
+  return { base: base.replace(/\/+$/, ""), apiKey, email, password };
+}
+
+async function requireConfig(): Promise<OwConfig> {
+  const c = await owConfig();
+  if (!c) throw new OwNotConfiguredError();
+  return c;
+}
+
+export async function owConfigured(): Promise<boolean> {
+  return (await owConfig()) !== null;
 }
 
 export function buildQuery(params: Query = {}): string {
@@ -67,18 +83,23 @@ export function buildQuery(params: Query = {}): string {
   return s ? `?${s}` : "";
 }
 
-const g = globalThis as unknown as { __owToken?: { token: string; exp: number } };
+const g = globalThis as unknown as { __owToken?: { key: string; token: string; exp: number } };
 
-async function login(force = false): Promise<string> {
+// The cached token is keyed to the credentials it came from, so saving new
+// ones in Settings takes effect on the next request.
+function tokenKey(c: OwConfig): string {
+  return createHash("sha256").update(`${c.base}\n${c.email}\n${c.password}`).digest("base64url");
+}
+
+async function login(c: OwConfig, force = false): Promise<string> {
   const now = Date.now();
-  if (!force && g.__owToken && g.__owToken.exp > now) return g.__owToken.token;
-  const email = process.env.OW_EMAIL;
-  const password = process.env.OW_PASSWORD;
-  if (!email || !password) throw new OwNotConfiguredError();
-  const res = await fetch(`${owBase()}/auth/login`, {
+  const key = tokenKey(c);
+  if (!force && g.__owToken && g.__owToken.key === key && g.__owToken.exp > now) return g.__owToken.token;
+  if (!c.email || !c.password) throw new OwNotConfiguredError();
+  const res = await fetch(`${c.base}/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ username: email, password }).toString(),
+    body: new URLSearchParams({ username: c.email, password: c.password }).toString(),
     signal: AbortSignal.timeout(TIMEOUT_MS),
     cache: "no-store",
   });
@@ -86,15 +107,44 @@ async function login(force = false): Promise<string> {
   const body = (await res.json()) as { access_token: string; expires_in?: number | null };
   // Refresh a minute early so a token never expires mid-pagination.
   const ttl = Math.max(60, (body.expires_in ?? 1800) - 60) * 1000;
-  g.__owToken = { token: body.access_token, exp: now + ttl };
+  g.__owToken = { key, token: body.access_token, exp: now + ttl };
   return body.access_token;
 }
 
-async function authHeaders(force = false): Promise<Record<string, string>> {
+async function authHeaders(c: OwConfig, force = false): Promise<Record<string, string>> {
   // An API key is preferred for server-to-server calls: no expiry, no login
   // round-trip. Developer login is the fallback the brief specifies.
-  if (process.env.OW_API_KEY) return { "X-Open-Wearables-API-Key": process.env.OW_API_KEY };
-  return { authorization: `Bearer ${await login(force)}` };
+  if (c.apiKey) return { "X-Open-Wearables-API-Key": c.apiKey };
+  return { authorization: `Bearer ${await login(c, force)}` };
+}
+
+/**
+ * Try a configuration before it is saved: one authenticated request, nothing
+ * kept. Returns null when it works, otherwise what went wrong.
+ */
+export async function probeOw(c: OwConfig): Promise<string | null> {
+  try {
+    if (c.apiKey) {
+      // Any authenticated read proves the key; the row itself is discarded.
+      const res = await fetch(`${c.base}/users${buildQuery({ limit: 1 })}`, {
+        headers: { accept: "application/json", "X-Open-Wearables-API-Key": c.apiKey },
+        signal: AbortSignal.timeout(20_000), cache: "no-store",
+      });
+      if (!res.ok) return (await toError(res, "/users")).message;
+    }
+    if (c.email && c.password) {
+      const token = await login(c, true);
+      const res = await fetch(`${c.base}/auth/me`, {
+        headers: { accept: "application/json", authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(20_000), cache: "no-store",
+      });
+      if (!res.ok) return (await toError(res, "/auth/me")).message;
+    }
+    return null;
+  } catch (e) {
+    const cause = (e as { cause?: { code?: string; message?: string } }).cause;
+    return `Couldn't reach ${c.base}: ${cause?.code ?? cause?.message ?? (e instanceof Error ? e.message : String(e))}`;
+  }
 }
 
 async function toError(res: Response, path: string): Promise<OwError> {
@@ -112,17 +162,18 @@ async function toError(res: Response, path: string): Promise<OwError> {
 }
 
 export async function owRaw(path: string, init: RequestInit & { query?: Query } = {}): Promise<Response> {
-  const url = `${owBase()}${path}${buildQuery(init.query)}`;
+  const c = await requireConfig();
+  const url = `${c.base}${path}${buildQuery(init.query)}`;
   const doFetch = async (force: boolean) =>
     fetch(url, {
       ...init,
-      headers: { accept: "application/json", ...(init.headers ?? {}), ...(await authHeaders(force)) },
+      headers: { accept: "application/json", ...(init.headers ?? {}), ...(await authHeaders(c, force)) },
       signal: init.signal ?? AbortSignal.timeout(TIMEOUT_MS),
       cache: "no-store",
     });
   let res = await doFetch(false);
   // A bearer token can be revoked server-side before its expiry; retry once.
-  if (res.status === 401 && !process.env.OW_API_KEY) res = await doFetch(true);
+  if (res.status === 401 && !c.apiKey) res = await doFetch(true);
   return res;
 }
 

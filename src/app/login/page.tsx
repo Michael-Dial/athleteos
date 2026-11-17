@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 import { IconLogo } from "@/components/icons";
+import { passwordSource } from "@/lib/signin";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
   "1": "That password didn't match. Try again.",
   locked: "Too many attempts. Wait 15 minutes, then try again.",
-  mailconfig: "Email codes are switched on but email isn't set up on the server (SMTP_HOST, SMTP_FROM, LOGIN_EMAIL). Set them, or turn LOGIN_2FA off, then restart.",
-  mailfail: "The sign-in code couldn't be emailed. Check the server's SMTP settings and logs, then try again.",
+  mailconfig: "Email codes are on but email isn't set up, so no code can be sent. To get back in, set LOGIN_2FA=off in the server environment and restart.",
+  mailfail: "The sign-in code couldn't be emailed. Try again shortly. If email stays broken, set LOGIN_2FA=off in the server environment and restart.",
   codeexpired: "That code expired. Sign in again for a new one.",
   codelocked: "Too many wrong codes. Sign in again for a new one.",
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const { error, next } = await searchParams;
-  const configured = Boolean(process.env.ATHLETEOS_PASSWORD);
+  const configured = (await passwordSource()) !== null;
   return (
     <main className="auth-wrap">
       <form action="/api/auth/login" method="post" className="card auth-card stack-lg">

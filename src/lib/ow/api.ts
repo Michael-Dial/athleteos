@@ -2,6 +2,7 @@ import "server-only";
 import { cached } from "../cache";
 import { addDays, addMonths, endOfMonth, startOfMonth } from "../dates";
 import { q1, q } from "../db";
+import { stored, writeCredentials } from "../credentials";
 import { owJson, owPaginate, owRaw, PAGE_LIMIT, OwError, type Query } from "./client";
 import type {
   OwApplication, OwConnection, OwDevice, OwDeviceHistoryEntry, OwProvider, OwRecoverySummary,
@@ -93,32 +94,41 @@ export async function createUser(firstName: string, lastName: string): Promise<O
   });
 }
 
+// The application (including its one-time secret) is kept sealed in the
+// credential store. Installs from before the store kept it in system_kv in
+// plain text; the first read moves it across and deletes the old row.
+async function readApplication(): Promise<OwApplication | null> {
+  const sealed = await stored("OW_APPLICATION");
+  if (sealed) return JSON.parse(sealed) as OwApplication;
+  const legacy = await q1<{ value: OwApplication }>("SELECT value FROM system_kv WHERE key = 'ow_application'");
+  if (!legacy) return null;
+  await writeCredentials({ OW_APPLICATION: JSON.stringify(legacy.value) });
+  await q("DELETE FROM system_kv WHERE key = 'ow_application'");
+  return legacy.value;
+}
+
 /**
  * Ensure an OW application named "AthleteOS" exists and its credentials are
  * stored. OW reveals app_secret only at creation, so it is persisted then; if
  * the stored app was deleted in OW, a new one is created.
  */
 export async function bootstrapApplication(): Promise<{ app_id: string; created: boolean }> {
-  const stored = await q1<{ value: OwApplication }>("SELECT value FROM system_kv WHERE key = 'ow_application'");
+  const current = await readApplication();
   const apps = await owJson<OwApplication[]>("/applications");
-  if (stored && apps.some((a) => a.id === stored.value.id)) return { app_id: stored.value.app_id, created: false };
+  if (current && apps.some((a) => a.id === current.id)) return { app_id: current.app_id, created: false };
   const app = await owJson<OwApplication>("/applications", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ name: "AthleteOS" }),
   });
-  await q(
-    `INSERT INTO system_kv (key, value, updated_at) VALUES ('ow_application', $1, now())
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-    [JSON.stringify(app)],
-  );
+  await writeCredentials({ OW_APPLICATION: JSON.stringify(app) });
   return { app_id: app.app_id, created: true };
 }
 
 export async function storedApplication(): Promise<Pick<OwApplication, "id" | "app_id" | "name" | "created_at"> | null> {
-  const row = await q1<{ value: OwApplication }>("SELECT value FROM system_kv WHERE key = 'ow_application'");
-  if (!row) return null;
-  const { id, app_id, name, created_at } = row.value;
+  const app = await readApplication();
+  if (!app) return null;
+  const { id, app_id, name, created_at } = app;
   return { id, app_id, name, created_at };
 }
 
