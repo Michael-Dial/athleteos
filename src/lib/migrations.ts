@@ -229,4 +229,28 @@ ALTER TABLE auth_challenge ADD CONSTRAINT auth_challenge_purpose_check CHECK (pu
 ALTER TABLE athlete ADD COLUMN phone_code_sealed text;
 `,
   },
+  {
+    version: 7,
+    name: "athlete invites",
+    sql: `
+-- Two athletes on one OW user would file one person's nights under the other:
+-- a wrong attribution that looks exactly like real data once read.
+CREATE UNIQUE INDEX athlete_ow_user ON athlete (ow_user_id) WHERE ow_user_id IS NOT NULL;
+
+-- A one-time code the admin hands an athlete, bound to an athlete row (and so to
+-- that athlete's OW user). Redeeming it in the app issues that athlete an API
+-- token. Only a hash of the code is kept; the admin sees it once.
+CREATE TABLE invite (
+  id            serial PRIMARY KEY,
+  athlete_id    int NOT NULL REFERENCES athlete(id) ON DELETE CASCADE,
+  code_hash     text NOT NULL UNIQUE,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  expires_at    timestamptz NOT NULL,
+  redeemed_at   timestamptz,
+  token_id      int REFERENCES api_token(id) ON DELETE SET NULL,
+  revoked_at    timestamptz
+);
+CREATE INDEX invite_athlete ON invite (athlete_id);
+`,
+  },
 ];

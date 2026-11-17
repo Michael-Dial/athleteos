@@ -23,6 +23,7 @@ export async function proxy(req: NextRequest) {
 export const config = {
   // Logout stays reachable without a session so a stale cookie can always be cleared.
   // /api/v1 authenticates itself (bearer token or session) inside apiRoute().
+  // /ow/api/v1 is the phone sync SDK's proxy to OW; OW checks the SDK's token.
   // PWA files stay public: browsers fetch the manifest without cookies.
-  matcher: ["/((?!login|api/health|api/auth/login|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
+  matcher: ["/((?!login|api/health|api/auth/login|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|ow/api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
 };

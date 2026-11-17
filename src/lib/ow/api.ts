@@ -132,6 +132,46 @@ export async function storedApplication(): Promise<Pick<OwApplication, "id" | "a
   return { id, app_id, name, created_at };
 }
 
+export interface OwSdkTokens {
+  accessToken: string;
+  refreshToken: string;
+  /** Seconds, as OW reported it; null when OW did not say. */
+  expiresIn: number | null;
+}
+
+/**
+ * A token pair for OW's mobile SDK, for one OW user. The access token writes
+ * only to that user's `/sdk/*`; the SDK refreshes it itself. The application
+ * credentials that mint it can mint for ANY user, so they never leave the
+ * server: the phone gets the pair. A pair missing either token would sign the
+ * SDK in to nothing and look like a phone that never synced, so it is refused.
+ */
+export async function mintSdkToken(userId: string): Promise<OwSdkTokens> {
+  let app = await readApplication();
+  if (!app?.app_secret) {
+    await bootstrapApplication();
+    app = await readApplication();
+  }
+  if (!app?.app_secret) throw new OwError("The OW application has no stored secret; recreate it under Data backend", 503, "NO_APP_SECRET", "/users/{id}/token");
+  let body: { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown };
+  try {
+    body = await owJson(`/users/${enc(userId)}/token`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ app_id: app.app_id, app_secret: app.app_secret }),
+    });
+  } catch (e) {
+    // A validation error echoes the request body, secret included: keep the status, drop OW's words.
+    if (e instanceof OwError) throw new OwError(`token: HTTP ${e.status}`, e.status, e.code, "/users/{id}/token");
+    throw e;
+  }
+  const access = body?.access_token, refresh = body?.refresh_token, expires = body?.expires_in;
+  if (typeof access !== "string" || !access || typeof refresh !== "string" || !refresh) {
+    throw new OwError("token: the answer has no access_token or no refresh_token", 502, "BAD_TOKEN_ANSWER", "/users/{id}/token");
+  }
+  return { accessToken: access, refreshToken: refresh, expiresIn: typeof expires === "number" && Number.isFinite(expires) ? expires : null };
+}
+
 export async function authorizeUrl(provider: string, userId: string, redirectUri: string): Promise<string> {
   const body = await owJson<{ authorization_url: string }>(`/oauth/${enc(provider)}/authorize`, {
     query: { user_id: userId, redirect_uri: redirectUri, account_type: "personal" },

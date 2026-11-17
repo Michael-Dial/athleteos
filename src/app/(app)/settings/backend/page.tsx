@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
 import Link from "next/link";
 import { getUser, listProviders, searchUsers, storedApplication } from "@/lib/ow/api";
-import { getPhoneCode } from "@/lib/domain/phone-code";
 import { owConfig } from "@/lib/ow/client";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
 import { Card, Notice, StatePill } from "@/components/ui";
-import { bootstrapOwApplication, createAndLinkOwUser, linkOwUser, savePhoneCode, updateSettings } from "../../actions";
+import { bootstrapOwApplication, cancelInvite, createAndLinkOwUser, linkOwUser, updateSettings } from "../../actions";
+import { InviteButton } from "@/components/invite-button";
+import { listAthletes } from "@/lib/invites";
 
 export const metadata: Metadata = { title: "Data backend" };
 
@@ -36,26 +37,26 @@ export default async function BackendPage({ searchParams }: { searchParams: Prom
     );
   }
 
-  const [providers, app, user, phoneCode] = await Promise.all([
+  const [providers, app, user, athletes] = await Promise.all([
     attempt(listProviders),
     attempt(storedApplication),
     ctx.athlete.ow_user_id ? attempt(() => getUser(ctx.athlete.ow_user_id!)) : Promise.resolve({ v: null, e: null }),
-    getPhoneCode(ctx.athlete.id),
+    listAthletes(),
   ]);
+  const athleteByOw = new Map(athletes.filter((a) => a.ow_user_id).map((a) => [a.ow_user_id!, a]));
   const q = (sp.q ?? "").trim();
   // Search only on request: the OW instance may hold other people's accounts.
   const found = q.length >= 2 ? await attempt(() => searchUsers(q)) : { v: null, e: null };
   const day = (iso: string | null) => (iso ? fmtDate(localDate(iso, tz), { month: "short", day: "numeric" }) : "never");
   const enabled = (providers.v ?? []).filter((p) => p.is_enabled);
   const unavailable = enabled.filter((p) => p.has_cloud_api && !p.credentials_configured);
-  const phone = enabled.filter((p) => !p.has_cloud_api);
 
   return (
     <div className="stack-lg">
       {sp.error && <Notice kind="bad">{sp.error}</Notice>}
       {sp.linked && <p className="small" style={{ color: "var(--good)" }} role="status">Athlete linked to the Open Wearables user.</p>}
-      {sp.code && <p className="small" style={{ color: "var(--good)" }} role="status">{sp.code === "cleared" ? "Pairing code removed." : "Pairing code saved. The athlete sees it under Connected accounts."}</p>}
-      {sp.saved && <p className="small" style={{ color: "var(--good)" }} role="status">Phone app details saved.</p>}
+      {sp.invite && <p className="small" style={{ color: "var(--good)" }} role="status">Invite cancelled; its code no longer works.</p>}
+      {sp.saved && <p className="small" style={{ color: "var(--good)" }} role="status">App details saved.</p>}
       <p className="small ink2" style={{ maxWidth: 720 }}>
         Athletes only ever see <Link href="/settings/accounts">Connected accounts</Link>. Open Wearables, its users and this application stay on this page.
         The first time an unlinked athlete connects an account, AthleteOS creates their Open Wearables user; link an existing user here first if they already have history.
@@ -76,7 +77,7 @@ export default async function BackendPage({ searchParams }: { searchParams: Prom
           <p className="small muted mt-sm">Registers an “AthleteOS” application under your developer account. Its secret is shown by OW only once, so AthleteOS stores it.</p>
         </Card>
 
-        <Card title="Athlete ↔ Open Wearables user">
+        <Card title="Your Open Wearables user" hint="search also finds users to invite">
           {ctx.athlete.ow_user_id ? (
             <dl className="kv">
               <dt>Linked user</dt><dd>{user.v ? [user.v.first_name, user.v.last_name].filter(Boolean).join(" ") || user.v.email || "unnamed" : user.e ?? "—"}</dd>
@@ -93,9 +94,13 @@ export default async function BackendPage({ searchParams }: { searchParams: Prom
             found.v.length === 0 ? <p className="small muted mt-sm">No users match “{q}”.</p> : (
               <ul className="stack mt-sm" style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
                 {found.v.slice(0, 20).map((u) => (
-                  <li key={u.id} className="row between">
-                    <span>{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || "unnamed"} <span className="small muted">· last sync {day(u.last_synced_at)}</span></span>
-                    <form action={linkOwUser}><input type="hidden" name="ow_user_id" value={u.id} /><button className="btn sm" type="submit">Link</button></form>
+                  <li key={u.id} className="row between" style={{ alignItems: "flex-start" }}>
+                    <span>{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || "unnamed"} <span className="small muted">· last sync {day(u.last_synced_at)}{athleteByOw.get(u.id) ? ` · athlete: ${athleteByOw.get(u.id)!.name}` : ""}</span></span>
+                    <div className="row" style={{ alignItems: "flex-start" }}>
+                      {/* One OW user, one athlete: a user already held by an athlete can be invited (a new code for that athlete) but not linked to you. */}
+                      {!athleteByOw.has(u.id) && <form action={linkOwUser}><input type="hidden" name="ow_user_id" value={u.id} /><button className="btn sm" type="submit">Link to me</button></form>}
+                      <InviteButton owUserId={u.id} />
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -111,24 +116,37 @@ export default async function BackendPage({ searchParams }: { searchParams: Prom
         </Card>
       </div>
 
-      <div className="grid cols-2">
-        <Card title="Phone pairing code" hint="Apple Health, Health Connect" action={<StatePill state={phoneCode.state === "set" ? "ok" : phoneCode.state === "unreadable" ? "flag" : "nodata"} label={phoneCode.state === "set" ? "Set" : phoneCode.state === "unreadable" ? "Re-enter" : "Not set"} />}>
-          <form action={savePhoneCode} className="stack">
-            <label className="field">Pairing code<input name="phone_code" autoComplete="off" spellCheck={false} className="mono" required minLength={4} maxLength={128} /><span className="help">Issued by Open Wearables for {ctx.athlete.ow_user_id ? "the linked user" : "the athlete's user (link or create it first)"}. The athlete sees it on {phone.length ? phone.map((p) => p.name).join(", ") : "the phone"} cards; it is stored encrypted.</span></label>
-            {phoneCode.state === "unreadable" && <Notice kind="bad">The saved code was encrypted under a previous SESSION_SECRET and can&apos;t be read. Paste it again.</Notice>}
-            <div className="row">
-              <button className="btn primary" type="submit">{phoneCode.state === "none" ? "Save code" : "Replace code"}</button>
-              {phoneCode.state !== "none" && <button className="btn" type="submit" name="clear" value="1" formNoValidate>Remove code</button>}
-            </div>
-          </form>
-        </Card>
+      <Card title="Athletes" hint="invite someone by finding their Open Wearables user above" className="flush">
+        <div className="table-wrap">
+          <table className="t">
+            <thead><tr><th>Athlete</th><th>Open Wearables user</th><th>Signed-in devices</th><th>Invite</th><th /></tr></thead>
+            <tbody>
+              {athletes.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.name}{a.id === ctx.athlete.id && <span className="small muted"> (you)</span>}</td>
+                  <td className="mono small">{a.ow_user_id ?? "—"}</td>
+                  <td className="num">{a.devices}</td>
+                  <td>{a.pending_invite_id ? <>Open until {fmtDate(localDate(new Date(a.pending_expires_at!).toISOString(), tz), { month: "short", day: "numeric" })}</> : <span className="muted">—</span>}</td>
+                  <td className="num">
+                    <div className="row" style={{ justifyContent: "flex-end", alignItems: "flex-start" }}>
+                      {a.pending_invite_id && <form action={cancelInvite}><input type="hidden" name="id" value={a.pending_invite_id} /><button className="btn sm" type="submit">Cancel invite</button></form>}
+                      {a.ow_user_id && <InviteButton owUserId={a.ow_user_id} label={a.pending_invite_id ? "New code" : "Invite"} />}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-        <Card title="Phone app" hint="shown in the athlete's setup steps">
+      <div className="grid cols-2">
+        <Card title="iPhone app" hint="shown in the athletes' setup steps">
           <form action={updateSettings} className="stack">
             <input type="hidden" name="back" value="/settings/backend" />
-            <label className="field">App name<input name="phoneApp.name" defaultValue={ctx.settings.phoneApp.name} maxLength={60} /><span className="help">Empty shows &ldquo;the sync app&rdquo;.</span></label>
+            <label className="field">App name<input name="phoneApp.name" defaultValue={ctx.settings.phoneApp.name} maxLength={60} /><span className="help">Empty shows &ldquo;the AthleteOS app&rdquo;.</span></label>
             <label className="field">Install link<input name="phoneApp.installUrl" type="url" defaultValue={ctx.settings.phoneApp.installUrl} placeholder="https://testflight.apple.com/join/…" /><span className="help">An https link: App Store, TestFlight or Play.</span></label>
-            <div><button className="btn primary" type="submit">Save phone app</button></div>
+            <div><button className="btn primary" type="submit">Save app details</button></div>
           </form>
         </Card>
       </div>

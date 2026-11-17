@@ -16,7 +16,8 @@ import {
 import { invalidate } from "@/lib/cache";
 import { authorizeUrl, bootstrapApplication, createUser, getUser, syncProvider } from "@/lib/ow/api";
 import { ensureOwUser } from "@/lib/ow/provision";
-import { PHONE_CODE_RE, setPhoneCode } from "@/lib/domain/phone-code";
+import { oauthReturn } from "@/lib/domain/accounts";
+import { createInvite, revokeInvite, type InviteCreated } from "@/lib/invites";
 import { errorMessage } from "@/lib/domain/errors";
 import { issueToken, revokeToken } from "@/lib/api/tokens";
 import { parsePace } from "@/lib/zones";
@@ -291,7 +292,13 @@ export async function linkOwUser(fd: FormData) {
   } catch (e) {
     redirect("/settings/backend?error=" + encodeURIComponent(errorMessage(e)));
   }
-  await W.linkOwUser(athlete.id, id);
+  try {
+    await W.linkOwUser(athlete.id, id);
+  } catch (e) {
+    // athlete_ow_user: another athlete already reads this OW user.
+    if ((e as { code?: string }).code === "23505") redirect("/settings/backend?error=" + encodeURIComponent("Another athlete is already linked to that user. Invite them instead."));
+    throw e;
+  }
   invalidate("ow:");
   redirect(done("/settings/backend?linked=1"));
 }
@@ -336,7 +343,7 @@ export async function connectProvider(fd: FormData) {
   let url: string;
   try {
     const userId = await ensureOwUser(ctx.athlete);
-    url = await authorizeUrl(provider, userId, `${origin}/settings/accounts?connected=${encodeURIComponent(provider)}`);
+    url = await authorizeUrl(provider, userId, oauthReturn("web", provider, origin));
   } catch (e) {
     redirect("/settings/accounts?error=" + encodeURIComponent(errorMessage(e)));
   }
@@ -357,17 +364,27 @@ export async function syncNow(fd: FormData) {
   redirect(done(`/settings/accounts?${msg}`));
 }
 
-/** Admin: the phone app pairing code issued by the backend for this athlete's user. */
-export async function savePhoneCode(fd: FormData) {
-  const { athlete } = await getCtx();
-  if (fd.get("clear")) {
-    await setPhoneCode(athlete.id, null);
-    redirect(done("/settings/backend?code=cleared"));
+export interface InviteState {
+  invite: InviteCreated | null;
+  error: string | null;
+}
+
+/** Admin: an invite for whoever owns this OW user; the code goes back to the page once. */
+export async function inviteAthlete(_prev: InviteState, fd: FormData): Promise<InviteState> {
+  const id = str(fd, "ow_user_id");
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return { invite: null, error: "Pick a user from the list." };
+  try {
+    const invite = await createInvite(id);
+    revalidatePath("/settings/backend");
+    return { invite, error: null };
+  } catch (e) {
+    return { invite: null, error: errorMessage(e) };
   }
-  const code = str(fd, "phone_code");
-  if (!code || !PHONE_CODE_RE.test(code)) redirect(withParam("/settings/backend", "error", "Paste the pairing code as issued: 4 to 128 characters, no spaces."));
-  await setPhoneCode(athlete.id, code);
-  redirect(done("/settings/backend?code=saved"));
+}
+
+export async function cancelInvite(fd: FormData) {
+  await revokeInvite(num(fd, "id") ?? 0);
+  redirect(done("/settings/backend?invite=cancelled"));
 }
 
 export async function refreshDeviceData() {

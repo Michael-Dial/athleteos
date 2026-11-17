@@ -60,7 +60,11 @@ async function seed(client: PoolClient): Promise<void> {
     "INSERT INTO athlete (name, ow_user_id) VALUES ($1, $2) RETURNING id",
     [name, owUser],
   );
-  const athleteId = ins.rows[0].id;
+  await seedAthlete(client, ins.rows[0].id);
+}
+
+/** What every new athlete starts with: the default questionnaires. */
+export async function seedAthlete(client: PoolClient, athleteId: number): Promise<void> {
   for (const q of DEFAULT_QUESTIONNAIRES) {
     await client.query(
       `INSERT INTO questionnaire_def (athlete_id, slug, name, description, kind, schedule, items)

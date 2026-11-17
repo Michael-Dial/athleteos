@@ -59,6 +59,17 @@ data backend — never call vendor APIs directly.**
   and provider setup appear only on the admin's Settings → Data backend and
   Credentials tabs. The OW user is created on an athlete's first connect
   (`lib/ow/provision.ts`), never asked for.
+- Athletes beyond the admin come in by invite (`lib/invites.ts`): the admin
+  picks an existing OW user on Data backend and hands over a one-time code;
+  the iOS app redeems it at `POST /api/v1/auth/invite` for that athlete's API
+  token. One OW user belongs to at most one athlete (unique index). The web UI
+  is the admin's; invited athletes use the app, so every `/api/v1` handler
+  scopes by `ctx.athlete`, never by "the first athlete".
+- The phone's Apple Health sync runs OW's iOS SDK with a token minted per
+  athlete (`POST /api/v1/wearables/sdk-token`). OW is LAN-only, so the SDK
+  reaches it through `/ow/api/v1/*` (`lib/ow/sdk-proxy.ts`), which passes only
+  the SDK's own paths and never an API key or cookie. Widen that allowlist only
+  for a path the pinned SDK actually calls.
 - HRV aggregates computed on log(RMSSD); display both raw and log-derived.
 - Keep every tuning knob (lag tolerance, device priority, metric windows) in
   settings, not hardcoded.

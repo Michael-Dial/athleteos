@@ -7,7 +7,7 @@ import {
 } from "./dto";
 import { CoverageDto, IllnessDto, IntensityDto, ReviewDto, TrendsDto, ZonesDto } from "./dto-dashboards";
 import {
-  AnnotationPatch, TokenVerifyRequest, ZonesQuery, CoverageQuery, IllnessQuery, ReviewQuery, TrendsQuery, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
+  AnnotationPatch, ConnectBody, InviteRedeem, TokenVerifyRequest, ZonesQuery, CoverageQuery, IllnessQuery, ReviewQuery, TrendsQuery, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
 } from "./schemas";
 
 // The route table is written once here and drives the OpenAPI document; a
@@ -36,9 +36,21 @@ export const ROUTES: RouteSpec[] = [
     summary: "Native app sign-in. Returns 201 with a token, or 202 with a challengeId when emailed codes are on (then call /auth/token/verify)",
     body: TokenRequest, response: z.union([Token, Challenge]), status: 201 },
   { method: "post", path: "/auth/token/verify", tag: "auth", public: true, summary: "Second step: exchange the emailed 6-digit code for a token", body: TokenVerifyRequest, response: Token, status: 201 },
+  { method: "post", path: "/auth/invite", tag: "auth", public: true, summary: "Invited athlete sign-in: exchange the admin's one-time invite code for a token for that athlete", body: InviteRedeem,
+    response: Token.extend({ athlete: z.object({ id: z.number(), name: z.string() }) }), status: 201 },
   { method: "get", path: "/auth/tokens", tag: "auth", summary: "List active tokens", response: z.object({ tokens: z.array(z.object({ id: z.number(), name: z.string(), prefix: z.string(), createdAt: z.string().nullable(), lastUsedAt: z.string().nullable() })) }) },
   { method: "post", path: "/auth/tokens", tag: "auth", summary: "Create a token for the signed-in athlete", body: TokenCreate, response: Token, status: 201 },
   { method: "delete", path: "/auth/tokens/{id}", tag: "auth", summary: "Revoke a token", status: 204 },
+  { method: "get", path: "/accounts", tag: "accounts", summary: "Services the athlete can connect and the device accounts they hold, by brand",
+    response: z.object({
+      services: z.array(z.object({ provider: z.string(), name: z.string(), kind: z.enum(["cloud", "phone"]).describe("cloud: connect via OAuth; phone: synced by the app from the phone's health store"), status: z.enum(["connected", "lapsed", "none"]), count: z.number(), lastSyncedAt: z.string().nullable() })),
+      accounts: z.array(z.object({ id: z.string(), provider: z.string(), name: z.string(), label: z.string(), device: z.string().nullable(), status: z.enum(["connected", "expired", "disconnected"]), lastSyncedAt: z.string().nullable(), canSync: z.boolean() })),
+      errors: z.array(z.string()),
+    }) },
+  { method: "post", path: "/accounts/{provider}/connect", tag: "accounts", summary: "Start a cloud provider's OAuth; open authorizationUrl in a browser session", body: ConnectBody, response: z.object({ authorizationUrl: z.string() }) },
+  { method: "post", path: "/accounts/{provider}/sync", tag: "accounts", summary: "Ask a connected cloud provider for new data now", response: z.object({ requested: z.boolean() }) },
+  { method: "post", path: "/wearables/sdk-token", tag: "accounts", summary: "Phone health-store sync session for the athlete's own data: a token pair for the sync SDK, which talks to {server}{syncPath}",
+    response: z.object({ owUserId: z.string(), accessToken: z.string(), refreshToken: z.string(), expiresIn: z.number().nullable(), syncPath: z.string() }) },
   { method: "get", path: "/me", tag: "athlete", summary: "Athlete, timezone, today's date and Open Wearables status", response: z.object({ athlete: z.object({ id: z.number(), name: z.string() }), timezone: z.string(), today: z.string(), openWearables: z.object({ configured: z.boolean(), linked: z.boolean() }), auth: z.enum(["token", "session"]) }) },
   { method: "get", path: "/today", tag: "athlete", summary: "Home screen: readiness, today's plan, due forms, last night per metric (all devices)", query: DateQuery,
     response: z.object({ date: z.string(), readiness: ReadinessDto, plan: z.array(PlanSessionDto), checkIn: z.object({ due: z.array(z.object({ slug: z.string(), name: z.string(), schedule: z.string(), kind: z.string() })), wellnessComposite: z.number().nullable() }), lastNight: z.record(z.enum(["sleep", "hrv", "rhr", "respiratory_rate", "spo2"]), LastNightDto) }) },

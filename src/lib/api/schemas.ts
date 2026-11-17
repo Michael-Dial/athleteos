@@ -9,6 +9,15 @@ export const TokenRequest = z.object({
   name: z.string().trim().min(1).max(80).describe("Shown in Settings so you can revoke it, e.g. 'iPhone'"),
 });
 
+export const InviteRedeem = z.object({
+  code: z.string().trim().min(1).max(40).describe("The invite code the admin gave you, e.g. 7KQ2M-X9D4R"),
+  name: z.string().trim().min(1).max(80).describe("This device's name, shown in Settings so it can be revoked"),
+});
+
+export const ConnectBody = z.object({
+  returnTo: z.enum(["app", "web"]).default("app").describe("app: OAuth returns to athleteos://accounts/connected; web: to Settings → Connected accounts"),
+});
+
 export const TokenCreate = z.object({ name: z.string().trim().min(1).max(80) });
 
 export const ReadinessQuery = z.object({

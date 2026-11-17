@@ -27,7 +27,7 @@ export const SettingsSchema = z.object({
       historicalCacheTtlSeconds: z.number().int().min(0).max(86400).default(1800),
     })
     .prefault({}),
-  // The phone app that relays Apple Health / Health Connect into the device
+  // The AthleteOS iPhone app, which also relays Apple Health into the device
   // backend. Named here so the athlete-facing setup steps can link to it.
   phoneApp: z
     .object({
