@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fmtDuration } from "@/lib/dates";
 
 export type Pt = [number, number | null];
 
@@ -33,6 +34,8 @@ interface Props {
   yMin?: number;
   yMax?: number;
   zeroBased?: boolean;
+  /** "duration": values are minutes; ticks fall on whole hours and read "7h", the tooltip "7h 23m". */
+  yAs?: "duration";
   ariaLabel: string;
 }
 
@@ -64,6 +67,14 @@ function niceTicks(min: number, max: number, count = 4): number[] {
   return out;
 }
 
+/** Ticks on whole hours (or every 2 h for wide spans) for minute-valued axes. */
+function hourTicks(min: number, max: number): number[] {
+  const step = (max - min) / 60 > 6 ? 120 : 60;
+  const out: number[] = [];
+  for (let v = Math.ceil(min / step) * step; v <= max; v += step) out.push(v);
+  return out.length ? out : niceTicks(min, max);
+}
+
 function fmtX(x: number, kind: "date" | "time" | "datetime" | "number", tz?: string, long = false, xUnit = ""): string {
   if (kind === "number") return `${x.toLocaleString("en-US", { maximumFractionDigits: 1 })}${xUnit}`;
   const d = new Date(x);
@@ -80,7 +91,7 @@ export function dateX(d: string): number {
   return Date.parse(`${d}T12:00:00Z`);
 }
 
-export function TimeChart({ series, band, refs = [], height = 220, xKind = "date", xUnit, tz, unit = "", digits = 0, yMin, yMax, zeroBased, ariaLabel }: Props) {
+export function TimeChart({ series, band, refs = [], height = 220, xKind = "date", xUnit, tz, unit = "", digits = 0, yMin, yMax, zeroBased, yAs, ariaLabel }: Props) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -112,7 +123,7 @@ export function TimeChart({ series, band, refs = [], height = 220, xKind = "date
   }, [series, band, refs, width, height, yMin, yMax, zeroBased]);
 
   const { xList, lo, hi, sx, sy, plotH, slot } = geo;
-  const yTicks = niceTicks(lo, hi);
+  const yTicks = yAs === "duration" ? hourTicks(lo, hi) : niceTicks(lo, hi);
   const xTickEvery = Math.max(1, Math.ceil(xList.length / Math.max(2, Math.floor(width / 90))));
   const barSeries = series.filter((s) => s.kind === "bar");
   const barW = Math.max(2, Math.min(24, (slot - 2) / Math.max(1, barSeries.length)));
@@ -130,7 +141,7 @@ export function TimeChart({ series, band, refs = [], height = 220, xKind = "date
   }
 
   const hx = hover != null ? xList[hover] : null;
-  const fmtY = (v: number) => `${v.toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits })}${unit ? ` ${unit}` : ""}`;
+  const fmtY = (v: number) => yAs === "duration" ? fmtDuration(v) : `${v.toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits })}${unit ? ` ${unit}` : ""}`;
   const visible = series.filter((s) => !s.quiet);
 
   const hasData = series.some((s) => s.points.some(([, y]) => y != null));
@@ -154,7 +165,7 @@ export function TimeChart({ series, band, refs = [], height = 220, xKind = "date
         {yTicks.map((t) => (
           <g key={t}>
             <line className="grid-line" x1={PAD.l} x2={width - PAD.r} y1={sy(t)} y2={sy(t)} />
-            <text className="axis-label" x={PAD.l - 6} y={sy(t) + 4} textAnchor="end">{t.toLocaleString("en-US", { maximumFractionDigits: 2 })}</text>
+            <text className="axis-label" x={PAD.l - 6} y={sy(t) + 4} textAnchor="end">{yAs === "duration" ? `${t / 60}h` : t.toLocaleString("en-US", { maximumFractionDigits: 2 })}</text>
           </g>
         ))}
         {band && (

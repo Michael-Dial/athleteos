@@ -30,8 +30,10 @@ export function ReadinessGauge({ index, state, label, zFlag, watchZ, size = 240 
       )}
       <text x={cx} y={cy - 4} textAnchor="middle" fontFamily="var(--display)" fontWeight={700} fontSize={size * 0.135} fill={index == null ? "var(--muted)" : ({ ok: "var(--good)", watch: "var(--warn)", flag: "var(--bad)", nodata: "var(--muted)" } as const)[state]} letterSpacing="0.03em">{label.toUpperCase()}</text>
       <text x={cx} y={cy + 30} textAnchor="middle" fontSize={13} fill="var(--muted)">{index != null ? `index ${index > 0 ? "+" : index < 0 ? "−" : ""}${Math.abs(index).toFixed(1)} SD` : "needs two pillars with baselines"}</text>
-      <text x={18} y={cy + 30} fontSize={11} fill="var(--muted)">−3</text>
-      <text x={w - 18} y={cy + 30} fontSize={11} fill="var(--muted)" textAnchor="end">+3</text>
+      {/* Scale ends sit just under the arc ends, above the caption line, so they
+          read as the scale and not as part of the caption sentence. */}
+      {index != null && <text x={18} y={cy + 14} fontSize={12} fill="var(--muted)">−3</text>}
+      {index != null && <text x={w - 18} y={cy + 14} fontSize={12} fill="var(--muted)" textAnchor="end">+3</text>}
     </svg>
   );
 }

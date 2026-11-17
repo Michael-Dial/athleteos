@@ -76,16 +76,22 @@ export default async function CoveragePage({ searchParams }: { searchParams: Pro
               <span><i className="legend-swatch" style={{ background: "#86b6ef" }} />Sleep or vitals, no HRV</span>
               <span><i className="legend-swatch" style={{ background: "#256abf" }} />Including HRV</span>
             </div>
-            <div className="table-wrap">
+            {/* Focusable so keyboard users can scroll the grid when it is wider than the screen. */}
+            <div className="table-wrap" tabIndex={0} aria-label="Device coverage by night, scrollable">
               <div className="heat" style={{ gridTemplateColumns: `minmax(120px, 220px) repeat(${c.dates.length}, 9px) auto` }} role="table" aria-label="Device coverage by night">
-                <span />
-                {c.dates.map((d, i) => <span key={d} className="tick" style={{ gridColumn: `span 1` }}>{i % 7 === 0 ? short(d) : ""}</span>)}
-                <span className="tick">Nights</span>
+                <div style={{ display: "contents" }} role="row">
+                  <span role="columnheader" className="tick">Device</span>
+                  {c.dates.map((d, i) => <span key={d} role="columnheader" aria-label={short(d)} className="tick" style={{ gridColumn: `span 1` }}>{i % 7 === 0 ? short(d) : ""}</span>)}
+                  <span role="columnheader" className="tick">Nights</span>
+                </div>
                 {c.devices.map((dv) => (
                   <div key={dv.key} style={{ display: "contents" }} role="row">
-                    <span className="name" title={dv.name}>{dv.name}</span>
-                    {dv.cells.split("").map((s, i) => <span key={i} className={`cell s${s}`} title={`${dv.name} · ${short(c.dates[i])}: ${s === "2" ? "with HRV" : s === "1" ? "no HRV" : "nothing"}`} />)}
-                    <span className="tick" style={{ paddingLeft: 8 }}>{dv.nights}/{c.dates.length}{dv.longestGap >= 3 && dv.nights > 0 ? ` · gap ${dv.longestGap}` : ""}</span>
+                    <span role="rowheader" className="name" title={dv.name}>{dv.name}</span>
+                    {dv.cells.split("").map((s, i) => {
+                      const label = `${dv.name} · ${short(c.dates[i])}: ${s === "2" ? "with HRV" : s === "1" ? "no HRV" : "nothing"}`;
+                      return <span key={i} role="cell" aria-label={label} className={`cell s${s}`} title={label} />;
+                    })}
+                    <span role="cell" className="tick" style={{ paddingLeft: 8 }}>{dv.nights}/{c.dates.length}{dv.longestGap >= 3 && dv.nights > 0 ? ` · gap ${dv.longestGap}` : ""}</span>
                   </div>
                 ))}
               </div>

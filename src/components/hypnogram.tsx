@@ -24,7 +24,7 @@ export function Hypnogram({ intervals, tz, height = 120 }: { intervals: OwSleepS
   return (
     <div className="chart" style={{ display: "grid", gridTemplateColumns: "44px 1fr", columnGap: 6 }}>
       <div style={{ display: "flex", flexDirection: "column", height: height - 20, marginTop: 0 }}>
-        {ROWS.map((r) => <span key={r} className="axis-label small muted" style={{ flex: 1, display: "flex", alignItems: "center", fontSize: 11 }}>{LABEL[r]}</span>)}
+        {ROWS.map((r) => <span key={r} className="axis-label small muted" style={{ flex: 1, display: "flex", alignItems: "center", fontSize: 12 }}>{LABEL[r]}</span>)}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ height: height - 20 }} role="img" aria-label="Sleep stage timeline">
         {ROWS.map((r, i) => (
@@ -46,7 +46,7 @@ export function Hypnogram({ intervals, tz, height = 120 }: { intervals: OwSleepS
       <span />
       <div style={{ position: "relative", height: 16 }} className="small muted">
         {hours.map((h) => (
-          <span key={h} style={{ position: "absolute", left: `${((h - t0) / (t1 - t0 || 1)) * 100}%`, transform: "translateX(-50%)", fontSize: 11 }}>{fmt(h)}</span>
+          <span key={h} style={{ position: "absolute", left: `${((h - t0) / (t1 - t0 || 1)) * 100}%`, transform: "translateX(-50%)", fontSize: 12 }}>{fmt(h)}</span>
         ))}
       </div>
       <span />

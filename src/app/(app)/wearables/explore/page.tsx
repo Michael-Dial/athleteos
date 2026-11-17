@@ -74,7 +74,7 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
       {tooLong && <Notice>{res} resolution is limited to {MAX_DAYS[res]} days here. Pick a coarser resolution or a shorter window, or use the bulk export below.</Notice>}
       <OwErrors errors={[err]} />
       <Card title={`${seriesLabel(type)}${unit ? ` (${unit})` : ""}`} hint={`${data.length.toLocaleString()} rows · ${groups.size} source${groups.size === 1 ? "" : "s"}${groups.size > 8 ? " · chart shows the 8 with most data" : ""}`}
-        action={<a className="btn sm" href={`/api/export/series?types=${type}&start=${start}&end=${exportEnd}&format=csv`}><IconDownload size={14} />Raw CSV</a>}>
+        action={<a className="btn sm" href={`/api/export/series?types=${type}&start=${start}&end=${exportEnd}&format=csv`}><IconDownload size={14} />Download CSV</a>}>
         <TimeChart ariaLabel={`${seriesLabel(type)} by source`} xKind={span <= 1 ? "time" : "datetime"} tz={tz} unit={unit} digits={1} height={300}
           series={ordered.slice(0, 8).map(([k, g], i) => ({ id: k, label: g.name, color: SLOTS[i], kind: "line" as const, points: g.pts }))} />
       </Card>

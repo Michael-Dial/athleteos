@@ -9,7 +9,12 @@ import { OwErrors } from "@/components/setup-banner";
 
 export const metadata: Metadata = { title: "Devices" };
 
-export default async function DevicesPage() {
+// The audit log runs to hundreds of rows; the page leads with devices and shows
+// only the latest changes until asked for the rest.
+const HISTORY_PREVIEW = 20;
+
+export default async function DevicesPage({ searchParams }: { searchParams: Promise<{ history?: string }> }) {
+  const showAll = (await searchParams).history === "all";
   const ctx = await getCtx();
   const tz = ctx.settings.timezone;
   const [devices, history, conns] = await Promise.all([
@@ -20,6 +25,7 @@ export default async function DevicesPage() {
   const active = devices.v.filter((d) => d.is_active).sort((a, b) => (b.last_seen_at ?? "").localeCompare(a.last_seen_at ?? ""));
   const retired = devices.v.filter((d) => !d.is_active);
   const devName = new Map(devices.v.map((d) => [d.id, d.display_name]));
+  const historyRows = history.v.items.slice(0, showAll ? 200 : HISTORY_PREVIEW);
   const day = (iso: string | null) => (iso ? fmtDate(localDate(iso, tz), { month: "short", day: "numeric", year: "numeric" }) : "—");
 
   return (
@@ -73,12 +79,13 @@ export default async function DevicesPage() {
           </table>
         </div>
       </Card>
-      <Card title="Attribution history" hint={history.v.total > history.v.items.length ? `newest ${history.v.items.length} of ${history.v.total}` : `${history.v.total} entries`} className="flush">
+      <Card title="Attribution history" hint={history.v.total > historyRows.length ? `newest ${historyRows.length} of ${history.v.total}` : `${history.v.total} entries`} className="flush"
+        action={!showAll && history.v.items.length > HISTORY_PREVIEW ? <Link className="btn sm" href="/wearables/devices?history=all" scroll={false}>Show all entries</Link> : undefined}>
         <div className="table-wrap">
           <table className="t">
             <thead><tr><th>When</th><th>Device</th><th>Action</th><th>Change</th><th>By</th><th>Reason</th></tr></thead>
             <tbody>
-              {history.v.items.slice(0, 200).map((h) => (
+              {historyRows.map((h) => (
                 <tr key={h.id}>
                   <td style={{ whiteSpace: "nowrap" }}>{day(h.created_at)}</td>
                   <td>{(h.device_id && devName.get(h.device_id)) ?? <span className="mono">{h.device_id?.slice(0, 8) ?? "—"}</span>}</td>
@@ -91,7 +98,7 @@ export default async function DevicesPage() {
             </tbody>
           </table>
         </div>
-        {history.v.items.length > 200 && <p className="small muted" style={{ padding: "8px 16px" }}>Showing the newest 200 here.</p>}
+        {showAll && history.v.items.length > 200 && <p className="small muted" style={{ padding: "8px 16px" }}>Showing the newest 200 here.</p>}
       </Card>
     </div>
   );

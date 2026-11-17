@@ -1,10 +1,11 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
 import { coverageOrder, getNightly, METRIC_VALUE } from "@/lib/domain/nightly";
 import { getReadiness } from "@/lib/domain/readiness";
-import { addDays, todayIn } from "@/lib/dates";
+import { addDays, fmtDate, todayIn } from "@/lib/dates";
 import { finite, mean, sd } from "@/lib/stats/basic";
-import { Card, SourceChip, fmt } from "@/components/ui";
+import { Card, Empty, SourceChip, fmt } from "@/components/ui";
 import { OwErrors } from "@/components/setup-banner";
 import { TimeChart, type Series } from "@/components/charts";
 import { HrvChart } from "@/components/trend-charts";
@@ -31,6 +32,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   const allKeys = [...new Set([...hrvKeys, ...rhrKeys])].slice(0, 8);
   const color = new Map(allKeys.map((k, i) => [k, SLOTS[i]]));
   const nameOf = new Map(rows.map((x) => [x.key, x.name]));
+  const latestHrv = rows.filter((x) => METRIC_VALUE.hrv(x) != null).sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
   const seriesFor = (metric: "hrv" | "rhr", keys: string[]): Series[] =>
     keys.filter((k) => color.has(k)).map((k) => ({
       id: k, label: nameOf.get(k) ?? k, color: color.get(k)!, kind: "line" as const,
@@ -48,12 +50,24 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   return (
     <div className="stack-lg">
       <div className="row between">
-        <p className="small muted">Overnight HRV and resting HR per device. Baselines and status use one device only: {r.hrv.device ? <SourceChip name={r.hrv.device.name} fallback={r.hrv.device.fallback} /> : "none yet"}</p>
+        <p className="small muted">Overnight HRV and resting HR per device. Baselines and status use one device only: {r.hrv.device ? <SourceChip name={r.hrv.device.name} fallback={r.hrv.device.fallback} /> : latestHrv ? "none reporting recently" : "none yet"}</p>
         <RangeSeg base="/wearables" days={days} />
       </div>
       <OwErrors errors={[n.owError, ...r.errors]} />
-      <Card title="HRV status (lnRMSSD)" hint={`${ctx.settings.hrv.rollingDays}-day mean vs ${ctx.settings.hrv.baselineDays}-day baseline ± ${ctx.settings.hrv.swcSd} SD`}>
-        <HrvChart series={r.hrv.series} height={260} />
+      <Card title={<>HRV status (<span className="nocaps">lnRMSSD</span>)</>} hint={`${ctx.settings.hrv.rollingDays}-day mean vs ${ctx.settings.hrv.baselineDays}-day baseline ± ${ctx.settings.hrv.swcSd} SD`}>
+        {r.hrv.device ? <HrvChart series={r.hrv.series} height={260} /> : latestHrv ? (
+          // HRV exists in the window but no device reported it recently, which is
+          // what status needs. Saying "no HRV nights" here contradicted the chart below.
+          <Empty title="No recent HRV, so no current status"
+            action={<Link className="btn sm" href="/wearables/coverage">Check device sync</Link>}>
+            Status needs a reading from the last few nights. The latest is {fmtDate(latestHrv.date, { month: "short", day: "numeric" })} from {latestHrv.name}.
+          </Empty>
+        ) : (
+          <Empty title={`No HRV in the last ${days} days`}
+            action={<Link className="btn sm" href="/settings/accounts">Open connected accounts</Link>}>
+            HRV status starts once a connected device reports overnight HRV.
+          </Empty>
+        )}
       </Card>
       <div className="grid cols-2">
         <Card title="Nightly RMSSD by device" hint="raw ms; devices differ in window and algorithm">
