@@ -5,6 +5,7 @@ import { owConfig } from "@/lib/ow/client";
 import { smtpConfig } from "@/lib/mail";
 import { requireAdmin } from "@/lib/current-user";
 import { Card, Notice, StatePill } from "@/components/ui";
+import { CredentialTestActions } from "@/components/credential-test";
 import { discardUnreadable, saveCredentials, sendTestEmail } from "../security-actions";
 
 export const metadata: Metadata = { title: "Credentials" };
@@ -51,12 +52,16 @@ function SaveRow({ test }: { test: boolean }) {
       <label className="field">
         Your AthleteOS password
         <input name="current_password" type="password" autoComplete="current-password" required />
-        <span className="help">Needed for every credential change, so a stolen session can&apos;t send your keys elsewhere.</span>
+        <span className="help">
+          Needed for every credential change, so a stolen session can&apos;t send your keys elsewhere.
+          {test && " Test alone needs it only when it would send a saved key or password to a new address."}
+        </span>
       </label>
-      <div className="row between">
-        {test ? <label className="row small ink2" style={{ gap: 6 }}><input type="checkbox" name="skip_test" /> Save without testing</label> : <span />}
-        <button className="btn primary" type="submit">{test ? "Test and save" : "Save"}</button>
-      </div>
+      {test ? <CredentialTestActions /> : (
+        <div className="row" style={{ justifyContent: "flex-end" }}>
+          <button className="btn primary" type="submit">Save</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -88,7 +93,7 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
           <form action={saveCredentials} className="stack" id="ow">
             <input type="hidden" name="group" value="ow" />
             {fields(["OW_API_BASE", "OW_API_KEY", "OW_EMAIL", "OW_PASSWORD"])}
-            <p className="small muted">Saving makes one signed-in request to Open Wearables first and refuses settings it rejects. Link the athlete&apos;s Open Wearables user under <Link href="/settings/backend">Data backend</Link>; athletes connect devices under <Link href="/settings/accounts">Connected accounts</Link>.</p>
+            <p className="small muted">Test makes one signed-in request to Open Wearables with what is typed here and saves nothing; saving does the same first and refuses settings it rejects. Link the athlete&apos;s Open Wearables user under <Link href="/settings/backend">Data backend</Link>; athletes connect devices under <Link href="/settings/accounts">Connected accounts</Link>.</p>
             <SaveRow test />
           </form>
         </Card>
@@ -96,7 +101,7 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
           <form action={saveCredentials} className="stack" id="smtp">
             <input type="hidden" name="group" value="smtp" />
             {fields(["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"])}
-            <p className="small muted">Used for sign-in codes and invites. Saving connects and logs in to the mail server first, without sending anything. Brevo: host smtp-relay.brevo.com, port 587, your SMTP login and an SMTP key.</p>
+            <p className="small muted">Used for sign-in codes and invites. Test connects and logs in to the mail server with what is typed here, without sending or saving anything; saving does the same first. Brevo: host smtp-relay.brevo.com, port 587, your SMTP login and an SMTP key.</p>
             <SaveRow test />
           </form>
           <form action={sendTestEmail} className="row mt" style={{ alignItems: "flex-end", borderTop: "1px solid var(--line)", paddingTop: 12 }}>
