@@ -6,6 +6,7 @@ import { getConnections, listProviders } from "@/lib/ow/api";
 import type { OwConnection, OwProvider } from "@/lib/ow/types";
 import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
 import { requireUser } from "@/lib/current-user";
+import { phoneProvidersFor, platformOf } from "@/lib/platform";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
 import { Card, Notice } from "@/components/ui";
@@ -64,12 +65,10 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   // A cloud provider without client credentials can't complete OAuth; offering
   // it would only end on an error page, so it waits on the admin's list.
   const cloud = enabled.filter((p) => p.has_cloud_api && p.credentials_configured);
-  // The phone's own health store is the obvious first choice: Apple Health on
-  // an iPhone, Health Connect on Android. Put it, and its card, first there.
-  const ua = h.get("user-agent") ?? "";
-  const platform = /iPhone|iPad|iPod/i.test(ua) ? "ios" : /Android/i.test(ua) ? "android" : null;
-  const native = (p: OwProvider) => (platform === "ios" ? /apple/i.test(`${p.provider} ${p.name}`) : platform === "android" ? /health.?connect|google.?health|samsung/i.test(`${p.provider} ${p.name}`) : false);
-  const phone = enabled.filter((p) => !p.has_cloud_api).sort((a, b) => Number(native(b)) - Number(native(a)));
+  // The phone's own health store is the obvious first choice, and the other
+  // platform's store can't be used from this phone at all.
+  const platform = platformOf(h.get("user-agent"));
+  const phone = phoneProvidersFor(enabled.filter((p) => !p.has_cloud_api), platform);
   const phoneFirst = platform !== null && phone.length > 0;
   const nameOf = new Map(enabled.map((p) => [p.provider, p.name]));
   const connectedName = sp.connected ? nameOf.get(sp.connected) ?? sp.connected : null;

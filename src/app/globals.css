@@ -393,7 +393,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   table.t:not(.keep-table), table.t:not(.keep-table) tbody { display: block; }
   table.t:not(.keep-table) tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
   table.t:not(.keep-table) tr:last-child { border-bottom: 0; }
-  table.t:not(.keep-table) td { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 3px 0; border: 0; text-align: right; }
+  table.t:not(.keep-table) td { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; padding: 3px 0; border: 0; text-align: right; overflow-wrap: anywhere; }
   table.t:not(.keep-table) td::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 600; text-align: left; flex: none; max-width: 50%; }
   /* The first cell is the card's title and may hold a name, a tag and a description: let it flow as a block. */
   table.t:not(.keep-table) td:first-child { display: block; text-align: left; font-weight: 600; font-size: 14px; padding-bottom: 6px; }
@@ -467,3 +467,12 @@ main svg:not([width]) { height: auto; }
   .tabbar a .tab-label { display: none; }
   .tabbar a { min-height: 52px; }
 }
+/* Grid columns may shrink below their content's natural width, so nothing in
+   them can force the page wider than the screen. */
+.grid > *, .today-hero > *, .night > *, .vital > * { min-width: 0; }
+@media (max-width: 360px) {
+  .vital { grid-template-columns: 1fr; }
+  .vital > div:last-child { width: 100% !important; }
+}
+.week-strip { gap: 8px; }
+@media (max-width: 360px) { .week-strip { gap: 3px; } }

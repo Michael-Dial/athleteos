@@ -4,7 +4,8 @@ import { headers } from "next/headers";
 import { getCtx } from "@/lib/domain/context";
 import { requireUser } from "@/lib/current-user";
 import { getConnections, listProviders } from "@/lib/ow/api";
-import type { OwConnection, OwProvider } from "@/lib/ow/types";
+import type { OwConnection } from "@/lib/ow/types";
+import { phoneProvidersFor, platformOf } from "@/lib/platform";
 import { getDef } from "@/lib/domain/questionnaires";
 import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
 import { vapidKeys } from "@/lib/push/webpush";
@@ -74,8 +75,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   if (step === "connect") {
     const h = await headers();
     const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
-    const ua = h.get("user-agent") ?? "";
-    const ios = /iPhone|iPad|iPod/i.test(ua), android = /Android/i.test(ua);
+    const platform = platformOf(h.get("user-agent"));
     const [providers, conns, phoneCode, phoneApp] = await Promise.all([
       ctx.owConfigured ? attempt(listProviders) : null,
       ctx.ow ? attempt(() => getConnections(ctx.ow!)) : null,
@@ -83,8 +83,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
       getPhoneApp(),
     ]);
     const enabled = (providers ?? []).filter((p) => p.is_enabled);
-    const native = (p: OwProvider) => (ios ? /apple/i : android ? /health.?connect|google.?health|samsung/i : /$^/).test(`${p.provider} ${p.name}`);
-    const phone = enabled.filter((p) => !p.has_cloud_api).sort((a, b) => Number(native(b)) - Number(native(a)));
+    const phone = phoneProvidersFor(enabled.filter((p) => !p.has_cloud_api), platform);
     const cloud = enabled.filter((p) => p.has_cloud_api && p.credentials_configured);
     const active = new Set((conns ?? []).filter((c: OwConnection) => c.status === "active").map((c) => c.provider));
     const appName = phoneApp.name || "the sync app";
@@ -99,7 +98,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           <Notice>Connecting devices isn&apos;t set up on this server yet. You can do it later from Settings → Connected accounts.</Notice>
         ) : (
           <div className="card" style={{ padding: "4px 16px" }}>
-            {phone.filter(native).concat(phone.filter((p) => !native(p))).map((p) => (
+            {phone.map((p) => (
               <div key={p.provider} className="connect-row">
                 <div className="stack" style={{ gap: 2 }}>
                   <b>{p.name}</b>
