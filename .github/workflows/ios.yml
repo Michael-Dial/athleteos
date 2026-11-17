@@ -1,13 +1,26 @@
 name: iOS
 
 # Builds the iPhone app and runs AthleteKit's tests. A public repository, so
-# GitHub's hosted macOS runner (org CI policy rule 3).
+# GitHub's hosted macOS runners only, never the org's self-hosted Macs (org CI
+# policy rule 3: a fork's pull request could run its own code on them).
+#
+# GitHub's Apple-silicon pool (macos-15) sometimes has no capacity; the job
+# then waits about 15 minutes and is cancelled with "not acquired by Runner
+# of type hosted". Re-run it, or run this workflow by hand on the PR's branch
+# (Actions → iOS → Run workflow) and pick macos-15-intel, a separate pool.
 on:
   pull_request:
     paths: ["ios/**", ".github/workflows/ios.yml"]
   push:
     branches: [main]
     paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: GitHub-hosted Mac to build on
+        type: choice
+        options: [macos-15, macos-15-intel]
+        default: macos-15
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -19,7 +32,7 @@ permissions:
 jobs:
   build:
     name: AthleteKit tests and app build
-    runs-on: macos-15
+    runs-on: ${{ inputs.runner || 'macos-15' }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
