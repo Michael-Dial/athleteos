@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
+import { currentUser } from "@/lib/current-user";
 import { getTimeseries } from "@/lib/ow/api";
 import type { OwTimeSeriesSample } from "@/lib/ow/types";
 import { addDays, diffDays, isISODate, todayIn } from "@/lib/dates";
 import { deviceKey, deviceName } from "@/lib/stats/sources";
 import { COMMON_SERIES, isSeriesType, seriesLabel, seriesUnit } from "@/lib/series-types";
 import { errorMessage } from "@/lib/domain/errors";
-import { Card, Notice, fmt } from "@/components/ui";
+import { Card, NoDeviceData, Notice, fmt } from "@/components/ui";
+import { latestDeviceDay } from "@/lib/domain/latest";
 import { OwErrors } from "@/components/setup-banner";
 import { TimeChart } from "@/components/charts";
 import { IconDownload } from "@/components/icons";
@@ -22,6 +24,8 @@ const MAX_DAYS: Record<Res, number> = { raw: 2, "1min": 3, "5min": 14, "15min": 
 export default async function ExplorePage({ searchParams }: { searchParams: Promise<{ type?: string; start?: string; end?: string; res?: string; relays?: string }> }) {
   const sp = await searchParams;
   const ctx = await getCtx();
+  // Data source ids are the backend's own; only an admin sees them (CLAUDE.md).
+  const admin = (await currentUser())?.role === "admin";
   const tz = ctx.settings.timezone;
   const today = todayIn(tz);
   const type = sp.type && isSeriesType(sp.type) ? sp.type : "heart_rate";
@@ -51,6 +55,10 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
   const ordered = [...groups.entries()].sort((a, b) => b[1].pts.length - a[1].pts.length);
   const unit = data[0]?.unit ?? seriesUnit(type);
   const exportEnd = addDays(end, 1); // export end_time is exclusive
+  // The default window is the last day; with stale devices that is always
+  // empty, so offer the last day that has data instead.
+  const latest = data.length || tooLong || err ? null : await latestDeviceDay(ctx);
+  const latestHref = latest && latest < start ? `/wearables/explore?type=${type}&start=${latest}&end=${latest}&res=${res}${relays ? "&relays=1" : ""}` : undefined;
 
   return (
     <div className="stack-lg">
@@ -75,14 +83,15 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
       <OwErrors errors={[err]} />
       <Card title={`${seriesLabel(type)}${unit ? ` (${unit})` : ""}`} hint={`${data.length.toLocaleString()} rows · ${groups.size} source${groups.size === 1 ? "" : "s"}${groups.size > 8 ? " · chart shows the 8 with most data" : ""}`}
         action={<a className="btn sm" href={`/api/export/series?types=${type}&start=${start}&end=${exportEnd}&format=csv`}><IconDownload size={14} />Download CSV</a>}>
-        <TimeChart ariaLabel={`${seriesLabel(type)} by source`} xKind={span <= 1 ? "time" : "datetime"} tz={tz} unit={unit} digits={1} height={300}
+        <TimeChart ariaLabel={`${seriesLabel(type)} by source`}
+          empty={latest ? <NoDeviceData title={`No ${lowerFirst(seriesLabel(type))} in this window`} latest={latest} latestHref={latestHref} /> : undefined} xKind={span <= 1 ? "time" : "datetime"} tz={tz} unit={unit} digits={1} height={300}
           series={ordered.slice(0, 8).map(([k, g], i) => ({ id: k, label: g.name, color: SLOTS[i], kind: "line" as const, points: g.pts }))} />
       </Card>
       {ordered.length > 0 && (
         <Card title="Sources" className="flush">
           <div className="table-wrap">
             <table className="t">
-              <thead><tr><th>Source</th><th className="num">Rows</th><th className="num">Mean</th><th className="num">Min</th><th className="num">Max</th><th>Data source id</th></tr></thead>
+              <thead><tr><th>Source</th><th className="num">Rows</th><th className="num">Mean</th><th className="num">Min</th><th className="num">Max</th>{admin && <th>Data source id</th>}</tr></thead>
               <tbody>
                 {ordered.map(([k, g], i) => {
                   const vals = g.pts.map((p) => p[1]).filter((v): v is number => v != null);
@@ -93,7 +102,7 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
                       <td className="num">{fmt(vals.reduce((a, b) => a + b, 0) / (vals.length || 1), 1)}</td>
                       <td className="num">{fmt(Math.min(...vals), 1)}</td>
                       <td className="num">{fmt(Math.max(...vals), 1)}</td>
-                      <td className="mono">{g.dsid ?? "—"}</td>
+                      {admin && <td className="mono">{g.dsid ?? "—"}</td>}
                     </tr>
                   );
                 })}
@@ -104,4 +113,9 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
       )}
     </div>
   );
+}
+
+/** "Heart rate" → "heart rate" mid-sentence; leaves "HRV (RMSSD)" and "SpO2" alone. */
+function lowerFirst(s: string): string {
+  return /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
+import { currentUser } from "@/lib/current-user";
 import { getConnections, getDevices, getDevicesHistory } from "@/lib/ow/api";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
@@ -16,6 +17,8 @@ const HISTORY_PREVIEW = 20;
 export default async function DevicesPage({ searchParams }: { searchParams: Promise<{ history?: string }> }) {
   const showAll = (await searchParams).history === "all";
   const ctx = await getCtx();
+  // Device ids are the data backend's own; athletes see names only (CLAUDE.md).
+  const admin = (await currentUser())?.role === "admin";
   const tz = ctx.settings.timezone;
   const [devices, history, conns] = await Promise.all([
     getDevices(ctx.ow!).then((v) => ({ v, e: null as string | null })).catch((e) => ({ v: [], e: errorMessage(e) })),
@@ -36,7 +39,7 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
         {active.length === 0 ? <Empty title="No devices yet">They appear once a connected provider syncs data.</Empty> : (
           <div className="table-wrap">
             <table className="t">
-              <thead><tr><th>Device</th><th>Type</th><th>Brand / model</th><th className="num">Sources</th><th>First seen</th><th>Last seen</th><th>Device id</th></tr></thead>
+              <thead><tr><th>Device</th><th>Type</th><th>Brand / model</th><th className="num">Sources</th><th>First seen</th><th>Last seen</th>{admin && <th>Device id</th>}</tr></thead>
               <tbody>
                 {active.map((d) => (
                   <tr key={d.id}>
@@ -46,7 +49,7 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
                     <td className="num">{d.data_sources.length}</td>
                     <td>{day(d.first_seen_at)}</td>
                     <td>{day(d.last_seen_at)}</td>
-                    <td className="mono">{d.id}</td>
+                    {admin && <td className="mono">{d.id}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -57,7 +60,7 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
       {retired.length > 0 && (
         <Card title={`Retired (${retired.length})`} className="flush">
           <div className="table-wrap"><table className="t"><tbody>
-            {retired.map((d) => <tr key={d.id}><td>{d.display_name}</td><td>{d.device_type}</td><td>retired {day(d.retired_at)}</td><td className="mono">{d.id}</td></tr>)}
+            {retired.map((d) => <tr key={d.id}><td>{d.display_name}</td><td>{d.device_type}</td><td>retired {day(d.retired_at)}</td>{admin && <td className="mono">{d.id}</td>}</tr>)}
           </tbody></table></div>
         </Card>
       )}
@@ -88,7 +91,7 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
               {historyRows.map((h) => (
                 <tr key={h.id}>
                   <td style={{ whiteSpace: "nowrap" }}>{day(h.created_at)}</td>
-                  <td>{(h.device_id && devName.get(h.device_id)) ?? <span className="mono">{h.device_id?.slice(0, 8) ?? "—"}</span>}</td>
+                  <td>{(h.device_id && devName.get(h.device_id)) ?? (admin && h.device_id ? <span className="mono">{h.device_id.slice(0, 8)}</span> : <span className="muted">Unknown device</span>)}</td>
                   <td>{h.action}</td>
                   <td className="small">{h.field ? `${h.field}: ${h.old_value ?? "∅"} → ${h.new_value ?? "∅"}` : ""}</td>
                   <td className="small">{h.actor}</td>

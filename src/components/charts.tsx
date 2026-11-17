@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { fmtDuration } from "@/lib/dates";
 
 export type Pt = [number, number | null];
@@ -36,6 +36,8 @@ interface Props {
   zeroBased?: boolean;
   /** "duration": values are minutes; ticks fall on whole hours and read "7h", the tooltip "7h 23m". */
   yAs?: "duration";
+  /** Shown instead of the default "No data in this window." so a page can offer a way out. */
+  empty?: ReactNode;
   ariaLabel: string;
 }
 
@@ -91,7 +93,7 @@ export function dateX(d: string): number {
   return Date.parse(`${d}T12:00:00Z`);
 }
 
-export function TimeChart({ series, band, refs = [], height = 220, xKind = "date", xUnit, tz, unit = "", digits = 0, yMin, yMax, zeroBased, yAs, ariaLabel }: Props) {
+export function TimeChart({ series, band, refs = [], height = 220, xKind = "date", xUnit, tz, unit = "", digits = 0, yMin, yMax, zeroBased, yAs, empty, ariaLabel }: Props) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -146,7 +148,7 @@ export function TimeChart({ series, band, refs = [], height = 220, xKind = "date
 
   const hasData = series.some((s) => s.points.some(([, y]) => y != null));
   if (!xList.length || !hasData) {
-    return <div className="empty"><p className="small">No data in this window.</p></div>;
+    return empty ?? <div className="empty"><p className="small">No data in this window.</p></div>;
   }
 
   return (

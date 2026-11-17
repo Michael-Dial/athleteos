@@ -5,7 +5,8 @@ import { coverageOrder, getNightly, METRIC_VALUE } from "@/lib/domain/nightly";
 import { getReadiness } from "@/lib/domain/readiness";
 import { addDays, fmtDate, todayIn } from "@/lib/dates";
 import { finite, mean, sd } from "@/lib/stats/basic";
-import { Card, Empty, SourceChip, fmt } from "@/components/ui";
+import { Card, Empty, NoDeviceData, SourceChip, fmt } from "@/components/ui";
+import { latestDeviceDay } from "@/lib/domain/latest";
 import { OwErrors } from "@/components/setup-banner";
 import { TimeChart, type Series } from "@/components/charts";
 import { HrvChart } from "@/components/trend-charts";
@@ -23,6 +24,9 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   const start = addDays(today, -days + 1);
   const [n, r] = await Promise.all([getNightly(ctx, start, today), getReadiness(ctx, today, { historyDays: days })]);
   const rows = n.rows;
+  // Only an empty window needs to say where the data is.
+  const latest = rows.length ? null : await latestDeviceDay(ctx);
+  const noRows = rows.length ? undefined : <NoDeviceData title={`No overnight data in the last ${days} days`} latest={latest} />;
   const dx = (d: string) => Date.parse(`${d}T12:00:00Z`);
 
   // One colour per device, assigned by coverage so the same device keeps its
@@ -71,10 +75,10 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
       </Card>
       <div className="grid cols-2">
         <Card title="Nightly RMSSD by device" hint="raw ms; devices differ in window and algorithm">
-          <TimeChart ariaLabel="Nightly RMSSD by device" series={seriesFor("hrv", hrvKeys)} unit="ms" />
+          <TimeChart ariaLabel="Nightly RMSSD by device" series={seriesFor("hrv", hrvKeys)} unit="ms" empty={noRows} />
         </Card>
         <Card title="Resting HR by device" hint="bpm">
-          <TimeChart ariaLabel="Resting heart rate by device" series={seriesFor("rhr", rhrKeys)} unit="bpm" />
+          <TimeChart ariaLabel="Resting heart rate by device" series={seriesFor("rhr", rhrKeys)} unit="bpm" empty={noRows} />
         </Card>
       </div>
       <Card title="Per-device summary" hint={`last ${days} days · HRV aggregated on ln scale`} className="flush">

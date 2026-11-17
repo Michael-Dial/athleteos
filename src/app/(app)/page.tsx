@@ -186,6 +186,9 @@ export default async function TodayPage() {
       <div className="grid cols-2">
         <Card title="This week" hint="done, stacked by sport · dashed = planned" action={<Link className="small" href="/review">Weekly review</Link>}>
           <WeekStrip days={dayCols} />
+          {dayCols.every((d) => d.plannedMin === 0 && d.sessions.length === 0) && (
+            <p className="small muted mt-sm">Nothing logged or planned this week. <Link href="/plan">Plan a session</Link></p>
+          )}
           {familiesThisWeek.length > 0 && (
             <div className="legend-dots mt-sm">{familiesThisWeek.map((f) => <span key={f}><i style={{ background: SPORT_COLOR[f] }} />{SPORT_LABEL[f]}</span>)}</div>
           )}

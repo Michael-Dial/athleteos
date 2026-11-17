@@ -7,7 +7,8 @@ import { addDays, fmtDate, fmtDuration, fmtTime, isISODate, localDateWithOffset,
 import { deviceName } from "@/lib/stats/sources";
 import { stageTotals } from "@/lib/ow/stages";
 import { errorMessage } from "@/lib/domain/errors";
-import { Card, SourceChip, fmt } from "@/components/ui";
+import { Card, Empty, NoDeviceData, SourceChip, fmt } from "@/components/ui";
+import { latestDeviceDay } from "@/lib/domain/latest";
 import { OwErrors } from "@/components/setup-banner";
 import { TimeChart } from "@/components/charts";
 import { Hypnogram } from "@/components/hypnogram";
@@ -40,6 +41,9 @@ export default async function SleepPage({ searchParams }: { searchParams: Promis
   const dates = [...new Set(rows.filter((r) => r.date >= start).map((r) => r.date))].sort().reverse();
   const nightRows = rows.filter((r) => r.date === night && (r.sleepMin != null || r.inBedMin != null));
   const extra = `&night=${night}`;
+  // An empty night points back to the latest night any device scored.
+  const lastSlept = nightRows.length ? null : rows.filter((r) => r.sleepMin != null && r.date < night).map((r) => r.date).sort().at(-1) ?? null;
+  const latest = rows.length && (nightRows.length || lastSlept) ? null : await latestDeviceDay(ctx);
 
   return (
     <div className="stack-lg">
@@ -50,6 +54,7 @@ export default async function SleepPage({ searchParams }: { searchParams: Promis
       <OwErrors errors={[owError, evError]} />
       <Card title="Time asleep by device" hint="main sleep, naps excluded">
         <TimeChart ariaLabel="Sleep duration by device" yAs="duration"
+          empty={<NoDeviceData title={`No sleep in the last ${days} days`} latest={latest} />}
           refs={[{ y: ctx.settings.readiness.sleepTargetMin, label: `target ${fmtDuration(ctx.settings.readiness.sleepTargetMin)}` }]}
           series={keys.map((k, i) => ({ id: k, label: nameOf.get(k)!, color: SLOTS[i], kind: "line" as const,
             points: rows.filter((r) => r.key === k && r.date >= start).map((r) => [dx(r.date), r.sleepMin] as [number, number | null]) }))} />
@@ -57,7 +62,12 @@ export default async function SleepPage({ searchParams }: { searchParams: Promis
 
       <Card title={`Night of ${fmtDate(night, { weekday: "long", month: "short", day: "numeric" })}`} hint={`${nightRows.length} device${nightRows.length === 1 ? "" : "s"}`}
         action={<div className="row"><Link className="btn sm" href={`/wearables/sleep?days=${days}&night=${addDays(night, -1)}`}>Previous night</Link>{night < today && <Link className="btn sm" href={`/wearables/sleep?days=${days}&night=${addDays(night, 1)}`}>Next night</Link>}</div>}>
-        {nightRows.length === 0 ? <p className="small muted">No device reported sleep for this night.</p> : (
+        {nightRows.length === 0 ? (lastSlept ? (
+          <Empty title="No sleep recorded for this night"
+            action={<Link className="btn sm" href={`/wearables/sleep?days=${days}&night=${lastSlept}`}>Show {fmtDate(lastSlept, { weekday: "short", month: "short", day: "numeric" })}</Link>}>
+            The latest night a device scored is {fmtDate(lastSlept, { month: "short", day: "numeric" })}.
+          </Empty>
+        ) : <NoDeviceData title="No sleep recorded for this night" latest={latest} />) : (
           <div className="table-wrap">
             <table className="t">
               <thead><tr><th>Device</th><th>Bed – wake</th><th className="num">Asleep</th><th className="num">In bed</th><th className="num">Eff. %</th><th className="num">Deep</th><th className="num">REM</th><th className="num">Light</th><th className="num">Awake</th><th className="num">RMSSD</th><th className="num">RHR</th></tr></thead>
