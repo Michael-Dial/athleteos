@@ -11,7 +11,7 @@ const PAGES = [
   "/", "/more", "/review", "/trends", "/history", "/history/intensity", "/history/zones", "/history/zones?metric=pace", "/history/zones?metric=bikepower", "/readiness/illness", "/wearables/coverage", "/plan", "/plan/phases", "/wellness", "/wellness/morning-wellness",
   "/questionnaires/morning-wellness", "/questionnaires/new", "/readiness",
   "/wearables", "/wearables/sleep", "/wearables/explore", "/wearables/compare", "/wearables/devices",
-  "/settings", "/settings/devices", "/settings/connections", "/settings/api", "/settings/notifications", "/settings/zones", "/settings/security", "/settings/credentials",
+  "/settings", "/settings/devices", "/settings/accounts", "/settings/backend", "/settings/api", "/settings/notifications", "/settings/zones", "/settings/security", "/settings/credentials",
 ];
 
 let failed = 0;
@@ -65,6 +65,11 @@ for (const p of PAGES) {
   const broken = html.includes("This page couldn") || html.includes("Application error");
   check(res.status === 200 && !broken, `GET ${p}`, `status ${res.status}${broken ? ", error boundary rendered" : ""}`);
 }
+
+// The old combined page forwards to the athlete page with its query, so an
+// OAuth flow started before the split still lands on its confirmation.
+const old = await get("/settings/connections?connected=garmin", { headers: { cookie } });
+check([307, 308].includes(old.status) && (old.headers.get("location") ?? "").endsWith("/settings/accounts?connected=garmin"), "old connections URL forwards to accounts", `${old.status} ${old.headers.get("location")}`);
 
 // Seed ran: the default wellness form exists and exports as JSON.
 const def = await get("/api/questionnaires/morning-wellness", { headers: { cookie } });

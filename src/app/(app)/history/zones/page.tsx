@@ -63,7 +63,7 @@ export default async function ZonesPage({ searchParams }: { searchParams: Promis
           <Card title={`${r.label} · ${r.zoneSet.modelLabel}`} hint={`${fmtDate(r.start, { month: "short", day: "numeric" })} – ${fmtDate(r.end, { month: "short", day: "numeric" })}`}>
             {r.total.recordedSec === 0 ? (
               <Empty title={`No ${r.label.toLowerCase()} recorded in this window`}>
-                {metric === "bikepower" ? "None of your rides in this window carry power data; it appears once a power meter syncs through Open Wearables." : `${r.total.sessionsWithout} session${r.total.sessionsWithout === 1 ? "" : "s"} had no ${r.label.toLowerCase()} from any of their devices.`}
+                {metric === "bikepower" ? "None of your rides in this window carry power data; it appears once a power meter syncs through a connected account." : `${r.total.sessionsWithout} session${r.total.sessionsWithout === 1 ? "" : "s"} had no ${r.label.toLowerCase()} from any of their devices.`}
               </Empty>
             ) : (
               <div className="stack">

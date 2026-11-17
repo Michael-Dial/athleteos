@@ -6,7 +6,7 @@ export function SetupBanner({ ctx }: { ctx: AppCtx }) {
   if (!ctx.owConfigured) {
     return (
       <Notice>
-        Open Wearables isn&apos;t connected, so device data is hidden. <Link href="/settings/credentials">Add its URL and API key</Link>.
+        Device data isn&apos;t set up on this server yet, so it&apos;s hidden. <Link href="/settings/credentials">Finish setup</Link>.
         Plan, history and questionnaires work without it.
       </Notice>
     );
@@ -14,7 +14,7 @@ export function SetupBanner({ ctx }: { ctx: AppCtx }) {
   if (!ctx.athlete.ow_user_id) {
     return (
       <Notice>
-        Link this athlete to an Open Wearables user to see device data. <Link href="/settings/connections">Link a user</Link>
+        Connect a wearable or Apple Health to see device data here. <Link href="/settings/accounts">Connect an account</Link>
       </Notice>
     );
   }

@@ -30,7 +30,7 @@ export default async function CoveragePage({ searchParams }: { searchParams: Pro
       <OwErrors errors={c.owErrors} />
       <div className="grid cols-4">
         <Card>
-          <div className="stat-label">Open Wearables</div>
+          <div className="stat-label">Device data service</div>
           <div className="row mt-sm"><StatePill state={c.ow.reachable ? "ok" : "flag"} label={c.ow.reachable ? "Reachable" : "Unreachable"} />{c.ow.latencyMs != null && <span className="small muted">{c.ow.latencyMs} ms</span>}</div>
           {c.ow.error && <p className="small mt-sm">{c.ow.error}</p>}
         </Card>

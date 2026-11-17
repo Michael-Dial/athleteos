@@ -108,7 +108,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
       <Card title="Sessions" className="flush"
         hint={excludedCount ? <Link href={showExcluded ? `/history?weeks=${weeks}` : `/history?weeks=${weeks}&show=excluded`}>{showExcluded ? "Hide" : "Show"} {excludedCount} excluded</Link> : undefined}>
         {visible.length === 0 ? (
-          <Empty title="No sessions in this window">Device workouts appear here automatically once Open Wearables has them. You can also log one below.</Empty>
+          <Empty title="No sessions in this window">Device workouts appear here automatically once a connected account syncs them. You can also log one below.</Empty>
         ) : (
           <div className="table-wrap">
             <table className="t">

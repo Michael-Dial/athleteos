@@ -7,6 +7,18 @@ const nextConfig: NextConfig = {
   // pg is a Node-only driver; keep it out of the bundler so its native/optional
   // requires resolve at runtime instead of being traced into chunks.
   serverExternalPackages: ["pg", "web-push", "nodemailer"],
+  async redirects() {
+    return [
+      {
+        // The old combined OW page, split into Connected accounts (athlete) and
+        // Data backend (admin). Provider OAuth flows started before the split
+        // return here with ?connected=…; the query string is carried over.
+        source: "/settings/connections",
+        destination: "/settings/accounts",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

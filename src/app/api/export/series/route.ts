@@ -8,7 +8,7 @@ import { errorMessage } from "@/lib/domain/errors";
 // Streams OW's bulk export straight through; nothing is buffered or stored.
 export async function GET(req: NextRequest) {
   const ctx = await getCtx();
-  if (!ctx.ow) return new Response("Open Wearables is not linked", { status: 409 });
+  if (!ctx.ow) return new Response("No device data account is linked", { status: 409 });
   const sp = req.nextUrl.searchParams;
   const start = sp.get("start");
   const end = sp.get("end");

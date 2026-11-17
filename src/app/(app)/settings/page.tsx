@@ -115,11 +115,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <N name="training.minDurationMin" label="Ignore shorter than (min)" value={s.training.minDurationMin} min={0} max={120} />
             <N name="training.maxDurationHours" label="Ignore longer than (h)" value={s.training.maxDurationHours} min={1} max={48} step={0.5} help="overnight captures logged as workouts" />
             <N name="training.sameSessionOverlap" label="Same-session overlap" value={s.training.sameSessionOverlap} min={0.1} max={1} step={0.05} help="fraction of the shorter recording" />
-            <label className="field wide">Exclude workout types<input name="training.excludeTypes" defaultValue={s.training.excludeTypes.join(", ")} placeholder="e.g. chores, lifestyle, meditation" /><span className="help">OW type names, comma-separated. Exclude whole devices on the Device priority tab.</span></label>
+            <label className="field wide">Exclude workout types<input name="training.excludeTypes" defaultValue={s.training.excludeTypes.join(", ")} placeholder="e.g. chores, lifestyle, meditation" /><span className="help">Workout type names as the device reports them, comma-separated. Exclude whole devices on the Device priority tab.</span></label>
           </div>
         </Card>
 
-        <Card title="Device comparison" hint="lag search: OW has no cross-device clock offset">
+        <Card title="Device comparison" hint="lag search: devices don't share a clock">
           <div className="form-grid">
             <N name="compare.epochSeconds" label="Epoch (s)" value={s.compare.epochSeconds} min={1} max={3600} />
             <N name="compare.lagToleranceSeconds" label="Lag tolerance ± (s)" value={s.compare.lagToleranceSeconds} min={0} max={3600} />

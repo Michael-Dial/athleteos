@@ -54,6 +54,11 @@ data backend — never call vendor APIs directly.**
 ## Conventions
 
 - All dashboard numbers show their source device; never silently pick one.
+- Open Wearables stays behind the scenes. Athletes see brands and "connected
+  accounts" (Settings → Connected accounts); OW's name, user ids, application
+  and provider setup appear only on the admin's Settings → Data backend and
+  Credentials tabs. The OW user is created on an athlete's first connect
+  (`lib/ow/provision.ts`), never asked for.
 - HRV aggregates computed on log(RMSSD); display both raw and log-derived.
 - Keep every tuning knob (lag tolerance, device priority, metric windows) in
   settings, not hardcoded.

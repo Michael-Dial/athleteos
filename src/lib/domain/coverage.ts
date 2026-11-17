@@ -37,7 +37,7 @@ export async function getCoverage(ctx: AppCtx, days: number): Promise<CoverageRe
   const pingT0 = Date.now();
   const ping = ctx.owConfigured
     ? owJson("/oauth/providers").then(() => ({ reachable: true, latencyMs: Date.now() - pingT0, error: null }), (e) => ({ reachable: false, latencyMs: null, error: errorMessage(e) }))
-    : Promise.resolve({ reachable: false, latencyMs: null, error: "Open Wearables isn't configured." });
+    : Promise.resolve({ reachable: false, latencyMs: null, error: "Device data isn't set up yet." });
   const adStart = addDays(end, -(s.coverage.adherenceDays - 1));
   const [nightly, conns, training, defs, ow] = await Promise.all([
     // Never fewer nights than the device-fallback window, so baselines match other pages.

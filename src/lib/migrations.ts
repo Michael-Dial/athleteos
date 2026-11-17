@@ -219,4 +219,14 @@ ALTER TABLE auth_challenge DROP CONSTRAINT auth_challenge_purpose_check;
 ALTER TABLE auth_challenge ADD CONSTRAINT auth_challenge_purpose_check CHECK (purpose IN ('web', 'token', 'setup'));
 `,
   },
+  {
+    version: 6,
+    name: "phone sync pairing code",
+    sql: `
+-- The code an athlete types into the phone sync app (Apple Health, Health
+-- Connect) to pair it with their device-data account. Sealed like the
+-- credential store (lib/vault.ts), bound to the athlete row by its AAD.
+ALTER TABLE athlete ADD COLUMN phone_code_sealed text;
+`,
+  },
 ];
