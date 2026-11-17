@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { fmtDate } from "@/lib/dates";
 import type { ReactNode } from "react";
 import { IconAlert, IconCheck, IconDevice, IconDown, IconMinus } from "./icons";
 
@@ -92,4 +94,25 @@ export function fmt(v: number | null | undefined, digits = 0): string {
 export function fmtSigned(v: number | null | undefined, digits = 1): string {
   if (v == null || !Number.isFinite(v)) return "—";
   return `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(digits)}`;
+}
+
+/**
+ * Empty state for a window with no device data: says when devices last
+ * reported and offers the way forward (the latest data, or connecting one).
+ */
+export function NoDeviceData({ title = "No device data in this window", latest, latestHref }: { title?: string; latest: string | null; latestHref?: string }) {
+  if (!latest) {
+    return (
+      <Empty title={title} action={<Link className="btn sm" href="/settings/accounts">Open connected accounts</Link>}>
+        Data appears here once a connected device syncs.
+      </Empty>
+    );
+  }
+  const day = fmtDate(latest, { month: "short", day: "numeric" });
+  return (
+    <Empty title={title}
+      action={latestHref ? <Link className="btn sm" href={latestHref}>Show {day}</Link> : <Link className="btn sm" href="/wearables/coverage">Check device sync</Link>}>
+      Your devices last reported on {day}.
+    </Empty>
+  );
 }
