@@ -2,8 +2,9 @@ import type { NextRequest } from "next/server";
 import { CHALLENGE_COOKIE } from "@/lib/auth";
 import { relRedirect } from "@/lib/http";
 import { safeNext } from "@/lib/safe-next";
-import { trustEpoch, verifyChallenge } from "@/lib/login-challenge";
+import { verifyChallenge } from "@/lib/login-challenge";
 import { clearChallenge, setSession, setTrust } from "@/lib/session-cookies";
+import { userById } from "@/lib/users";
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -15,9 +16,15 @@ export async function POST(req: NextRequest) {
     clearChallenge(res);
     return res;
   }
+  const user = await userById(r.challenge.userId);
+  if (!user || user.disabled) {
+    const res = relRedirect("/login?error=1");
+    clearChallenge(res);
+    return res;
+  }
   const res = relRedirect(safeNext(r.challenge.meta.next));
-  await setSession(res, req);
-  if (form.get("trust") === "on") await setTrust(res, req, await trustEpoch());
+  await setSession(res, req, user);
+  if (form.get("trust") === "on") await setTrust(res, req, user);
   clearChallenge(res);
   return res;
 }

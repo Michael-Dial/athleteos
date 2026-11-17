@@ -1,16 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, authDisabled, verifySessionToken } from "./lib/auth";
+import { SESSION_COOKIE, authDisabled } from "./lib/auth";
 import { publicUrl } from "./lib/http";
-import { sessionEpoch } from "./lib/session-epoch";
+import { sessionUser } from "./lib/user-session";
+
+// Admin-only pages. Their pages and actions check the role too; turning
+// members away here means they get a plain 404 before anything renders.
+const ADMIN_PATHS = ["/settings/users", "/settings/credentials", "/settings/backend"];
 
 // Everything except the login page, the healthcheck and static assets requires
 // a session: the app is reachable from the public tunnel.
 export async function proxy(req: NextRequest) {
   if (authDisabled()) return NextResponse.next();
-  const token = req.cookies.get(SESSION_COOKIE)?.value;
-  // The epoch lookup is skipped when there is no cookie at all.
-  const ok = Boolean(token) && (await verifySessionToken(token, await sessionEpoch()));
-  if (ok) return NextResponse.next();
+  // A session must name an active user and carry that user's current epoch.
+  const user = await sessionUser(req.cookies.get(SESSION_COOKIE)?.value);
+  if (user) {
+    const path = req.nextUrl.pathname;
+    if (!user.admin && ADMIN_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
+      return NextResponse.rewrite(new URL("/not-found-admin-only", req.url));
+    }
+    return NextResponse.next();
+  }
   if (req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -24,5 +33,5 @@ export const config = {
   // Logout stays reachable without a session so a stale cookie can always be cleared.
   // /api/v1 authenticates itself (bearer token or session) inside apiRoute().
   // PWA files stay public: browsers fetch the manifest without cookies.
-  matcher: ["/((?!login|api/health|api/auth/login|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
+  matcher: ["/((?!login|invite/|api/health|api/auth/login|api/auth/invite|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
 };

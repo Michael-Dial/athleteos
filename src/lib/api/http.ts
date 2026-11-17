@@ -1,9 +1,10 @@
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { SESSION_COOKIE, authDisabled, verifySessionToken } from "../auth";
+import { SESSION_COOKIE, authDisabled } from "../auth";
 import { q1 } from "../db";
-import { sessionEpoch } from "../session-epoch";
+import { sessionUserId } from "../user-session";
+import { userByAthlete, userById, type User } from "../users";
 import { addDays, diffDays, todayIn } from "../dates";
 import { loadCtx, type AppCtx } from "../domain/context";
 import { NotFoundError } from "../domain/writes";
@@ -38,22 +39,28 @@ export interface ApiCall<P> {
   ctx: AppCtx;
   params: P;
   auth: "token" | "session";
+  user: User;
 }
 
-async function authenticate(req: NextRequest): Promise<{ athleteId: number; auth: "token" | "session" }> {
+// Every call acts as one user on their own athlete. A token belongs to the
+// user owning its athlete and stops working when that user is disabled.
+async function authenticate(req: NextRequest): Promise<{ user: User; auth: "token" | "session" }> {
   const header = req.headers.get("authorization");
   if (header?.toLowerCase().startsWith("bearer ")) {
     const t = await resolveToken(header.slice(7).trim());
-    if (!t) throw new ApiError(401, "unauthorized", "Token is invalid or revoked");
-    return { athleteId: t.athleteId, auth: "token" };
+    const user = t ? await userByAthlete(t.athleteId) : null;
+    if (!user || user.disabled) throw new ApiError(401, "unauthorized", "Token is invalid or revoked");
+    return { user, auth: "token" };
   }
-  const cookie = req.cookies.get(SESSION_COOKIE)?.value;
-  if (authDisabled() || (cookie && (await verifySessionToken(cookie, await sessionEpoch())))) {
-    // Web sessions are single-user today: the first athlete.
-    const a = await q1<{ id: number }>("SELECT id FROM athlete ORDER BY id LIMIT 1");
-    if (!a) throw new ApiError(500, "no_athlete", "No athlete exists yet");
-    return { athleteId: a.id, auth: "session" };
+  if (authDisabled()) {
+    const a = await q1<{ id: number }>("SELECT id FROM app_user WHERE role = 'admin' AND disabled_at IS NULL ORDER BY id LIMIT 1");
+    const user = a ? await userById(a.id) : null;
+    if (!user) throw new ApiError(401, "unauthorized", "Open the web app once to create the owner account");
+    return { user, auth: "session" };
   }
+  const id = await sessionUserId(req.cookies.get(SESSION_COOKIE)?.value);
+  const user = id === null ? null : await userById(id);
+  if (user) return { user, auth: "session" };
   throw new ApiError(401, "unauthorized", "Send Authorization: Bearer <token> or sign in");
 }
 
@@ -62,10 +69,10 @@ export function apiRoute<P = Record<string, never>>(
 ) {
   return async (req: NextRequest, route: { params: Promise<P> }): Promise<NextResponse> => {
     try {
-      const { athleteId, auth } = await authenticate(req);
-      const ctx = await loadCtx(athleteId);
+      const { user, auth } = await authenticate(req);
+      const ctx = await loadCtx(user.athlete_id);
       const params = (await route?.params) ?? ({} as P);
-      const out = await handler({ req, ctx, params, auth });
+      const out = await handler({ req, ctx, params, auth, user });
       return out instanceof NextResponse ? out : json(out);
     } catch (e) {
       return toErrorResponse(e);

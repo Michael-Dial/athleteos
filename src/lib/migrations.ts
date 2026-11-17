@@ -229,4 +229,51 @@ ALTER TABLE auth_challenge ADD CONSTRAINT auth_challenge_purpose_check CHECK (pu
 ALTER TABLE athlete ADD COLUMN phone_code_sealed text;
 `,
   },
+  {
+    version: 7,
+    name: "users and roles",
+    sql: `
+-- One sign-in per person. Each user owns exactly one athlete (their data);
+-- admins also manage users, credentials and the device backend. The first
+-- admin is created on the first sign-in after this migration (lib/signin.ts),
+-- from the password the install already used.
+CREATE TABLE app_user (
+  id             serial PRIMARY KEY,
+  athlete_id     int  NOT NULL UNIQUE REFERENCES athlete(id) ON DELETE CASCADE,
+  email          text NOT NULL,
+  role           text NOT NULL CHECK (role IN ('admin', 'member')),
+  -- scrypt; NULL until an invited user sets one.
+  password_hash  text,
+  login_codes    boolean NOT NULL DEFAULT false,
+  -- Bumping either ends that user's sessions / trusted devices only.
+  session_epoch  int NOT NULL DEFAULT 0,
+  trust_epoch    int NOT NULL DEFAULT 0,
+  disabled_at    timestamptz,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  last_login_at  timestamptz
+);
+CREATE UNIQUE INDEX app_user_email ON app_user (lower(email));
+
+-- Invite and password-reset links. Only a SHA-256 of the token is stored.
+CREATE TABLE user_link (
+  token_hash   text PRIMARY KEY,
+  user_id      int  NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+  kind         text NOT NULL CHECK (kind IN ('invite', 'reset')),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  expires_at   timestamptz NOT NULL,
+  consumed_at  timestamptz
+);
+
+-- Sign-in codes belong to the user signing in.
+ALTER TABLE auth_challenge ADD COLUMN user_id int REFERENCES app_user(id) ON DELETE CASCADE;
+DELETE FROM auth_challenge;
+
+-- One device-data account per athlete, so linking can't show one person's
+-- data under two users.
+CREATE UNIQUE INDEX athlete_ow_user ON athlete (ow_user_id) WHERE ow_user_id IS NOT NULL;
+
+-- Replaced by per-user epochs.
+DELETE FROM system_kv WHERE key IN ('session_epoch', 'trust_epoch');
+`,
+  },
 ];

@@ -5,6 +5,7 @@ import { clientIp } from "@/lib/throttle";
 import { resendChallenge } from "@/lib/login-challenge";
 import { sendLoginCode } from "@/lib/mail";
 import { safeNext } from "@/lib/safe-next";
+import { userById } from "@/lib/users";
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -14,8 +15,10 @@ export async function POST(req: NextRequest) {
     if (r.reason === "unknown") return relRedirect("/login?error=codeexpired");
     return relRedirect(`/login/verify?error=${r.reason}${r.waitSec ? `&wait=${r.waitSec}` : ""}&next=${next}`);
   }
+  const user = await userById(r.userId);
+  if (!user || user.disabled) return relRedirect("/login?error=codeexpired");
   try {
-    await sendLoginCode(r.code, { ip: clientIp(req.headers), purpose: "web" });
+    await sendLoginCode(r.code, { ip: clientIp(req.headers), purpose: "web", to: user.email });
   } catch {
     return relRedirect(`/login/verify?error=mailfail&next=${next}`);
   }

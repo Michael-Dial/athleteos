@@ -7,6 +7,8 @@ import { ROUTES } from "./openapi";
 //   API_BASE=http://127.0.0.1:3020 API_PASSWORD=... npx vitest run lib/api/contract.test.ts
 const BASE = process.env.API_BASE;
 const PASSWORD = process.env.API_PASSWORD;
+// The admin created by the first sign-in (the smoke test's, in CI).
+const EMAIL = process.env.API_EMAIL ?? "admin@example.test";
 const live = BASE && PASSWORD ? describe : describe.skip;
 
 const spec = (method: string, path: string) => {
@@ -35,10 +37,10 @@ live("API v1 contract (live)", () => {
   };
 
   it("issues tokens only for the right password", async () => {
-    const bad = await call("POST", "/auth/token", { password: "nope", name: "test" }, false);
+    const bad = await call("POST", "/auth/token", { email: EMAIL, password: "nope", name: "test" }, false);
     expect(bad.status).toBe(401);
     expect(bad.data.error.code).toBe("bad_credentials");
-    const good = await call("POST", "/auth/token", { password: PASSWORD, name: "contract-test" }, false);
+    const good = await call("POST", "/auth/token", { email: EMAIL, password: PASSWORD, name: "contract-test" }, false);
     expect(good.status).toBe(201);
     // CI runs without emailed codes, so the password alone returns a token.
     token = (spec("post", "/auth/token").parse(good.data) as { token: string }).token;

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { CHALLENGE_COOKIE, TRUST_DAYS, maskEmail } from "@/lib/auth";
-import { loginEmail } from "@/lib/mail";
+import { q1 } from "@/lib/db";
 import { IconLogo } from "@/components/icons";
 
 export const metadata: Metadata = { title: "Enter code" };
@@ -17,8 +17,10 @@ const ERRORS: Record<string, string> = {
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; sent?: string; wait?: string }> }) {
   const sp = await searchParams;
-  if (!(await cookies()).get(CHALLENGE_COOKIE)) redirect("/login");
-  const to = await loginEmail();
+  const challenge = (await cookies()).get(CHALLENGE_COOKIE)?.value;
+  if (!challenge || !/^[0-9a-f-]{36}$/i.test(challenge)) redirect("/login");
+  const to = (await q1<{ email: string }>(
+    "SELECT u.email FROM auth_challenge c JOIN app_user u ON u.id = c.user_id WHERE c.id = $1", [challenge]))?.email;
   const next = sp.next ?? "/";
   return (
     <main className="auth-wrap">

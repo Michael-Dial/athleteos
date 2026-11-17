@@ -20,13 +20,9 @@ export async function smtpConfig(): Promise<SmtpConfig | null> {
   return { host, port: Number(port || 587), user, pass, from };
 }
 
-export async function loginEmail(): Promise<string | null> {
-  return (await cred("LOGIN_EMAIL")) ?? null;
-}
-
-/** Sign-in codes can be delivered: SMTP works and there is an address to send them to. */
+/** Email can be sent (sign-in codes, invites). */
 export async function mailConfigured(): Promise<boolean> {
-  return Boolean((await smtpConfig()) && (await loginEmail()));
+  return (await smtpConfig()) !== null;
 }
 
 function transport(c: SmtpConfig) {
@@ -66,22 +62,21 @@ function esc(s: string): string {
 
 type CodePurpose = "web" | "token" | "setup";
 
-export async function sendLoginCode(code: string, ctx: { ip: string; purpose: CodePurpose; device?: string; to?: string }): Promise<void> {
-  const to = ctx.to ?? (await loginEmail());
-  if (!to) throw new Error("No address for sign-in codes");
+export async function sendLoginCode(code: string, ctx: { ip: string; purpose: CodePurpose; device?: string; to: string }): Promise<void> {
+  const to = ctx.to;
   const when = new Date().toUTCString();
   if (ctx.purpose === "setup") {
     const text = [
       `Your AthleteOS confirmation code is ${code}`,
       "",
-      `Enter it in Settings → Security to send sign-in codes to this address. Requested from ${ctx.ip} at ${when}; it expires in 10 minutes.`,
+      `Enter it in Settings → Security to confirm this address. Requested from ${ctx.ip} at ${when}; it expires in 10 minutes.`,
     ].join("\n");
     const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#111">
 <p>Your AthleteOS confirmation code is</p>
 <p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0 16px">${code}</p>
-<p style="color:#555">Enter it in Settings → Security to send sign-in codes to this address. Requested from ${esc(ctx.ip)} at ${when}; it expires in 10 minutes.</p>
+<p style="color:#555">Enter it in Settings → Security to confirm this address. Requested from ${esc(ctx.ip)} at ${when}; it expires in 10 minutes.</p>
 </div>`;
-    await sendMail(to, "Confirm your AthleteOS sign-in address", text, html);
+    await sendMail(to, "Confirm your AthleteOS email address", text, html);
     return;
   }
   const what = ctx.purpose === "token" ? `an app sign-in${ctx.device ? ` (“${ctx.device}”)` : ""}` : "a sign-in";
@@ -98,4 +93,19 @@ export async function sendLoginCode(code: string, ctx: { ip: string; purpose: Co
 <p style="color:#555">If this wasn't you, someone has your AthleteOS password: change it in Settings → Security.</p>
 </div>`;
   await sendMail(to, "Your AthleteOS sign-in code", text, html);
+}
+
+/** An invite or password-reset link. The link itself is the secret, so it goes only to the user's address. */
+export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset"; url: string; name: string; by: string; expires: string }): Promise<void> {
+  const invite = ctx.kind === "invite";
+  const subject = invite ? "You're invited to AthleteOS" : "Set a new AthleteOS password";
+  const lead = invite ? `${ctx.by} invited you to AthleteOS.` : `${ctx.by} sent you a link to set a new AthleteOS password.`;
+  const text = [`Hi ${ctx.name},`, "", lead, "", `Set your password here: ${ctx.url}`, "", `The link works once and expires ${ctx.expires}.`].join("\n");
+  const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#111">
+<p>Hi ${esc(ctx.name)},</p>
+<p>${esc(lead)}</p>
+<p><a href="${esc(ctx.url)}" style="display:inline-block;background:#c8f046;color:#0c0d0f;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">Set your password</a></p>
+<p style="color:#555">The link works once and expires ${esc(ctx.expires)}.</p>
+</div>`;
+  await sendMail(to, subject, text, html);
 }

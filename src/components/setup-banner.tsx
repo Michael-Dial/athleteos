@@ -1,12 +1,15 @@
 import Link from "next/link";
 import type { AppCtx } from "@/lib/domain/context";
+import { currentUser } from "@/lib/current-user";
 import { Notice } from "./ui";
 
-export function SetupBanner({ ctx }: { ctx: AppCtx }) {
+export async function SetupBanner({ ctx }: { ctx: AppCtx }) {
   if (!ctx.owConfigured) {
+    const admin = (await currentUser())?.role === "admin";
     return (
       <Notice>
-        Device data isn&apos;t set up on this server yet, so it&apos;s hidden. <Link href="/settings/credentials">Finish setup</Link>.
+        Device data isn&apos;t set up on this server yet, so it&apos;s hidden.{" "}
+        {admin ? <><Link href="/settings/credentials">Finish setup</Link>.</> : "Your admin needs to finish setting it up."}{" "}
         Plan, history and questionnaires work without it.
       </Notice>
     );

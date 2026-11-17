@@ -352,3 +352,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* ---------- sign-in ---------- */
 .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
 .auth-card { width: 100%; max-width: 380px; padding: 28px; }
+
+/* Admin looking at another user's dashboards: always visible, never mistaken for their own. */
+.view-banner { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: var(--warn-weak); color: var(--ink); font-size: 14px; border-bottom: 1px solid var(--line); }
