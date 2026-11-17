@@ -30,7 +30,7 @@ export interface UserRow extends User {
 const COLS = `u.id, u.athlete_id, u.email, u.role, a.name, u.login_codes, u.password_hash IS NOT NULL AS has_password,
   u.disabled_at IS NOT NULL AS disabled, u.session_epoch, u.trust_epoch`;
 
-/** The invite/reset link shown to the admin after issuing it: an httpOnly cookie for two minutes, never a URL. */
+/** The invite/reset code shown to the admin after issuing it: an httpOnly cookie for two minutes, never a URL. */
 export const LINK_FLASH_COOKIE = "aos_link";
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -142,35 +142,61 @@ export async function deleteUser(target: User): Promise<void> {
   forgetUserState(target.id);
 }
 
-// ---------- invite and reset links ----------
+// ---------- invite codes (and the reset links that use the same mechanism) ----------
 
-const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
+// Codes are typed by people, so they use Crockford base32 (no I, L, O, U) in
+// three groups of four: 60 bits, single use, expiring, and the invite form is
+// throttled per IP, so guessing one is out of reach.
+const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const CODE_RE = /^[0-9A-HJKMNP-TV-Z]{12}$/;
 
-/** A one-time link that lets the user set a password; earlier unused links for them stop working. */
-export async function issueLink(userId: number, kind: "invite" | "reset"): Promise<{ token: string; expiresAt: Date }> {
-  const token = randomBytes(32).toString("base64url");
+/** Uppercase, drop spaces and dashes, and read the look-alike letters as the digits they resemble. */
+export function normalizeCode(input: string): string | null {
+  const c = input.toUpperCase().replace(/[\s-]/g, "").replace(/O/g, "0").replace(/[IL]/g, "1");
+  return CODE_RE.test(c) ? c : null;
+}
+
+export function formatCode(c: string): string {
+  return `${c.slice(0, 4)}-${c.slice(4, 8)}-${c.slice(8, 12)}`;
+}
+
+function newCode(): string {
+  const bytes = randomBytes(12);
+  let out = "";
+  // 256 is a multiple of 32, so taking each byte mod 32 is unbiased.
+  for (const b of bytes) out += ALPHABET[b % 32];
+  return out;
+}
+
+const hashCode = (c: string) => createHash("sha256").update(`invite:${c}`).digest("hex");
+
+/** A one-time code that lets the user set a password; earlier unused codes for them stop working. */
+export async function issueLink(userId: number, kind: "invite" | "reset"): Promise<{ code: string; expiresAt: Date }> {
+  const code = newCode();
   const expiresAt = new Date(Date.now() + (kind === "invite" ? INVITE_DAYS * 86400_000 : RESET_HOURS * 3600_000));
   await tx(async (c) => {
     await c.query("UPDATE user_link SET consumed_at = now() WHERE user_id = $1 AND consumed_at IS NULL", [userId]);
-    await c.query("INSERT INTO user_link (token_hash, user_id, kind, expires_at) VALUES ($1, $2, $3, $4)", [hashToken(token), userId, kind, expiresAt]);
+    await c.query("INSERT INTO user_link (token_hash, user_id, kind, expires_at) VALUES ($1, $2, $3, $4)", [hashCode(code), userId, kind, expiresAt]);
   });
-  return { token, expiresAt };
+  return { code: formatCode(code), expiresAt };
 }
 
-export async function peekLink(token: string): Promise<{ user: User; kind: "invite" | "reset" } | null> {
-  if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return null;
+export async function peekLink(input: string): Promise<{ user: User; kind: "invite" | "reset" } | null> {
+  const code = normalizeCode(input);
+  if (!code) return null;
   const row = await q1<{ user_id: number; kind: "invite" | "reset" }>(
-    "SELECT user_id, kind FROM user_link WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now()", [hashToken(token)]);
+    "SELECT user_id, kind FROM user_link WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now()", [hashCode(code)]);
   if (!row) return null;
   const user = await userById(row.user_id);
   return user && !user.disabled ? { user, kind: row.kind } : null;
 }
 
-/** Set the password from a link. Single use; the user's other sessions end. */
-export async function consumeLink(token: string, pw: string): Promise<User | null> {
-  const link = await peekLink(token);
-  if (!link) return null;
-  const used = await q1("UPDATE user_link SET consumed_at = now() WHERE token_hash = $1 AND consumed_at IS NULL RETURNING user_id", [hashToken(token)]);
+/** Set the password from a code. Single use; the user's other sessions end. */
+export async function consumeLink(input: string, pw: string): Promise<User | null> {
+  const link = await peekLink(input);
+  const code = normalizeCode(input);
+  if (!link || !code) return null;
+  const used = await q1("UPDATE user_link SET consumed_at = now() WHERE token_hash = $1 AND consumed_at IS NULL RETURNING user_id", [hashCode(code)]);
   if (!used) return null;
   await setPassword(link.user.id, pw);
   await bumpSessionEpoch(link.user.id);
