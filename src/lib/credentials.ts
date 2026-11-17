@@ -19,15 +19,17 @@ export interface CredDef {
   hint?: string;
   placeholder?: string;
   type?: "text" | "email" | "url" | "number";
+  /** Where the group's secrets are sent: a new value here receives the saved ones. */
+  destination?: boolean;
 }
 
 export const CREDENTIALS = {
-  OW_API_BASE: { group: "ow", label: "API base URL", secret: false, type: "url", placeholder: "http://192.168.8.222:8000/api/v1" },
+  OW_API_BASE: { group: "ow", label: "API base URL", secret: false, destination: true, type: "url", placeholder: "http://192.168.8.222:8000/api/v1" },
   OW_API_KEY: { group: "ow", label: "API key", secret: true, last4: true, hint: "Preferred. Used for all data reads when set." },
   OW_EMAIL: { group: "ow", label: "Developer email", secret: false, type: "email", hint: "Used when there is no API key, and to create the AthleteOS application." },
   OW_PASSWORD: { group: "ow", label: "Developer password", secret: true },
-  SMTP_HOST: { group: "smtp", label: "SMTP host", secret: false, placeholder: "smtp-relay.brevo.com" },
-  SMTP_PORT: { group: "smtp", label: "Port", secret: false, type: "number", placeholder: "587", hint: "587 uses STARTTLS (required); 465 uses implicit TLS." },
+  SMTP_HOST: { group: "smtp", label: "SMTP host", secret: false, destination: true, placeholder: "smtp-relay.brevo.com" },
+  SMTP_PORT: { group: "smtp", label: "Port", secret: false, destination: true, type: "number", placeholder: "587", hint: "587 uses STARTTLS (required); 465 uses implicit TLS." },
   SMTP_USER: { group: "smtp", label: "Username", secret: false },
   SMTP_PASS: { group: "smtp", label: "Password or SMTP key", secret: true },
   SMTP_FROM: { group: "smtp", label: "From", secret: false, placeholder: "AthleteOS <alerts@example.com>", hint: "Must be a sender your provider has verified." },
@@ -42,6 +44,20 @@ type InternalName = "APP_PASSWORD_HASH" | "OW_APPLICATION";
 export type StoreName = CredName | InternalName;
 
 export const CRED_NAMES = Object.keys(CREDENTIALS) as CredName[];
+
+/**
+ * Whether trying a form's settings would hand a saved secret to an address
+ * other than the saved one: a destination changed while a secret the form left
+ * blank (so the saved one is used) has a saved value. Testing that needs the
+ * person's password, like saving does; testing the saved address, or only
+ * secrets typed into the form, does not.
+ */
+export function testSendsSavedSecretElsewhere(changed: ReadonlySet<CredName>, savedSecrets: ReadonlySet<CredName>): boolean {
+  const def = (n: CredName): CredDef => CREDENTIALS[n];
+  const newDestination = [...changed].some((n) => def(n).destination);
+  const reusesSaved = [...savedSecrets].some((n) => def(n).secret && !changed.has(n));
+  return newDestination && reusesSaved;
+}
 
 interface Loaded {
   at: number;

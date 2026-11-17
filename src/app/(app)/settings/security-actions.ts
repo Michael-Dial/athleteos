@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE, TRUST_COOKIE, createSessionToken, createTrustToken } from "@/lib/auth";
 import { invalidate } from "@/lib/cache";
-import { CREDENTIALS, credentialStates, cred, forgetCredentialCache, writeCredentials, type CredGroup, type CredName, type StoreName } from "@/lib/credentials";
+import { CREDENTIALS, credentialStates, cred, forgetCredentialCache, testSendsSavedSecretElsewhere, writeCredentials, type CredGroup, type CredName, type StoreName } from "@/lib/credentials";
 import { requireAdmin, requireUser } from "@/lib/current-user";
 import { q } from "@/lib/db";
 import { createChallenge, verifyChallenge } from "@/lib/login-challenge";
@@ -26,15 +26,22 @@ function field(fd: FormData, k: string): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-async function requirePassword(user: User, fd: FormData, path: string): Promise<void> {
+/** Null when the form's current password is right; otherwise what to tell the person. */
+async function passwordProblem(user: User, fd: FormData): Promise<string | null> {
   const ip = clientIp(await headers());
   // Same limiter as sign-in, so this form can't be used to guess the password.
-  if (isLocked(ip)) fail(path, "Too many wrong passwords. Wait 15 minutes, then try again.");
+  if (isLocked(ip)) return "Too many wrong passwords. Wait 15 minutes, then try again.";
   if (!(await confirmPassword(user, String(fd.get("current_password") ?? "")))) {
     recordFailure(ip);
-    fail(path, "Your current password didn't match, so nothing was changed.");
+    return "Your current password didn't match, so nothing was changed.";
   }
   clearFailures(ip);
+  return null;
+}
+
+async function requirePassword(user: User, fd: FormData, path: string): Promise<void> {
+  const problem = await passwordProblem(user, fd);
+  if (problem) fail(path, problem);
 }
 
 async function secureCookies(): Promise<boolean> {
@@ -70,16 +77,12 @@ function validate(name: CredName, v: string): string | null {
   }
 }
 
-export async function saveCredentials(fd: FormData) {
-  const admin = await requireAdmin();
-  const group = field(fd, "group") as CredGroup;
-  const path = "/settings/credentials";
-  if (!(group in EDITABLE)) fail(path, "Unknown credential group");
-  await requirePassword(admin, fd, path);
-  const names = EDITABLE[group as keyof typeof EDITABLE];
+type Changes = Partial<Record<StoreName, string | null>>;
 
+/** What the form would change, or the first invalid value. */
+async function formChanges(fd: FormData, names: CredName[]): Promise<{ changes: Changes } | { error: string }> {
   // Blank secret fields mean "keep what's saved": secrets are never sent to the browser to be re-submitted.
-  const changes: Partial<Record<StoreName, string | null>> = {};
+  const changes: Changes = {};
   for (const name of names) {
     if (fd.get(`clear:${name}`) === "on") { changes[name] = null; continue; }
     const v = field(fd, name);
@@ -91,26 +94,84 @@ export async function saveCredentials(fd: FormData) {
     // Unchanged values aren't written, so a value shown from .env stays an .env value.
     if (v === (await cred(name))) continue;
     const bad = validate(name, v);
-    if (bad) fail(path, bad);
+    if (bad) return { error: bad };
     changes[name] = v;
   }
+  return { changes };
+}
 
-  // Resolve what the settings would be after saving, then try them first.
-  const after = async (n: CredName): Promise<string | undefined> =>
+/** A setting as it would be after saving `changes`. */
+function afterSaving(changes: Changes) {
+  return async (n: CredName): Promise<string | undefined> =>
     n in changes ? (changes[n] ?? (process.env[n]?.trim() || undefined)) : await cred(n);
-  if (fd.get("skip_test") !== "on") {
-    if (group === "ow") {
-      const [base, apiKey, email, password] = await Promise.all([after("OW_API_BASE"), after("OW_API_KEY"), after("OW_EMAIL"), after("OW_PASSWORD")]);
-      if (base && (apiKey || (email && password))) {
-        const err = await probeOw({ base: base.replace(/\/+$/, ""), apiKey, email, password });
-        if (err) fail(path, `Not saved: Open Wearables rejected these settings. ${err}`);
-      }
-    } else if (group === "smtp") {
-      const [host, port, user, pass, from] = await Promise.all(["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"].map((n) => after(n as CredName)));
-      if (host && from) {
-        const err = await probeSmtp({ host, port: Number(port || 587), user, pass, from });
-        if (err) fail(path, `Not saved: the mail server rejected these settings. ${err}`);
-      }
+}
+
+/**
+ * Try the settings with one signed-in request (OW) or a login without sending
+ * (SMTP). `incomplete` when there is not enough to try yet.
+ */
+async function probeGroup(group: "ow" | "smtp", changes: Changes): Promise<{ incomplete: true } | { error: string | null }> {
+  const after = afterSaving(changes);
+  if (group === "ow") {
+    const [base, apiKey, email, password] = await Promise.all([after("OW_API_BASE"), after("OW_API_KEY"), after("OW_EMAIL"), after("OW_PASSWORD")]);
+    if (!base || !(apiKey || (email && password))) return { incomplete: true };
+    return { error: await probeOw({ base: base.replace(/\/+$/, ""), apiKey, email, password }) };
+  }
+  const [host, port, user, pass, from] = await Promise.all(EDITABLE.smtp.map(after));
+  if (!host || !from) return { incomplete: true };
+  return { error: await probeSmtp({ host, port: Number(port || 587), user, pass, from }) };
+}
+
+export type CredentialTest = { ok: boolean; message: string };
+
+/** Settings → Credentials "Test": tries what is in the form and saves nothing. */
+export async function testCredentials(fd: FormData): Promise<CredentialTest> {
+  const admin = await requireAdmin();
+  const group = field(fd, "group");
+  if (group !== "ow" && group !== "smtp") return { ok: false, message: "This group has nothing to test." };
+  const parsed = await formChanges(fd, EDITABLE[group]);
+  if ("error" in parsed) return { ok: false, message: parsed.error };
+  const { changes } = parsed;
+
+  // A secret counts as typed only when the form holds it; one removed here
+  // falls back to .env, which is a stored secret like any saved one.
+  const typed = (n: CredName) => typeof changes[n as StoreName] === "string";
+  const changed = new Set((Object.keys(changes) as CredName[]).filter((n) => !CREDENTIALS[n].secret || typed(n)));
+  const after = afterSaving(changes);
+  const secrets = EDITABLE[group].filter((n) => CREDENTIALS[n].secret && !typed(n));
+  const inUse = await Promise.all(secrets.map((n) => after(n)));
+  const saved = new Set(secrets.filter((_, i) => inUse[i]));
+  if (testSendsSavedSecretElsewhere(changed, saved)) {
+    if (!field(fd, "current_password")) {
+      return { ok: false, message: "This would send a saved key or password to a new address. Enter your AthleteOS password to test it." };
+    }
+    const problem = await passwordProblem(admin, fd);
+    if (problem) return { ok: false, message: problem.replace(", so nothing was changed", ", so nothing was tested") };
+  }
+
+  const r = await probeGroup(group, changes);
+  if ("incomplete" in r) {
+    return { ok: false, message: group === "ow" ? "Enter the API base URL and an API key or a developer login first." : "Enter at least the host and the From address first." };
+  }
+  if (r.error) return { ok: false, message: `${group === "ow" ? "Open Wearables" : "The mail server"} rejected these settings. ${r.error}` };
+  return { ok: true, message: group === "ow" ? "Open Wearables accepted these settings. Nothing was saved." : "The mail server accepted the login. Nothing was sent or saved." };
+}
+
+export async function saveCredentials(fd: FormData) {
+  const admin = await requireAdmin();
+  const group = field(fd, "group") as CredGroup;
+  const path = "/settings/credentials";
+  if (!(group in EDITABLE)) fail(path, "Unknown credential group");
+  await requirePassword(admin, fd, path);
+  const parsed = await formChanges(fd, EDITABLE[group as keyof typeof EDITABLE]);
+  if ("error" in parsed) fail(path, parsed.error);
+  const { changes } = parsed as { changes: Changes };
+
+  // Try the settings as they would be after saving, before saving them.
+  if (fd.get("skip_test") !== "on" && (group === "ow" || group === "smtp")) {
+    const r = await probeGroup(group, changes);
+    if ("error" in r && r.error) {
+      fail(path, `Not saved: ${group === "ow" ? "Open Wearables" : "the mail server"} rejected these settings. ${r.error}`);
     }
   }
 
