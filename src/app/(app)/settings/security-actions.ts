@@ -5,18 +5,19 @@ import { redirect } from "next/navigation";
 import { SESSION_COOKIE, TRUST_COOKIE, createSessionToken, createTrustToken } from "@/lib/auth";
 import { invalidate } from "@/lib/cache";
 import { CREDENTIALS, credentialStates, cred, forgetCredentialCache, writeCredentials, type CredGroup, type CredName, type StoreName } from "@/lib/credentials";
+import { requireAdmin, requireUser } from "@/lib/current-user";
 import { q } from "@/lib/db";
-import { createChallenge, forgetTrustedDevices, trustEpoch, verifyChallenge } from "@/lib/login-challenge";
-import { loginEmail, probeSmtp, sendLoginCode, sendMail, smtpConfig } from "@/lib/mail";
+import { createChallenge, verifyChallenge } from "@/lib/login-challenge";
+import { probeSmtp, sendLoginCode, sendMail, smtpConfig } from "@/lib/mail";
 import { probeOw } from "@/lib/ow/client";
-import { bumpSessionEpoch } from "@/lib/session-epoch";
-import { MIN_PASSWORD_LENGTH, checkPassword, setPassword } from "@/lib/signin";
+import { MIN_PASSWORD_LENGTH, confirmPassword } from "@/lib/signin";
 import { clearFailures, clientIp, isLocked, recordFailure } from "@/lib/throttle";
+import { EMAIL_RE, UserError, bumpSessionEpoch, bumpTrustEpoch, setEmail, setLoginCodes, setPassword, userById, type User } from "@/lib/users";
 
 // Credential and sign-in changes. Every change that could hand a secret to
 // someone else (a new OW URL or SMTP host receives the stored key/password)
-// or lock you out asks for the current password, so a stolen session cookie
-// alone can't redirect credentials.
+// or lock someone out asks for the current password, so a stolen session
+// cookie alone can't redirect credentials or take over the account.
 
 const fail = (path: string, msg: string): never => redirect(`${path}${path.includes("?") ? "&" : "?"}error=${encodeURIComponent(msg)}`);
 
@@ -25,11 +26,11 @@ function field(fd: FormData, k: string): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-async function requirePassword(fd: FormData, path: string): Promise<void> {
+async function requirePassword(user: User, fd: FormData, path: string): Promise<void> {
   const ip = clientIp(await headers());
   // Same limiter as sign-in, so this form can't be used to guess the password.
   if (isLocked(ip)) fail(path, "Too many wrong passwords. Wait 15 minutes, then try again.");
-  if (!(await checkPassword(String(fd.get("current_password") ?? "")))) {
+  if (!(await confirmPassword(user, String(fd.get("current_password") ?? "")))) {
     recordFailure(ip);
     fail(path, "Your current password didn't match, so nothing was changed.");
   }
@@ -40,9 +41,9 @@ async function secureCookies(): Promise<boolean> {
   return (await headers()).get("x-forwarded-proto") === "https";
 }
 
-/** After the epoch moves, keep this browser signed in with a fresh cookie. */
-async function reissueSession(epoch: number): Promise<void> {
-  const { token, maxAge } = await createSessionToken(epoch);
+/** After the user's epoch moves, keep this browser signed in with a fresh cookie. */
+async function reissueSession(user: User, epoch: number): Promise<void> {
+  const { token, maxAge } = await createSessionToken(user.id, epoch);
   (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: await secureCookies(), path: "/", maxAge });
 }
 
@@ -70,10 +71,11 @@ function validate(name: CredName, v: string): string | null {
 }
 
 export async function saveCredentials(fd: FormData) {
+  const admin = await requireAdmin();
   const group = field(fd, "group") as CredGroup;
   const path = "/settings/credentials";
   if (!(group in EDITABLE)) fail(path, "Unknown credential group");
-  await requirePassword(fd, path);
+  await requirePassword(admin, fd, path);
   const names = EDITABLE[group as keyof typeof EDITABLE];
 
   // Blank secret fields mean "keep what's saved": secrets are never sent to the browser to be re-submitted.
@@ -119,47 +121,59 @@ export async function saveCredentials(fd: FormData) {
 }
 
 export async function discardUnreadable() {
+  await requireAdmin();
   const { unreadable } = await credentialStates();
   if (unreadable.length) await q("DELETE FROM credential WHERE name = ANY($1)", [unreadable]);
   forgetCredentialCache();
   redirect("/settings/credentials?discarded=1");
 }
 
-// ---------- password and sessions ----------
+// ---------- password and sessions (each user, their own account) ----------
 
 export async function changePassword(fd: FormData) {
+  const user = await requireUser();
   const path = "/settings/security";
-  await requirePassword(fd, path);
+  await requirePassword(user, fd, path);
   const next = String(fd.get("new_password") ?? "");
   if (next.length < MIN_PASSWORD_LENGTH) fail(path, `Use at least ${MIN_PASSWORD_LENGTH} characters for the new password.`);
   if (next !== String(fd.get("confirm_password") ?? "")) fail(path, "The new password and its confirmation don't match.");
-  await setPassword(next);
-  // Anyone holding an old session or trusted-device cookie has to start over.
-  await forgetTrustedDevices();
-  await reissueSession(await bumpSessionEpoch());
+  await setPassword(user.id, next);
+  // Anyone holding an old session or trusted-device cookie for this account has to start over.
+  await bumpTrustEpoch(user.id);
+  await reissueSession(user, await bumpSessionEpoch(user.id));
   redirect(`${path}?password=1`);
 }
 
 export async function signOutOtherDevices() {
-  await reissueSession(await bumpSessionEpoch());
+  const user = await requireUser();
+  await reissueSession(user, await bumpSessionEpoch(user.id));
   redirect("/settings/security?signedout=1");
 }
 
 export async function forgetAllDevices() {
-  await forgetTrustedDevices();
+  const user = await requireUser();
+  await bumpTrustEpoch(user.id);
   redirect("/settings/security?forgot=1");
 }
 
-// ---------- emailed sign-in codes ----------
+// ---------- emailed sign-in codes and the account's address ----------
 
-export async function startEmailCodes(fd: FormData) {
+/**
+ * Both switching codes on and changing the address send a confirmation code
+ * to the address that will receive sign-in codes, so a typo or a dead inbox
+ * can't lock the account.
+ */
+export async function startEmailConfirm(fd: FormData) {
+  const user = await requireUser();
   const path = "/settings/security";
-  await requirePassword(fd, path);
-  const to = field(fd, "email");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) fail(path, "Enter the address the codes should go to.");
-  if (!(await smtpConfig())) fail(path, "Set up email in Settings → Credentials first.");
+  await requirePassword(user, fd, path);
+  const action = field(fd, "action") === "email" ? "email" : "codes";
+  const to = action === "email" ? field(fd, "email") : user.email;
+  if (!EMAIL_RE.test(to)) fail(path, "Enter a valid email address.");
+  if (action === "email" && to.toLowerCase() === user.email.toLowerCase()) fail(path, "That's already your address.");
+  if (!(await smtpConfig())) fail(path, "Email isn't set up on this server yet, so no code can be sent. Ask your admin.");
   const ip = clientIp(await headers());
-  const { id, code } = await createChallenge("setup", ip, { email: to });
+  const { id, code } = await createChallenge("setup", user.id, ip, { action, email: to });
   try {
     await sendLoginCode(code, { ip, purpose: "setup", to });
   } catch (e) {
@@ -168,7 +182,8 @@ export async function startEmailCodes(fd: FormData) {
   redirect(`${path}?confirm=${id}`);
 }
 
-export async function confirmEmailCodes(fd: FormData) {
+export async function confirmEmailCode(fd: FormData) {
+  const user = await requireUser();
   const path = "/settings/security";
   const id = field(fd, "challenge");
   const r = await verifyChallenge(id, field(fd, "code"), "setup");
@@ -176,29 +191,38 @@ export async function confirmEmailCodes(fd: FormData) {
     if (r.reason === "invalid") fail(`${path}?confirm=${id}`, "That code isn't right. Check the latest email.");
     fail(path, "That confirmation expired or was used up. Start again.");
   }
-  if (!r.ok) return;
-  await writeCredentials({ LOGIN_EMAIL: r.challenge.meta.email, LOGIN_2FA: "email" });
-  // You just proved you can read that inbox, so this browser starts out trusted.
-  const { token, maxAge } = await createTrustToken(await trustEpoch());
+  if (!r.ok || r.challenge.userId !== user.id) return fail(path, "That confirmation belongs to another account.");
+  if (r.challenge.meta.action === "email") {
+    try {
+      await setEmail(user.id, r.challenge.meta.email);
+    } catch (e) {
+      fail(path, e instanceof UserError ? e.message : String(e));
+    }
+    redirect(`${path}?email=1`);
+  }
+  await setLoginCodes(user.id, true);
+  // They just proved they can read that inbox, so this browser starts out trusted.
+  const fresh = (await userById(user.id))!;
+  const { token, maxAge } = await createTrustToken(fresh.id, fresh.trust_epoch);
   (await cookies()).set(TRUST_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: await secureCookies(), path: "/", maxAge });
   redirect(`${path}?codes=on`);
 }
 
 export async function turnOffEmailCodes(fd: FormData) {
+  const user = await requireUser();
   const path = "/settings/security";
-  await requirePassword(fd, path);
-  // Stored as "off" (not deleted) so it also overrides LOGIN_2FA=email in .env.
-  await writeCredentials({ LOGIN_2FA: "off" });
+  await requirePassword(user, fd, path);
+  await setLoginCodes(user.id, false);
   redirect(`${path}?codes=off`);
 }
 
 export async function sendTestEmail(fd: FormData) {
-  const path = field(fd, "back") === "credentials" ? "/settings/credentials" : "/settings/security";
-  const to = field(fd, "to") || (await loginEmail());
-  if (!to) fail(path, "Enter an address to send the test to.");
+  const admin = await requireAdmin();
+  const path = "/settings/credentials";
+  const to = field(fd, "to") || admin.email;
   try {
-    await sendMail(to!, "AthleteOS test email", "Email from AthleteOS is working. Sign-in codes will arrive like this.",
-      "<p style=\"font-family:system-ui,sans-serif\">Email from AthleteOS is working. Sign-in codes will arrive like this.</p>");
+    await sendMail(to, "AthleteOS test email", "Email from AthleteOS is working. Sign-in codes and invites will arrive like this.",
+      "<p style=\"font-family:system-ui,sans-serif\">Email from AthleteOS is working. Sign-in codes and invites will arrive like this.</p>");
   } catch (e) {
     fail(path, `Sending failed: ${e instanceof Error ? e.message : String(e)}`);
   }

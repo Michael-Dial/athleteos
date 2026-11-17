@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { issueToken } from "@/lib/api/tokens";
 import { ApiError, body, json, toErrorResponse } from "@/lib/api/http";
-import { q1 } from "@/lib/db";
+import { userById } from "@/lib/users";
 import { TokenVerifyRequest } from "@/lib/api/schemas";
 import { verifyChallenge } from "@/lib/login-challenge";
 
@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
     const b = await body(req, TokenVerifyRequest);
     const r = await verifyChallenge(b.challengeId, b.code, "token");
     if (!r.ok) { const [s, c, m] = REASON[r.reason]; throw new ApiError(s, c, m); }
-    const athlete = await q1<{ id: number }>("SELECT id FROM athlete ORDER BY id LIMIT 1");
-    if (!athlete) throw new ApiError(500, "no_athlete", "No athlete exists yet");
-    const { token, row } = await issueToken(athlete.id, r.challenge.meta.name ?? "App");
+    const user = await userById(r.challenge.userId);
+    if (!user || user.disabled) throw new ApiError(401, "bad_credentials", "This account can't sign in");
+    const { token, row } = await issueToken(user.athlete_id, r.challenge.meta.name ?? "App");
     return json({ token, id: row.id, name: row.name, createdAt: new Date(row.created_at).toISOString() }, 201);
   } catch (e) {
     return toErrorResponse(e);

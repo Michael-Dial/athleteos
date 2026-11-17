@@ -1,7 +1,7 @@
 # CLAUDE.md — build brief for AthleteOS
 
-AthleteOS is an AMS-style (athlete management system) personal health/fitness
-dashboard for a single user (family-ready later). **Open Wearables is the device
+AthleteOS is an AMS-style (athlete management system) health/fitness dashboard
+with per-person accounts (admin or member), one athlete per user. **Open Wearables is the device
 data backend — never call vendor APIs directly.**
 
 ## Environment (homelab, already provisioned)
@@ -69,4 +69,10 @@ data backend — never call vendor APIs directly.**
   them before saving, and require the current password to change them. `.env`
   is the fallback, plus the bootstrap-only `SESSION_SECRET`, first
   `ATHLETEOS_PASSWORD` and `DATABASE_URL`.
+- Users and roles: each user owns one athlete. Pages and actions read the
+  athlete through `getCtx()` (an admin may be viewing someone read-only; write
+  actions go through `writeCtx()` in `actions.ts`, which refuses then). Anything
+  admin-only calls `requireAdmin()` in its page and action and is listed in
+  `ADMIN_PATHS` in `proxy.ts`. Searching the device backend and linking an
+  existing backend account are admin-only.
 - Comments explain why; no TODO left in a merged commit.

@@ -158,6 +158,8 @@ export async function renameAthlete(athleteId: number, name: string): Promise<vo
   await q("UPDATE athlete SET name = $1 WHERE id = $2", [name.trim().slice(0, 80), athleteId]);
 }
 
-export async function linkOwUser(athleteId: number, owUserId: string): Promise<void> {
+export async function linkOwUser(athleteId: number, owUserId: string | null): Promise<void> {
+  const other = owUserId ? await q1<{ name: string }>("SELECT name FROM athlete WHERE ow_user_id = $1 AND id <> $2", [owUserId, athleteId]) : null;
+  if (other) throw new Error(`That account is already linked to ${other.name}. Unlink it there first.`);
   await q("UPDATE athlete SET ow_user_id = $1 WHERE id = $2", [owUserId, athleteId]);
 }

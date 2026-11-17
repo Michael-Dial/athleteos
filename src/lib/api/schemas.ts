@@ -5,6 +5,7 @@ import { DateParam } from "./params";
 // Request schemas shared by the route handlers and the OpenAPI generator.
 
 export const TokenRequest = z.object({
+  email: z.string().trim().min(3).max(254).describe("The address you sign in with"),
   password: z.string().min(1),
   name: z.string().trim().min(1).max(80).describe("Shown in Settings so you can revoke it, e.g. 'iPhone'"),
 });

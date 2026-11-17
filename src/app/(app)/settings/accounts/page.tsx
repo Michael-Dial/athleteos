@@ -4,7 +4,8 @@ import Link from "next/link";
 import { getCtx } from "@/lib/domain/context";
 import { getConnections, listProviders } from "@/lib/ow/api";
 import type { OwConnection, OwProvider } from "@/lib/ow/types";
-import { getPhoneCode } from "@/lib/domain/phone-code";
+import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
+import { requireUser } from "@/lib/current-user";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
 import { Card, Notice } from "@/components/ui";
@@ -34,12 +35,13 @@ function statusOf(provider: string, conns: OwConnection[]): Status {
 
 export default async function AccountsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  const ctx = await getCtx();
+  const [ctx, user] = await Promise.all([getCtx(), requireUser()]);
+  const admin = user.role === "admin";
 
   if (!ctx.owConfigured) {
     return (
       <Card title="Connected accounts">
-        <Empty />
+        <Empty admin={admin} />
       </Card>
     );
   }
@@ -51,10 +53,11 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const tz = ctx.settings.timezone;
   const day = (iso: string | null) => (iso ? fmtDate(localDate(iso, tz), { month: "short", day: "numeric" }) : "not yet");
 
-  const [providers, conns, phoneCode] = await Promise.all([
+  const [providers, conns, phoneCode, phoneApp] = await Promise.all([
     attempt(listProviders),
     ctx.ow ? attempt(() => getConnections(ctx.ow!)) : Promise.resolve({ v: [] as OwConnection[], e: null }),
     getPhoneCode(ctx.athlete.id),
+    getPhoneApp(),
   ]);
   const all = conns.v ?? [];
   const enabled = (providers.v ?? []).filter((p) => p.is_enabled);
@@ -65,7 +68,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const nameOf = new Map(enabled.map((p) => [p.provider, p.name]));
   const connectedName = sp.connected ? nameOf.get(sp.connected) ?? sp.connected : null;
   const syncedName = sp.synced ? nameOf.get(sp.synced) ?? sp.synced : null;
-  const appName = ctx.settings.phoneApp.name || "the sync app";
+  const appName = phoneApp.name || "the sync app";
 
   return (
     <div className="stack-lg">
@@ -97,13 +100,13 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                     <p className="small muted mt-sm">Last synced {day(s.last)}. Keep {appName} installed; it syncs in the background.</p>
                   ) : phoneCode.state === "set" ? (
                     <ol className="small mt-sm" style={{ paddingLeft: 18, margin: 0 }}>
-                      <li>Install {ctx.settings.phoneApp.installUrl ? <a href={ctx.settings.phoneApp.installUrl} target="_blank" rel="noreferrer">{appName}</a> : appName} on your phone.</li>
+                      <li>Install {phoneApp.installUrl ? <a href={phoneApp.installUrl} target="_blank" rel="noreferrer">{appName}</a> : appName} on your phone.</li>
                       <li>Open it and enter your code: <code className="mono" style={{ userSelect: "all" }}>{phoneCode.code}</code></li>
                       <li>Allow access to {p.name} when asked.</li>
                     </ol>
                   ) : (
                     <p className="small muted mt-sm">
-                      Your phone pairing code isn&apos;t ready yet. <Link href="/settings/backend">Add one</Link>
+                      Your phone pairing code isn&apos;t ready yet. {admin ? <Link href={`/settings/users`}>Add one under Users</Link> : "Your admin adds it; check back soon."}
                     </p>
                   )}
                 </div>
@@ -139,11 +142,11 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   );
 }
 
-function Empty() {
+function Empty({ admin }: { admin: boolean }) {
   return (
     <div className="stack">
-      <Notice>Account linking isn&apos;t set up on this server yet. Plan, history and questionnaires work without it.</Notice>
-      <div><Link className="btn primary" href="/settings/credentials">Finish setup</Link></div>
+      <Notice>Account linking isn&apos;t set up on this server yet{admin ? "" : "; your admin needs to finish it"}. Plan, history and questionnaires work without it.</Notice>
+      {admin && <div><Link className="btn primary" href="/settings/credentials">Finish setup</Link></div>}
     </div>
   );
 }

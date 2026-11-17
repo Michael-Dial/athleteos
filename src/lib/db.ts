@@ -50,7 +50,8 @@ async function migrate(): Promise<void> {
 }
 
 // First-run seed: one athlete plus the default wellness questionnaire, so the
-// dashboard is usable immediately after `docker compose up`.
+// dashboard is usable immediately after `docker compose up`. Its user (the
+// first admin) is created at the first sign-in.
 async function seed(client: PoolClient): Promise<void> {
   const { rows } = await client.query<{ n: number }>("SELECT count(*)::int AS n FROM athlete");
   if (rows[0].n > 0) return;
@@ -60,7 +61,11 @@ async function seed(client: PoolClient): Promise<void> {
     "INSERT INTO athlete (name, ow_user_id) VALUES ($1, $2) RETURNING id",
     [name, owUser],
   );
-  const athleteId = ins.rows[0].id;
+  await seedQuestionnaires(client, ins.rows[0].id);
+}
+
+/** Default questionnaires for a new athlete (first run, or a newly invited user). */
+export async function seedQuestionnaires(client: PoolClient, athleteId: number): Promise<void> {
   for (const q of DEFAULT_QUESTIONNAIRES) {
     await client.query(
       `INSERT INTO questionnaire_def (athlete_id, slug, name, description, kind, schedule, items)

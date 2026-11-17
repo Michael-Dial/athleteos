@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isISODate } from "@/lib/dates";
-import { getCtx } from "@/lib/domain/context";
+import { getCtx, type AppCtx } from "@/lib/domain/context";
+import { requireAdmin } from "@/lib/current-user";
+import { userById, type User } from "@/lib/users";
 import { DefSchema, validateAnswers } from "@/lib/domain/questionnaire-schema";
 import { getDef, submitResponse, upsertDef } from "@/lib/domain/questionnaires";
 import { patchSettings, METRICS } from "@/lib/settings";
@@ -16,7 +18,7 @@ import {
 import { invalidate } from "@/lib/cache";
 import { authorizeUrl, bootstrapApplication, createUser, getUser, syncProvider } from "@/lib/ow/api";
 import { ensureOwUser } from "@/lib/ow/provision";
-import { PHONE_CODE_RE, setPhoneCode } from "@/lib/domain/phone-code";
+import { PHONE_CODE_RE, setPhoneApp, setPhoneCode } from "@/lib/domain/phone-code";
 import { errorMessage } from "@/lib/domain/errors";
 import { issueToken, revokeToken } from "@/lib/api/tokens";
 import { parsePace } from "@/lib/zones";
@@ -48,6 +50,16 @@ function done(path = "/") {
   return path;
 }
 
+/**
+ * Context for a write. An admin viewing someone else's dashboards is read-only:
+ * every action refuses rather than quietly writing to either athlete.
+ */
+async function writeCtx(): Promise<AppCtx> {
+  const ctx = await getCtx();
+  if (ctx.viewing) redirect("/?readonly=1");
+  return ctx;
+}
+
 // ---------- training ----------
 // Each action converts its form into the shared input schema and calls the
 // domain layer, so the web app and the JSON API behave identically.
@@ -59,7 +71,7 @@ function parseOr<T>(schema: z.ZodType<T>, obj: unknown, onError: string): T {
 }
 
 export async function annotateWorkout(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const backTo = back(fd, "/history");
   const a = parseOr(AnnotationInput, {
     owWorkoutId: str(fd, "ow_workout_id"), date: str(fd, "date"), startTime: str(fd, "start_time"),
@@ -72,7 +84,7 @@ export async function annotateWorkout(fd: FormData) {
 
 /** One-field RPE rating from a table row; keeps any existing annotation fields. */
 export async function rateSession(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const key = str(fd, "key") ?? "";
   const backTo = back(fd, "/history");
   const value = num(fd, "rpe");
@@ -90,7 +102,7 @@ export async function rateSession(fd: FormData) {
 }
 
 export async function logManualSession(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const backTo = back(fd, "/history");
   const m = parseOr(ManualSessionInput, {
     date: str(fd, "date"), sport: str(fd, "sport"), title: str(fd, "title"), durationMin: num(fd, "duration_min"),
@@ -103,7 +115,7 @@ export async function logManualSession(fd: FormData) {
 }
 
 export async function deleteManualSession(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   await W.deleteManualSession(athlete.id, num(fd, "id") ?? 0);
   redirect(done(back(fd, "/history")));
 }
@@ -111,7 +123,7 @@ export async function deleteManualSession(fd: FormData) {
 // ---------- plan ----------
 
 export async function savePlanSession(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const backTo = back(fd, "/plan");
   const s = parseOr(PlanSessionInput, {
     date: str(fd, "date"), sport: str(fd, "sport"), title: str(fd, "title") ?? "", description: str(fd, "description"),
@@ -125,13 +137,13 @@ export async function savePlanSession(fd: FormData) {
 }
 
 export async function deletePlanSession(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   await W.deletePlanSession(athlete.id, num(fd, "id") ?? 0);
   redirect(done(back(fd, "/plan")));
 }
 
 export async function copyPlanWeek(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const backTo = back(fd, "/plan");
   const c = parseOr(CopyWeekInput, { weekStart: str(fd, "week_start"), weeks: num(fd, "weeks") ?? 1 }, backTo);
   await W.copyPlanWeek(athlete.id, c.weekStart, c.weeks);
@@ -139,7 +151,7 @@ export async function copyPlanWeek(fd: FormData) {
 }
 
 export async function savePhase(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const backTo = back(fd, "/plan/phases");
   const p = parseOr(PhaseInput, {
     name: str(fd, "name") ?? "", kind: str(fd, "kind"), startDate: str(fd, "start_date"), endDate: str(fd, "end_date"),
@@ -152,7 +164,7 @@ export async function savePhase(fd: FormData) {
 }
 
 export async function deletePhase(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   await W.deletePhase(athlete.id, num(fd, "id") ?? 0);
   redirect(done(back(fd, "/plan/phases")));
 }
@@ -166,7 +178,7 @@ export interface SubmitState {
 }
 
 export async function submitQuestionnaire(_prev: SubmitState, fd: FormData): Promise<SubmitState> {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const slug = str(fd, "slug") ?? "";
   const def = await getDef(athlete.id, slug);
   if (!def) return { errors: { _form: "This questionnaire no longer exists." }, values: {} };
@@ -192,7 +204,7 @@ export interface DefState {
 }
 
 export async function saveQuestionnaireDef(_prev: DefState, fd: FormData): Promise<DefState> {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const text = String(fd.get("json") ?? "");
   let parsed: unknown;
   try {
@@ -211,7 +223,7 @@ export async function saveQuestionnaireDef(_prev: DefState, fd: FormData): Promi
 }
 
 export async function setQuestionnaireActive(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   await W.setQuestionnaireActive(athlete.id, str(fd, "slug") ?? "", fd.get("active") === "true");
   redirect(done("/wellness"));
 }
@@ -220,7 +232,7 @@ export async function setQuestionnaireActive(fd: FormData) {
 
 // Fields that are comma-separated lists in the form.
 const LIST_FIELDS = new Set(["training.excludeTypes"]);
-const TEXT_FIELDS = new Set(["timezone", "phoneApp.name", "phoneApp.installUrl", "load.method", "load.acwrModel", "load.trimpSex", "reminders.morningTime"]);
+const TEXT_FIELDS = new Set(["timezone", "load.method", "load.acwrModel", "load.trimpSex", "reminders.morningTime"]);
 // Optional numbers: an emptied field means "unset" (null), not "unchanged".
 const NULLABLE_FIELDS = new Set(["intensity.lt1Hr", "intensity.lt2Hr"]);
 
@@ -230,7 +242,7 @@ const NULLABLE_FIELDS = new Set(["intensity.lt1Hr", "intensity.lt2Hr"]);
  * form lists its own checkboxes in "$bools"; only those default to false.
  */
 export async function updateSettings(fd: FormData) {
-  const ctx = await getCtx();
+  const ctx = await writeCtx();
   const backTo = back(fd, "/settings");
   const patch: Record<string, unknown> = {};
   const set = (path: string, v: unknown) => {
@@ -262,7 +274,7 @@ export async function updateSettings(fd: FormData) {
 }
 
 export async function updateDevicePriority(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const metric = str(fd, "metric");
   if (!metric || !(METRICS as readonly string[]).includes(metric)) throw new Error("Unknown metric");
   const order = z.array(z.string().max(200)).max(100).parse(JSON.parse(String(fd.get("order") ?? "[]")));
@@ -271,7 +283,7 @@ export async function updateDevicePriority(fd: FormData) {
 }
 
 export async function toggleTrainingDeviceExcluded(fd: FormData) {
-  const ctx = await getCtx();
+  const ctx = await writeCtx();
   const key = str(fd, "device");
   if (!key) throw new Error("Missing device");
   const cur = new Set(ctx.settings.training.excludeDevices);
@@ -282,41 +294,60 @@ export async function toggleTrainingDeviceExcluded(fd: FormData) {
 
 // ---------- Open Wearables ----------
 
+/** Admin: the user an admin form acts on, by the hidden user_id field. */
+async function targetUser(fd: FormData): Promise<User> {
+  await requireAdmin();
+  const u = await userById(num(fd, "user_id") ?? 0);
+  if (!u) redirect("/settings/users?error=" + encodeURIComponent("That user no longer exists."));
+  return u;
+}
+const userPage = (u: User, q: string) => `/settings/users/${u.id}?${q}`;
+
+/** Admin: attach an existing device-data user (with its history) to this user's athlete. */
 export async function linkOwUser(fd: FormData) {
-  const { athlete } = await getCtx();
+  const target = await targetUser(fd);
   const id = str(fd, "ow_user_id");
-  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) redirect("/settings/backend?error=" + encodeURIComponent("Pick a user from the list."));
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) redirect(userPage(target, "error=" + encodeURIComponent("Pick an account from the list.")));
   try {
     await getUser(id);
+    await W.linkOwUser(target.athlete_id, id);
   } catch (e) {
-    redirect("/settings/backend?error=" + encodeURIComponent(errorMessage(e)));
+    redirect(userPage(target, "error=" + encodeURIComponent(errorMessage(e))));
   }
-  await W.linkOwUser(athlete.id, id);
   invalidate("ow:");
-  redirect(done("/settings/backend?linked=1"));
+  redirect(done(userPage(target, "linked=1")));
+}
+
+/** Admin: detach the device-data account (nothing is deleted in the backend). */
+export async function unlinkOwUser(fd: FormData) {
+  const target = await targetUser(fd);
+  await W.linkOwUser(target.athlete_id, null);
+  invalidate("ow:");
+  redirect(done(userPage(target, "unlinked=1")));
 }
 
 export async function createAndLinkOwUser(fd: FormData) {
-  const { athlete } = await getCtx();
+  const target = await targetUser(fd);
   let id: string;
   try {
-    const u = await createUser(str(fd, "first_name") ?? athlete.name, str(fd, "last_name") ?? "");
+    const u = await createUser(str(fd, "first_name") ?? target.name, str(fd, "last_name") ?? "");
     id = u.id;
+    await W.linkOwUser(target.athlete_id, id);
   } catch (e) {
-    redirect("/settings/backend?error=" + encodeURIComponent(errorMessage(e)));
+    redirect(userPage(target, "error=" + encodeURIComponent(errorMessage(e))));
   }
-  await W.linkOwUser(athlete.id, id);
-  redirect(done("/settings/backend?linked=1"));
+  redirect(done(userPage(target, "linked=1")));
 }
 
 export async function renameAthlete(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const name = str(fd, "name");
   if (name) await W.renameAthlete(athlete.id, name);
   redirect(done("/settings"));
 }
 
 export async function bootstrapOwApplication() {
+  await requireAdmin();
   let msg: string;
   try {
     const r = await bootstrapApplication();
@@ -329,7 +360,7 @@ export async function bootstrapOwApplication() {
 
 /** Athlete-facing: the backend user is created here on first connect, never asked for. */
 export async function connectProvider(fd: FormData) {
-  const ctx = await getCtx();
+  const ctx = await writeCtx();
   const provider = str(fd, "provider");
   const origin = str(fd, "origin");
   if (!provider || !origin) redirect("/settings/accounts");
@@ -344,7 +375,7 @@ export async function connectProvider(fd: FormData) {
 }
 
 export async function syncNow(fd: FormData) {
-  const ctx = await getCtx();
+  const ctx = await writeCtx();
   const provider = str(fd, "provider");
   if (!ctx.ow || !provider) redirect("/settings/accounts");
   let msg = `synced=${encodeURIComponent(provider)}`;
@@ -357,17 +388,29 @@ export async function syncNow(fd: FormData) {
   redirect(done(`/settings/accounts?${msg}`));
 }
 
-/** Admin: the phone app pairing code issued by the backend for this athlete's user. */
+/** Admin: the phone app pairing code issued by the backend for this user's device-data account. */
 export async function savePhoneCode(fd: FormData) {
-  const { athlete } = await getCtx();
+  const target = await targetUser(fd);
   if (fd.get("clear")) {
-    await setPhoneCode(athlete.id, null);
-    redirect(done("/settings/backend?code=cleared"));
+    await setPhoneCode(target.athlete_id, null);
+    redirect(done(userPage(target, "code=cleared")));
   }
   const code = str(fd, "phone_code");
-  if (!code || !PHONE_CODE_RE.test(code)) redirect(withParam("/settings/backend", "error", "Paste the pairing code as issued: 4 to 128 characters, no spaces."));
-  await setPhoneCode(athlete.id, code);
-  redirect(done("/settings/backend?code=saved"));
+  if (!code || !PHONE_CODE_RE.test(code)) redirect(userPage(target, "error=" + encodeURIComponent("Paste the pairing code as issued: 4 to 128 characters, no spaces.")));
+  await setPhoneCode(target.athlete_id, code);
+  redirect(done(userPage(target, "code=saved")));
+}
+
+/** Admin: the phone sync app every athlete is pointed to (install-wide). */
+export async function savePhoneApp(fd: FormData) {
+  await requireAdmin();
+  try {
+    await setPhoneApp({ name: str(fd, "name") ?? "", installUrl: str(fd, "installUrl") ?? "" });
+  } catch (e) {
+    if (e instanceof z.ZodError) redirect(withParam("/settings/backend", "error", "The install link must be an https:// address."));
+    throw e;
+  }
+  redirect(done("/settings/backend?saved=1"));
 }
 
 export async function refreshDeviceData() {
@@ -385,7 +428,7 @@ export interface TokenState {
 
 /** The plaintext token goes back to the page once; only its hash is stored. */
 export async function createApiToken(_prev: TokenState, fd: FormData): Promise<TokenState> {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const name = str(fd, "name");
   if (!name) return { token: null, error: "Name the token after the device or script that will use it." };
   const { token } = await issueToken(athlete.id, name);
@@ -394,7 +437,7 @@ export async function createApiToken(_prev: TokenState, fd: FormData): Promise<T
 }
 
 export async function revokeApiToken(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   await revokeToken(athlete.id, num(fd, "id") ?? 0);
   redirect(done("/settings/api?revoked=1"));
 }
@@ -403,7 +446,7 @@ export async function revokeApiToken(fd: FormData) {
 
 /** Zone settings: thresholds (pace as m:ss), model per metric, custom boundary lists. */
 export async function updateZones(fd: FormData) {
-  const { athlete } = await getCtx();
+  const { athlete } = await writeCtx();
   const numOrNull = (k: string) => { const v = str(fd, k); return v == null ? null : Number(v); };
   const list = (k: string, pace = false): number[] | string => {
     const v = str(fd, k);
