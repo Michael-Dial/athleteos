@@ -28,8 +28,10 @@ npm run build && DATABASE_URL=postgresql://…/scratch SESSION_SECRET=$(openssl 
 Sign in once as `admin@example.com` / `pw` to create the admin. Device data needs Open Wearables in Settings → Credentials and a linked account, or the data screens only show their empty states. Then run:
 
 ```bash
-DC_BASE=http://127.0.0.1:3022 DC_EMAIL=admin@example.com DC_PASSWORD=pw node scripts/design-check.mjs <out-dir>
+DC_BASE=http://127.0.0.1:3022 DC_EMAIL=admin@example.com DC_PASSWORD=pw node scripts/design-check.mjs
 ```
+
+Screenshots go to the system temp folder (`athleteos-design-check`; the script prints the path), so they stay out of the repo. Report findings from them and leave them uncommitted.
 
 The script writes one screenshot per page × configuration plus `report.json`. Each configuration covers:
 

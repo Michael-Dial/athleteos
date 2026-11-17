@@ -4,6 +4,8 @@
 //
 //   DC_BASE=http://127.0.0.1:3020 DC_EMAIL=you@example.com DC_PASSWORD=... node scripts/design-check.mjs [out-dir]
 //
+// out-dir defaults to <system temp>/athleteos-design-check; keep it outside the repo.
+//
 // Needs Playwright (with Chromium) and axe-core resolvable from here
 // (`npm i --no-save playwright axe-core` if they aren't). Writes one PNG per
 // page × configuration and report.json with, per page:
@@ -15,6 +17,7 @@
 //   axe         WCAG 2 A/AA violations (contrast, names, ARIA)
 import { createRequire } from "node:module";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const require = createRequire(import.meta.url);
@@ -24,7 +27,8 @@ const AXE = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 const B = process.env.DC_BASE ?? "http://127.0.0.1:3020";
 const EMAIL = process.env.DC_EMAIL, PASSWORD = process.env.DC_PASSWORD;
 if (!EMAIL || !PASSWORD) throw new Error("DC_EMAIL and DC_PASSWORD are required");
-const OUT = path.resolve(process.argv[2] ?? "design-check-out");
+// Screenshots go to the system temp folder by default, never into the repo.
+const OUT = path.resolve(process.argv[2] ?? path.join(os.tmpdir(), "athleteos-design-check"));
 fs.mkdirSync(OUT, { recursive: true });
 const T = { timeout: 180_000 };
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
