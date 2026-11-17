@@ -82,9 +82,10 @@ athlete. Then, in the app:
 
 1. **Settings → Credentials**: Open Wearables URL and API key (or developer login),
    SMTP for emailed codes, push contact. Each is tested before it is saved.
-2. **Settings → Users** (admin): invite people; each gets their own sign-in and data.
-   On a person's page, link an OW user that already has their history (search by name
-   or email), or leave it and their first connect creates one. Paste the phone pairing
+2. **Settings → Users** (admin): invite people with a one-time code; each gets their own
+   sign-in and data. Link an OW user that already has their history (search by name or
+   email) while inviting, or later on their page, or leave it and their first connect
+   creates one. Paste the phone pairing
    code OW issues for them there too.
    **Settings → Data backend** (admin): the OW application, the phone app's name and
    install link, and the providers that are enabled in OW without client credentials
@@ -152,10 +153,15 @@ Members never see the admin tabs, and those pages and their actions return 404
 for them. Searching the device-data backend is admin-only because it can hold
 other people's accounts.
 
-- **Invites.** An admin enters a name and email; the person gets a one-time link
-  (7 days) to set a password. If email isn't set up, the admin sees the link once
-  and sends it themselves. A reset link (24 hours) works the same way, and the
-  old password keeps working until the new one is set.
+- **Invites.** An admin enters a name and email and, optionally, picks the
+  person's existing device-data account from a search; it is linked before they
+  ever sign in, so their history is there on day one. The person gets a one-time
+  invite code like `K7QM-2XRA-9TPD` (7 days). They enter it under "Have an
+  invite code?" on the sign-in page, or open the emailed link that fills it in,
+  then choose a password. If email isn't set up, the admin sees the code once
+  and passes it on. A reset code (24 hours) works the same way, and the old
+  password keeps working until the new one is set. Codes are single use, stored
+  hashed, and wrong codes share the sign-in throttle.
 - **Safeguards.** Inviting, changing roles and removing a user ask for the
   admin's own password. Removing also needs the person's email typed, and deletes
   their AthleteOS data; their device-data account in the backend isn't touched.

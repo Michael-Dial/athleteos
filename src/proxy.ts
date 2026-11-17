@@ -33,5 +33,5 @@ export const config = {
   // Logout stays reachable without a session so a stale cookie can always be cleared.
   // /api/v1 authenticates itself (bearer token or session) inside apiRoute().
   // PWA files stay public: browsers fetch the manifest without cookies.
-  matcher: ["/((?!login|invite/|api/health|api/auth/login|api/auth/invite|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
+  matcher: ["/((?!login|invite|api/health|api/auth/login|api/auth/invite|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
 };

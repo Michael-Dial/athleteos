@@ -95,17 +95,24 @@ export async function sendLoginCode(code: string, ctx: { ip: string; purpose: Co
   await sendMail(to, "Your AthleteOS sign-in code", text, html);
 }
 
-/** An invite or password-reset link. The link itself is the secret, so it goes only to the user's address. */
-export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset"; url: string; name: string; by: string; expires: string }): Promise<void> {
+/** An invite or password-reset code, with a link that fills it in. It goes only to the user's own address. */
+export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset"; url: string; code: string; name: string; by: string; expires: string }): Promise<void> {
   const invite = ctx.kind === "invite";
   const subject = invite ? "You're invited to AthleteOS" : "Set a new AthleteOS password";
-  const lead = invite ? `${ctx.by} invited you to AthleteOS.` : `${ctx.by} sent you a link to set a new AthleteOS password.`;
-  const text = [`Hi ${ctx.name},`, "", lead, "", `Set your password here: ${ctx.url}`, "", `The link works once and expires ${ctx.expires}.`].join("\n");
+  const lead = invite ? `${ctx.by} invited you to AthleteOS.` : `${ctx.by} sent you a code to set a new AthleteOS password.`;
+  const text = [
+    `Hi ${ctx.name},`, "", lead, "",
+    `Your ${invite ? "invite" : "reset"} code: ${ctx.code}`,
+    `Open ${ctx.url} or enter the code under "Have an invite code?" on the sign-in page, then choose your password.`,
+    "", `The code works once and expires ${ctx.expires}.`,
+  ].join("\n");
   const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#111">
 <p>Hi ${esc(ctx.name)},</p>
 <p>${esc(lead)}</p>
+<p>Your ${invite ? "invite" : "reset"} code</p>
+<p style="font-size:26px;font-weight:700;letter-spacing:3px;margin:4px 0 14px;font-family:ui-monospace,monospace">${esc(ctx.code)}</p>
 <p><a href="${esc(ctx.url)}" style="display:inline-block;background:#c8f046;color:#0c0d0f;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">Set your password</a></p>
-<p style="color:#555">The link works once and expires ${esc(ctx.expires)}.</p>
+<p style="color:#555">Or enter the code under &ldquo;Have an invite code?&rdquo; on the sign-in page. It works once and expires ${esc(ctx.expires)}.</p>
 </div>`;
   await sendMail(to, subject, text, html);
 }

@@ -5,12 +5,13 @@ import { MIN_PASSWORD_LENGTH } from "@/lib/signin";
 import { clearFailures, clientIp, isLocked, recordFailure } from "@/lib/throttle";
 import { consumeLink, peekLink } from "@/lib/users";
 
-// Accept an invite or reset link: set the password and sign in. Public, like
-// the login form; the link itself is the credential, so it is single use.
+// Accept an invite or reset code: set the password and sign in. Public, like
+// the login form; the code itself is the credential, so it is single use and
+// wrong codes count against the same per-IP limit as wrong passwords.
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const token = String(form.get("token") ?? "");
-  const back = (error: string) => relRedirect(`/invite/${encodeURIComponent(token)}?error=${error}`);
+  const back = (error: string) => relRedirect(token ? `/invite/${encodeURIComponent(token)}?error=${error}` : "/invite");
   const ip = clientIp(req.headers);
   if (isLocked(ip)) return back("locked");
   if (!(await peekLink(token))) {

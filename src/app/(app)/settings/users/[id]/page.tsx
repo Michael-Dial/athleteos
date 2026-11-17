@@ -33,8 +33,8 @@ const DONE: Record<string, string> = {
 
 const MAIL: Record<string, string> = {
   sent: "Emailed to them.",
-  notsent: "Email isn't set up, so send them this link yourself.",
-  failed: "The email couldn't be sent, so send them this link yourself.",
+  notsent: "Email isn't set up, so give them the code (or the link) yourself.",
+  failed: "The email couldn't be sent, so give them the code (or the link) yourself.",
 };
 
 type SP = Record<string, string | undefined>;
@@ -58,8 +58,8 @@ export default async function UserPage({ params, searchParams }: { params: Promi
   // Search only on request: the backend may hold other people's accounts.
   const found = cfg && q.length >= 2 ? await attempt(() => searchUsers(q)) : { v: null, e: null };
 
-  const flash = (await cookies()).get(LINK_FLASH_COOKIE)?.value;
-  const link = flash?.startsWith(`${u.id}|`) ? flash.slice(String(u.id).length + 1) : null;
+  const flash = (await cookies()).get(LINK_FLASH_COOKIE)?.value?.split("|");
+  const issued = flash && flash[0] === String(u.id) ? { code: flash[1], url: flash.slice(2).join("|") } : null;
   const linkNote = sp.invited ? MAIL[sp.invited] : sp.linksent ? MAIL[sp.linksent] : null;
   const done = sp.linked ? DONE.linked : sp.unlinked ? DONE.unlinked : sp.role ? DONE.role : sp.status ? DONE[sp.status] : sp.code ? DONE[sp.code] : null;
   const isMe = u.id === me.id;
@@ -82,8 +82,16 @@ export default async function UserPage({ params, searchParams }: { params: Promi
       {(sp.invited || sp.linksent) && (
         <Notice kind="info">
           <div className="stack" style={{ gap: 6 }}>
-            <span>{sp.invited ? `Invite created for ${u.name}.` : `New link for ${u.name}.`} {linkNote}</span>
-            {link ? <code className="mono" style={{ userSelect: "all", wordBreak: "break-all" }}>{link}</code> : <span className="small muted">The link is only shown right after it&apos;s made. Send a new one if you need it.</span>}
+            <span>
+              {sp.invited ? `Invite created for ${u.name}` : `New code for ${u.name}`}
+              {sp.prelinked ? ", already linked to their existing device-data account" : ""}. {linkNote}
+            </span>
+            {issued ? (
+              <>
+                <code className="mono" style={{ userSelect: "all", fontSize: 22, letterSpacing: "0.1em" }}>{issued.code}</code>
+                <span className="small">They enter it under &ldquo;Have an invite code?&rdquo; on the sign-in page, or open <code className="mono" style={{ userSelect: "all", wordBreak: "break-all" }}>{issued.url}</code></span>
+              </>
+            ) : <span className="small muted">The code is only shown right after it&apos;s made. Send a new one if you need it.</span>}
           </div>
         </Notice>
       )}
@@ -155,8 +163,8 @@ export default async function UserPage({ params, searchParams }: { params: Promi
               <dt>Status</dt><dd>{u.disabled ? "Disabled" : u.has_password ? "Active" : "Hasn't set a password yet"}</dd>
               <dt>Emailed codes</dt><dd>{u.login_codes ? "On" : "Off"}</dd>
             </dl>
-            <form action={sendResetLink}>{hidden}<button className="btn" type="submit">{u.has_password ? "Send a password reset link" : "Send a new invite link"}</button></form>
-            <p className="small muted">A reset link lets them choose a new password; their current one keeps working until they do.</p>
+            <form action={sendResetLink}>{hidden}<button className="btn" type="submit">{u.has_password ? "Send a password reset code" : "Send a new invite code"}</button></form>
+            <p className="small muted">A reset code lets them choose a new password; their current one keeps working until they do. Any earlier code stops working.</p>
           </div>
         </Card>
         <Card title="Role">
