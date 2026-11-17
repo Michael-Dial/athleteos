@@ -85,13 +85,13 @@ athlete. Then, in the app:
 2. **Settings → Users** (admin): invite people with a one-time code; each gets their own
    sign-in and data. Link an OW user that already has their history (search by name or
    email) while inviting, or later on their page, or leave it and their first connect
-   creates one. Paste the phone pairing
-   code OW issues for them there too.
-   **Settings → Data backend** (admin): the OW application, the phone app's name and
+   creates one. An invited person can enter the code on the web or in the iPhone app.
+   **Settings → Data backend** (admin): the OW application, the iPhone app's name and
    install link, and the providers that are enabled in OW without client credentials
    (hidden from athletes).
 3. **Settings → Connected accounts** (what an athlete sees): connect Garmin, Oura and
-   the rest, and follow the Apple Health / Health Connect steps. Open Wearables is
+   the rest. Apple Health syncs from the iPhone app, which reaches OW through this
+   server (`/ow/api/v1`), so OW never needs its own public address. Open Wearables is
    never named on this page or anywhere else an athlete looks.
 4. **Settings → Device priority**: rank devices per metric (HRV, RHR, sleep, respiratory rate,
    SpO₂, workouts). Unranked devices fall back to the one with the most data and are labelled.
@@ -223,6 +223,23 @@ emailed code for a token.
 ```bash
 docker exec athleteos-db psql -U athleteos -c "UPDATE app_user SET password_hash = NULL WHERE email = 'you@example.com'"
 ```
+
+## iPhone app
+
+`ios/` holds the native app (SwiftUI, iOS 18). Invited athletes and the admin
+use it for Today, Training, Plan, Trends, check-ins and connected accounts; it
+also turns on Apple Health sync, which runs OW's iOS SDK and reaches OW through
+this server's `/ow/api/v1` proxy.
+
+- `ios/project.yml` is the XcodeGen spec (`cd ios && xcodegen`); the release
+  pipeline signs and uploads from it.
+- `ios/AthleteKit` is the testable core: the API client, session, invite codes
+  and the phone sync rules (`swift test` on a Mac). Its models in
+  `Generated/API.swift` are generated from the server's route table; after an
+  API change run `cd src && UPDATE_SWIFT=1 npx vitest run lib/api/swift-gen`
+  and commit `ios/`, or the server's unit tests fail.
+- CI builds the app and runs AthleteKit's tests on a hosted macOS runner
+  (`.github/workflows/ios.yml`).
 
 ## Phone: install as an app (PWA)
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
+import type { PoolClient } from "pg";
 import { q, q1 } from "../db";
 
 export interface ApiTokenRow {
@@ -13,9 +14,11 @@ export interface ApiTokenRow {
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
 
 /** New token for an athlete. The plaintext is returned once and never stored. */
-export async function issueToken(athleteId: number, name: string): Promise<{ token: string; row: ApiTokenRow }> {
+export async function issueToken(athleteId: number, name: string, client?: PoolClient): Promise<{ token: string; row: ApiTokenRow }> {
   const token = `aos_${randomBytes(32).toString("base64url")}`;
-  const row = await q1<ApiTokenRow>(
+  // Inside a caller's transaction (invite redemption) when a client is given.
+  const run = async (sql: string, params: unknown[]) => client ? (await client.query<ApiTokenRow>(sql, params)).rows[0] ?? null : q1<ApiTokenRow>(sql, params);
+  const row = await run(
     `INSERT INTO api_token (athlete_id, name, token_hash, prefix) VALUES ($1,$2,$3,$4)
      RETURNING id, name, prefix, created_at, last_used_at`,
     [athleteId, name.trim().slice(0, 80) || "Unnamed", hash(token), token.slice(0, 12)],

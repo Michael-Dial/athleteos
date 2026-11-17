@@ -313,7 +313,9 @@ export async function linkOwUser(fd: FormData) {
     await getUser(id);
     await W.linkOwUser(target.athlete_id, id);
   } catch (e) {
-    redirect(userPage(target, "error=" + encodeURIComponent(errorMessage(e))));
+    // athlete_ow_user: another athlete already reads this account; say so rather than show the database's words.
+    const msg = (e as { code?: string }).code === "23505" ? "Another user is already linked to that account." : errorMessage(e);
+    redirect(userPage(target, "error=" + encodeURIComponent(msg)));
   }
   invalidate("ow:");
   redirect(done(userPage(target, "linked=1")));

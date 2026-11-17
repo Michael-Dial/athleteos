@@ -1,0 +1,40 @@
+import Foundation
+
+// Password sign-in answers either a token (201) or an emailed-code challenge
+// (202), so it is written here rather than generated.
+
+public struct GrantedToken: Codable, Hashable, Sendable {
+    public let token: String
+    public let id: Double
+    public let name: String
+    public let createdAt: String
+
+    public init(token: String, id: Double, name: String, createdAt: String) {
+        self.token = token
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+    }
+}
+
+public struct EmailChallenge: Codable, Hashable, Sendable {
+    public let challengeId: String
+    public let delivery: String
+    public let destination: String
+    public let expiresInSec: Double
+}
+
+public enum PasswordSignIn: Sendable {
+    case signedIn(GrantedToken)
+    case needsCode(EmailChallenge)
+}
+
+private struct TokenRequest: Encodable { let email: String; let password: String; let name: String }
+
+public extension APIClient {
+    func postAuthToken(email: String, password: String, deviceName: String) async throws -> PasswordSignIn {
+        let (data, status) = try await raw("POST", "/auth/token", body: try APIClient.encoder.encode(TokenRequest(email: email, password: password, name: deviceName)))
+        if status == 202 { return .needsCode(try APIClient.decode(EmailChallenge.self, data, "/auth/token")) }
+        return .signedIn(try APIClient.decode(GrantedToken.self, data, "/auth/token"))
+    }
+}

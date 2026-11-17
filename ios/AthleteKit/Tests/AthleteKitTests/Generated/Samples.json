@@ -1,0 +1,2066 @@
+{
+ "AuthTokenVerifyPostResponse": {
+  "max": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17"
+  },
+  "min": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17"
+  }
+ },
+ "AuthInvitePostResponse": {
+  "max": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17",
+   "athlete": {
+    "id": 1.5,
+    "name": "2026-11-17"
+   }
+  },
+  "min": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17",
+   "athlete": {
+    "id": 1.5,
+    "name": "2026-11-17"
+   }
+  }
+ },
+ "AuthTokensResponse": {
+  "max": {
+   "tokens": [
+    {
+     "id": 1.5,
+     "name": "2026-11-17",
+     "prefix": "2026-11-17",
+     "createdAt": "2026-11-17",
+     "lastUsedAt": "2026-11-17"
+    }
+   ]
+  },
+  "min": {
+   "tokens": []
+  }
+ },
+ "AuthTokensPostResponse": {
+  "max": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17"
+  },
+  "min": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17"
+  }
+ },
+ "AccountsResponse": {
+  "max": {
+   "services": [
+    {
+     "provider": "2026-11-17",
+     "name": "2026-11-17",
+     "kind": "cloud",
+     "status": "connected",
+     "count": 1.5,
+     "lastSyncedAt": "2026-11-17"
+    }
+   ],
+   "accounts": [
+    {
+     "id": "2026-11-17",
+     "provider": "2026-11-17",
+     "name": "2026-11-17",
+     "label": "2026-11-17",
+     "device": "2026-11-17",
+     "status": "connected",
+     "lastSyncedAt": "2026-11-17",
+     "canSync": true
+    }
+   ],
+   "errors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "services": [],
+   "accounts": [],
+   "errors": []
+  }
+ },
+ "AccountsByProviderConnectPostResponse": {
+  "max": {
+   "authorizationUrl": "2026-11-17"
+  },
+  "min": {
+   "authorizationUrl": "2026-11-17"
+  }
+ },
+ "AccountsByProviderSyncPostResponse": {
+  "max": {
+   "requested": true
+  },
+  "min": {
+   "requested": true
+  }
+ },
+ "WearablesSdkTokenPostResponse": {
+  "max": {
+   "owUserId": "2026-11-17",
+   "accessToken": "2026-11-17",
+   "refreshToken": "2026-11-17",
+   "expiresIn": 1.5,
+   "syncPath": "2026-11-17"
+  },
+  "min": {
+   "owUserId": "2026-11-17",
+   "accessToken": "2026-11-17",
+   "refreshToken": "2026-11-17",
+   "expiresIn": null,
+   "syncPath": "2026-11-17"
+  }
+ },
+ "MeResponse": {
+  "max": {
+   "user": {
+    "id": 1.5,
+    "email": "2026-11-17",
+    "role": "admin"
+   },
+   "athlete": {
+    "id": 1.5,
+    "name": "2026-11-17"
+   },
+   "timezone": "2026-11-17",
+   "today": "2026-11-17",
+   "openWearables": {
+    "configured": true,
+    "linked": true
+   },
+   "auth": "token"
+  },
+  "min": {
+   "user": {
+    "id": 1.5,
+    "email": "2026-11-17",
+    "role": "admin"
+   },
+   "athlete": {
+    "id": 1.5,
+    "name": "2026-11-17"
+   },
+   "timezone": "2026-11-17",
+   "today": "2026-11-17",
+   "openWearables": {
+    "configured": true,
+    "linked": true
+   },
+   "auth": "token"
+  }
+ },
+ "TodayResponse": {
+  "max": {
+   "date": "2026-11-17",
+   "readiness": {
+    "date": "2026-11-17",
+    "overall": "green",
+    "index": 1.5,
+    "hrv": {
+     "state": "ok",
+     "note": "2026-11-17",
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17",
+      "fallback": true
+     },
+     "lastNightMs": 1.5,
+     "lastNightLn": 1.5,
+     "rollingLn": 1.5,
+     "rollingMs": 1.5,
+     "rollingCvPct": 1.5,
+     "rollingN": 1.5,
+     "baselineLn": 1.5,
+     "baselineSdLn": 1.5,
+     "baselineN": 1.5,
+     "normalLowLn": 1.5,
+     "normalHighLn": 1.5,
+     "status": "below",
+     "series": [
+      {
+       "date": "2026-11-17",
+       "ln": 1.5,
+       "rollingLn": 1.5,
+       "normalLowLn": 1.5,
+       "normalHighLn": 1.5
+      }
+     ]
+    },
+    "restingHr": {
+     "state": "ok",
+     "note": "2026-11-17",
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17",
+      "fallback": true
+     },
+     "z": {
+      "value": 1.5,
+      "mean": 1.5,
+      "sd": 1.5,
+      "n": 1.5,
+      "z": 1.5
+     },
+     "staleFrom": "2026-11-17"
+    },
+    "sleep": {
+     "state": "ok",
+     "note": "2026-11-17",
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17",
+      "fallback": true
+     },
+     "z": {
+      "value": 1.5,
+      "mean": 1.5,
+      "sd": 1.5,
+      "n": 1.5,
+      "z": 1.5
+     },
+     "staleFrom": "2026-11-17"
+    },
+    "wellness": {
+     "state": "ok",
+     "note": "2026-11-17",
+     "composite": 1.5,
+     "z": {
+      "value": 1.5,
+      "mean": 1.5,
+      "sd": 1.5,
+      "n": 1.5,
+      "z": 1.5
+     },
+     "lowItems": [
+      {
+       "key": "2026-11-17",
+       "z": 1.5
+      }
+     ]
+    },
+    "load": {
+     "state": "ok",
+     "note": "2026-11-17",
+     "acwr": 1.5,
+     "acute": 1.5,
+     "chronic": 1.5,
+     "weekLoad": 1.5,
+     "monotony": 1.5,
+     "strain": 1.5,
+     "methods": [
+      "2026-11-17"
+     ],
+     "unrated": 1.5,
+     "series": [
+      {
+       "date": "2026-11-17",
+       "load": 1.5,
+       "acwr": 1.5
+      }
+     ]
+    },
+    "errors": [
+     "2026-11-17"
+    ]
+   },
+   "plan": [
+    {
+     "id": 1.5,
+     "phaseId": 1.5,
+     "date": "2026-11-17",
+     "sport": "2026-11-17",
+     "title": "2026-11-17",
+     "description": "2026-11-17",
+     "intensity": "2026-11-17",
+     "plannedDurationMin": 1.5,
+     "plannedDistanceKm": 1.5,
+     "plannedRpe": 1.5,
+     "plannedLoad": 1.5,
+     "owWorkoutId": "2026-11-17",
+     "skipped": true,
+     "status": "planned",
+     "actualKey": "2026-11-17",
+     "match": "linked"
+    }
+   ],
+   "checkIn": {
+    "due": [
+     {
+      "slug": "2026-11-17",
+      "name": "2026-11-17",
+      "schedule": "2026-11-17",
+      "kind": "2026-11-17"
+     }
+    ],
+    "wellnessComposite": 1.5
+   },
+   "lastNight": {
+    "key": {
+     "primary": {
+      "device": {
+       "key": "2026-11-17",
+       "name": "2026-11-17"
+      },
+      "value": 1.5,
+      "fallback": true
+     },
+     "others": [
+      {
+       "device": {
+        "key": "2026-11-17",
+        "name": "2026-11-17"
+       },
+       "value": 1.5,
+       "fallback": true
+      }
+     ]
+    }
+   }
+  },
+  "min": {
+   "date": "2026-11-17",
+   "readiness": {
+    "date": "2026-11-17",
+    "overall": "green",
+    "index": null,
+    "hrv": {
+     "state": "ok",
+     "note": null,
+     "device": null,
+     "lastNightMs": null,
+     "lastNightLn": null,
+     "rollingLn": null,
+     "rollingMs": null,
+     "rollingCvPct": null,
+     "rollingN": null,
+     "baselineLn": null,
+     "baselineSdLn": null,
+     "baselineN": null,
+     "normalLowLn": null,
+     "normalHighLn": null,
+     "status": null,
+     "series": []
+    },
+    "restingHr": {
+     "state": "ok",
+     "note": null,
+     "device": null,
+     "z": null,
+     "staleFrom": null
+    },
+    "sleep": {
+     "state": "ok",
+     "note": null,
+     "device": null,
+     "z": null,
+     "staleFrom": null
+    },
+    "wellness": {
+     "state": "ok",
+     "note": null,
+     "composite": null,
+     "z": null,
+     "lowItems": []
+    },
+    "load": {
+     "state": "ok",
+     "note": null,
+     "acwr": null,
+     "acute": null,
+     "chronic": null,
+     "weekLoad": 1.5,
+     "monotony": null,
+     "strain": null,
+     "methods": [],
+     "unrated": 1.5,
+     "series": []
+    },
+    "errors": []
+   },
+   "plan": [],
+   "checkIn": {
+    "due": [],
+    "wellnessComposite": null
+   },
+   "lastNight": {}
+  }
+ },
+ "ReadinessResponse": {
+  "max": {
+   "date": "2026-11-17",
+   "overall": "green",
+   "index": 1.5,
+   "hrv": {
+    "state": "ok",
+    "note": "2026-11-17",
+    "device": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "lastNightMs": 1.5,
+    "lastNightLn": 1.5,
+    "rollingLn": 1.5,
+    "rollingMs": 1.5,
+    "rollingCvPct": 1.5,
+    "rollingN": 1.5,
+    "baselineLn": 1.5,
+    "baselineSdLn": 1.5,
+    "baselineN": 1.5,
+    "normalLowLn": 1.5,
+    "normalHighLn": 1.5,
+    "status": "below",
+    "series": [
+     {
+      "date": "2026-11-17",
+      "ln": 1.5,
+      "rollingLn": 1.5,
+      "normalLowLn": 1.5,
+      "normalHighLn": 1.5
+     }
+    ]
+   },
+   "restingHr": {
+    "state": "ok",
+    "note": "2026-11-17",
+    "device": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "z": {
+     "value": 1.5,
+     "mean": 1.5,
+     "sd": 1.5,
+     "n": 1.5,
+     "z": 1.5
+    },
+    "staleFrom": "2026-11-17"
+   },
+   "sleep": {
+    "state": "ok",
+    "note": "2026-11-17",
+    "device": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "z": {
+     "value": 1.5,
+     "mean": 1.5,
+     "sd": 1.5,
+     "n": 1.5,
+     "z": 1.5
+    },
+    "staleFrom": "2026-11-17"
+   },
+   "wellness": {
+    "state": "ok",
+    "note": "2026-11-17",
+    "composite": 1.5,
+    "z": {
+     "value": 1.5,
+     "mean": 1.5,
+     "sd": 1.5,
+     "n": 1.5,
+     "z": 1.5
+    },
+    "lowItems": [
+     {
+      "key": "2026-11-17",
+      "z": 1.5
+     }
+    ]
+   },
+   "load": {
+    "state": "ok",
+    "note": "2026-11-17",
+    "acwr": 1.5,
+    "acute": 1.5,
+    "chronic": 1.5,
+    "weekLoad": 1.5,
+    "monotony": 1.5,
+    "strain": 1.5,
+    "methods": [
+     "2026-11-17"
+    ],
+    "unrated": 1.5,
+    "series": [
+     {
+      "date": "2026-11-17",
+      "load": 1.5,
+      "acwr": 1.5
+     }
+    ]
+   },
+   "errors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "date": "2026-11-17",
+   "overall": "green",
+   "index": null,
+   "hrv": {
+    "state": "ok",
+    "note": null,
+    "device": null,
+    "lastNightMs": null,
+    "lastNightLn": null,
+    "rollingLn": null,
+    "rollingMs": null,
+    "rollingCvPct": null,
+    "rollingN": null,
+    "baselineLn": null,
+    "baselineSdLn": null,
+    "baselineN": null,
+    "normalLowLn": null,
+    "normalHighLn": null,
+    "status": null,
+    "series": []
+   },
+   "restingHr": {
+    "state": "ok",
+    "note": null,
+    "device": null,
+    "z": null,
+    "staleFrom": null
+   },
+   "sleep": {
+    "state": "ok",
+    "note": null,
+    "device": null,
+    "z": null,
+    "staleFrom": null
+   },
+   "wellness": {
+    "state": "ok",
+    "note": null,
+    "composite": null,
+    "z": null,
+    "lowItems": []
+   },
+   "load": {
+    "state": "ok",
+    "note": null,
+    "acwr": null,
+    "acute": null,
+    "chronic": null,
+    "weekLoad": 1.5,
+    "monotony": null,
+    "strain": null,
+    "methods": [],
+    "unrated": 1.5,
+    "series": []
+   },
+   "errors": []
+  }
+ },
+ "ReviewResponse": {
+  "max": {
+   "weekStart": "2026-11-17",
+   "weekEnd": "2026-11-17",
+   "daysElapsed": 1.5,
+   "training": {
+    "planned": 1.5,
+    "completed": 1.5,
+    "skipped": 1.5,
+    "missed": 1.5,
+    "unplanned": 1.5,
+    "compliancePct": 1.5,
+    "plannedDurationMin": 1.5,
+    "actualDurationMin": 1.5,
+    "plannedLoad": 1.5,
+    "actualLoad": 1.5,
+    "unrated": 1.5,
+    "loadMethods": [
+     "2026-11-17"
+    ],
+    "bySport": [
+     {
+      "sport": "2026-11-17",
+      "sessions": 1.5,
+      "durationMin": 1.5,
+      "load": 1.5
+     }
+    ],
+    "monotony": 1.5,
+    "strain": 1.5,
+    "acwrAtEnd": 1.5,
+    "sessions": [
+     {
+      "key": "2026-11-17",
+      "date": "2026-11-17",
+      "title": "2026-11-17",
+      "sport": "2026-11-17",
+      "durationMin": 1.5,
+      "rpe": 1.5,
+      "load": 1.5,
+      "planned": "2026-11-17",
+      "source": "2026-11-17"
+     }
+    ]
+   },
+   "hrv": {
+    "device": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "weeks": [
+     {
+      "weekStart": "2026-11-17",
+      "n": 1.5,
+      "meanLn": 1.5,
+      "geoMeanMs": 1.5,
+      "cvPct": 1.5
+     }
+    ]
+   },
+   "rhr": {
+    "device": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "weeks": [
+     {
+      "weekStart": "2026-11-17",
+      "n": 1.5,
+      "mean": 1.5,
+      "sd": 1.5
+     }
+    ]
+   },
+   "sleep": {
+    "device": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "weeks": [
+     {
+      "weekStart": "2026-11-17",
+      "n": 1.5,
+      "meanMin": 1.5,
+      "sdMin": 1.5,
+      "midpointSdMin": 1.5,
+      "meanBedtime": "2026-11-17",
+      "meanWake": "2026-11-17"
+     }
+    ]
+   },
+   "wellness": {
+    "answeredDays": 1.5,
+    "weeks": [
+     {
+      "weekStart": "2026-11-17",
+      "n": 1.5,
+      "composite": 1.5
+     }
+    ],
+    "items": [
+     {
+      "key": "2026-11-17",
+      "label": "2026-11-17",
+      "thisWeek": 1.5,
+      "priorWeeks": 1.5
+     }
+    ]
+   },
+   "checkIns": [
+    {
+     "name": "2026-11-17",
+     "date": "2026-11-17",
+     "answers": [
+      {
+       "label": "2026-11-17",
+       "value": "2026-11-17"
+      }
+     ]
+    }
+   ],
+   "observations": [
+    "2026-11-17"
+   ],
+   "owErrors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "weekStart": "2026-11-17",
+   "weekEnd": "2026-11-17",
+   "daysElapsed": 1.5,
+   "training": {
+    "planned": 1.5,
+    "completed": 1.5,
+    "skipped": 1.5,
+    "missed": 1.5,
+    "unplanned": 1.5,
+    "compliancePct": null,
+    "plannedDurationMin": 1.5,
+    "actualDurationMin": 1.5,
+    "plannedLoad": 1.5,
+    "actualLoad": 1.5,
+    "unrated": 1.5,
+    "loadMethods": [],
+    "bySport": [],
+    "monotony": null,
+    "strain": null,
+    "acwrAtEnd": null,
+    "sessions": []
+   },
+   "hrv": {
+    "device": null,
+    "weeks": []
+   },
+   "rhr": {
+    "device": null,
+    "weeks": []
+   },
+   "sleep": {
+    "device": null,
+    "weeks": []
+   },
+   "wellness": {
+    "answeredDays": 1.5,
+    "weeks": [],
+    "items": []
+   },
+   "checkIns": [],
+   "observations": [],
+   "owErrors": []
+  }
+ },
+ "CoverageResponse": {
+  "max": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "dates": [
+    "2026-11-17"
+   ],
+   "devices": [
+    {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "nights": 1.5,
+     "hrvNights": 1.5,
+     "pct": 1.5,
+     "longestGap": 1.5,
+     "lastNight": "2026-11-17",
+     "cells": "2026-11-17"
+    }
+   ],
+   "baselines": [
+    {
+     "metric": "2026-11-17",
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17",
+      "fallback": true
+     },
+     "pct": 1.5,
+     "longestGap": 1.5,
+     "lastNight": "2026-11-17"
+    }
+   ],
+   "ow": {
+    "reachable": true,
+    "latencyMs": 1.5,
+    "error": "2026-11-17"
+   },
+   "connections": [
+    {
+     "provider": "2026-11-17",
+     "account": "2026-11-17",
+     "status": "2026-11-17",
+     "lastSyncedAt": "2026-11-17",
+     "hoursSinceSync": 1.5,
+     "stale": true
+    }
+   ],
+   "questionnaires": [
+    {
+     "slug": "2026-11-17",
+     "name": "2026-11-17",
+     "answered": 1.5,
+     "days": 1.5,
+     "pct": 1.5,
+     "missing": [
+      "2026-11-17"
+     ]
+    }
+   ],
+   "unratedSessions": 1.5,
+   "owErrors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "dates": [],
+   "devices": [],
+   "baselines": [],
+   "ow": {
+    "reachable": true,
+    "latencyMs": null,
+    "error": null
+   },
+   "connections": [],
+   "questionnaires": [],
+   "unratedSessions": 1.5,
+   "owErrors": []
+  }
+ },
+ "IntensityResponse": {
+  "max": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "bounds": {
+    "z1MaxBpm": 1.5,
+    "z2MaxBpm": 1.5,
+    "source": "thresholds"
+   },
+   "total": {
+    "zonesMin": [
+     1.5
+    ],
+    "pattern": "polarized",
+    "polarizationIndex": 1.5,
+    "noHrMin": 1.5
+   },
+   "weeks": [
+    {
+     "weekStart": "2026-11-17",
+     "zonesMin": [
+      1.5
+     ],
+     "pattern": "polarized",
+     "polarizationIndex": 1.5,
+     "sessions": 1.5,
+     "noHrMin": 1.5
+    }
+   ],
+   "sessions": [
+    {
+     "key": "2026-11-17",
+     "date": "2026-11-17",
+     "title": "2026-11-17",
+     "sport": "2026-11-17",
+     "durationMin": 1.5,
+     "zonesMin": [
+      1.5
+     ],
+     "device": "2026-11-17",
+     "reason": "2026-11-17"
+    }
+   ],
+   "owErrors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "bounds": {
+    "z1MaxBpm": 1.5,
+    "z2MaxBpm": 1.5,
+    "source": "thresholds"
+   },
+   "total": {
+    "zonesMin": [],
+    "pattern": "polarized",
+    "polarizationIndex": null,
+    "noHrMin": 1.5
+   },
+   "weeks": [],
+   "sessions": [],
+   "owErrors": []
+  }
+ },
+ "ZonesResponse": {
+  "max": {
+   "metric": "hr",
+   "label": "2026-11-17",
+   "unit": "2026-11-17",
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "sport": "all",
+   "zoneSet": {
+    "model": "2026-11-17",
+    "modelLabel": "2026-11-17",
+    "bands": [
+     {
+      "name": "2026-11-17",
+      "from": 1.5,
+      "to": 1.5
+     }
+    ]
+   },
+   "needs": {
+    "reason": "2026-11-17",
+    "settingsKey": "2026-11-17"
+   },
+   "total": {
+    "seconds": [
+     1.5
+    ],
+    "recordedSec": 1.5,
+    "pct": [
+     1.5
+    ],
+    "sessions": 1.5,
+    "sessionsWithout": 1.5
+   },
+   "weeks": [
+    {
+     "weekStart": "2026-11-17",
+     "seconds": [
+      1.5
+     ],
+     "recordedSec": 1.5
+    }
+   ],
+   "sessions": [
+    {
+     "key": "2026-11-17",
+     "date": "2026-11-17",
+     "title": "2026-11-17",
+     "sport": "2026-11-17",
+     "durationMin": 1.5,
+     "seconds": [
+      1.5
+     ],
+     "device": "2026-11-17",
+     "reason": "2026-11-17"
+    }
+   ],
+   "owErrors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "metric": "hr",
+   "label": "2026-11-17",
+   "unit": "2026-11-17",
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "sport": "all",
+   "zoneSet": null,
+   "needs": null,
+   "total": {
+    "seconds": [],
+    "recordedSec": 1.5,
+    "pct": [],
+    "sessions": 1.5,
+    "sessionsWithout": 1.5
+   },
+   "weeks": [],
+   "sessions": [],
+   "owErrors": []
+  }
+ },
+ "TrendsResponse": {
+  "max": {
+   "weeks": [
+    "2026-11-17"
+   ],
+   "load": [
+    {
+     "weekStart": "2026-11-17",
+     "load": 1.5,
+     "durationMin": 1.5,
+     "sessions": 1.5,
+     "unrated": 1.5
+    }
+   ],
+   "loadMethods": [
+    "2026-11-17"
+   ],
+   "hrv": [
+    {
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17"
+     },
+     "points": [
+      {
+       "weekStart": "2026-11-17",
+       "value": 1.5,
+       "n": 1.5,
+       "cvPct": 1.5
+      }
+     ]
+    }
+   ],
+   "rhr": [
+    {
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17"
+     },
+     "points": [
+      {
+       "weekStart": "2026-11-17",
+       "value": 1.5,
+       "n": 1.5,
+       "cvPct": 1.5
+      }
+     ]
+    }
+   ],
+   "sleep": [
+    {
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17"
+     },
+     "points": [
+      {
+       "weekStart": "2026-11-17",
+       "value": 1.5,
+       "n": 1.5,
+       "cvPct": 1.5
+      }
+     ]
+    }
+   ],
+   "bodyMass": [
+    {
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17"
+     },
+     "points": [
+      {
+       "weekStart": "2026-11-17",
+       "value": 1.5,
+       "n": 1.5,
+       "cvPct": 1.5
+      }
+     ]
+    }
+   ],
+   "vo2max": [
+    {
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17"
+     },
+     "points": [
+      {
+       "weekStart": "2026-11-17",
+       "value": 1.5,
+       "n": 1.5,
+       "cvPct": 1.5
+      }
+     ]
+    }
+   ],
+   "owErrors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "weeks": [],
+   "load": [],
+   "loadMethods": [],
+   "hrv": [],
+   "rhr": [],
+   "sleep": [],
+   "bodyMass": [],
+   "vo2max": [],
+   "owErrors": []
+  }
+ },
+ "IllnessResponse": {
+  "max": {
+   "date": "2026-11-17",
+   "devices": {
+    "rhr": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "rr": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "temp": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    },
+    "hrv": {
+     "key": "2026-11-17",
+     "name": "2026-11-17",
+     "fallback": true
+    }
+   },
+   "nights": [
+    {
+     "date": "2026-11-17",
+     "signals": [
+      {
+       "key": "rhr",
+       "value": 1.5,
+       "baselineMean": 1.5,
+       "baselineSd": 1.5,
+       "n": 1.5,
+       "z": 1.5,
+       "firing": true
+      }
+     ],
+     "firing": 1.5,
+     "assessed": 1.5,
+     "level": "none"
+    }
+   ],
+   "latest": {
+    "date": "2026-11-17",
+    "signals": [
+     {
+      "key": "rhr",
+      "value": 1.5,
+      "baselineMean": 1.5,
+      "baselineSd": 1.5,
+      "n": 1.5,
+      "z": 1.5,
+      "firing": true
+     }
+    ],
+    "firing": 1.5,
+    "assessed": 1.5,
+    "level": "none"
+   },
+   "selfReported": [
+    "2026-11-17"
+   ],
+   "owErrors": [
+    "2026-11-17"
+   ]
+  },
+  "min": {
+   "date": "2026-11-17",
+   "devices": {
+    "rhr": null,
+    "rr": null,
+    "temp": null,
+    "hrv": null
+   },
+   "nights": [],
+   "latest": null,
+   "selfReported": [],
+   "owErrors": []
+  }
+ },
+ "NightlyResponse": {
+  "max": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "nights": [
+    {
+     "date": "2026-11-17",
+     "device": {
+      "key": "2026-11-17",
+      "name": "2026-11-17"
+     },
+     "hrvRmssdMs": 1.5,
+     "restingHrBpm": 1.5,
+     "sleepMin": 1.5,
+     "inBedMin": 1.5,
+     "efficiencyPct": 1.5,
+     "deepMin": 1.5,
+     "remMin": 1.5,
+     "lightMin": 1.5,
+     "awakeMin": 1.5,
+     "respiratoryRate": 1.5,
+     "spo2Pct": 1.5,
+     "bedtime": "2026-11-17",
+     "wakeTime": "2026-11-17"
+    }
+   ],
+   "owError": "2026-11-17"
+  },
+  "min": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "nights": []
+  }
+ },
+ "TrainingResponse": {
+  "max": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "sessions": [
+    {
+     "key": "2026-11-17",
+     "date": "2026-11-17",
+     "start": "2026-11-17",
+     "sport": "2026-11-17",
+     "type": "2026-11-17",
+     "title": "2026-11-17",
+     "durationMin": 1.5,
+     "distanceKm": 1.5,
+     "avgHrBpm": 1.5,
+     "maxHrBpm": 1.5,
+     "rpe": 1.5,
+     "load": 1.5,
+     "loadMethod": "srpe",
+     "source": "2026-11-17",
+     "recordings": [
+      {
+       "owWorkoutId": "2026-11-17",
+       "device": {
+        "key": "2026-11-17",
+        "name": "2026-11-17"
+       },
+       "type": "2026-11-17",
+       "start": "2026-11-17",
+       "end": "2026-11-17",
+       "durationMin": 1.5,
+       "avgHrBpm": 1.5,
+       "maxHrBpm": 1.5,
+       "distanceKm": 1.5,
+       "caloriesKcal": 1.5,
+       "avgPowerW": 1.5
+      }
+     ],
+     "notes": "2026-11-17",
+     "planSessionId": 1.5,
+     "excluded": "2026-11-17",
+     "manualId": 1.5
+    }
+   ],
+   "owError": "2026-11-17"
+  },
+  "min": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "sessions": []
+  }
+ },
+ "TrainingManualPostResponse": {
+  "max": {
+   "id": 1.5,
+   "key": "2026-11-17"
+  },
+  "min": {
+   "id": 1.5,
+   "key": "2026-11-17"
+  }
+ },
+ "PlanResponse": {
+  "max": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "phases": [
+    {
+     "id": 1.5,
+     "name": "2026-11-17",
+     "kind": "2026-11-17",
+     "startDate": "2026-11-17",
+     "endDate": "2026-11-17",
+     "goal": "2026-11-17",
+     "notes": "2026-11-17"
+    }
+   ],
+   "sessions": [
+    {
+     "id": 1.5,
+     "phaseId": 1.5,
+     "date": "2026-11-17",
+     "sport": "2026-11-17",
+     "title": "2026-11-17",
+     "description": "2026-11-17",
+     "intensity": "2026-11-17",
+     "plannedDurationMin": 1.5,
+     "plannedDistanceKm": 1.5,
+     "plannedRpe": 1.5,
+     "plannedLoad": 1.5,
+     "owWorkoutId": "2026-11-17",
+     "skipped": true,
+     "status": "planned",
+     "actualKey": "2026-11-17",
+     "match": "linked"
+    }
+   ],
+   "unplannedKeys": [
+    "2026-11-17"
+   ],
+   "owError": "2026-11-17"
+  },
+  "min": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "phases": [],
+   "sessions": [],
+   "unplannedKeys": [],
+   "owError": null
+  }
+ },
+ "PlanSessionsPostResponse": {
+  "max": {
+   "id": 1.5
+  },
+  "min": {
+   "id": 1.5
+  }
+ },
+ "PlanCopyWeekPostResponse": {
+  "max": {
+   "created": 1.5
+  },
+  "min": {
+   "created": 1.5
+  }
+ },
+ "PlanPhasesResponse": {
+  "max": {
+   "phases": [
+    {
+     "id": 1.5,
+     "name": "2026-11-17",
+     "kind": "2026-11-17",
+     "startDate": "2026-11-17",
+     "endDate": "2026-11-17",
+     "goal": "2026-11-17",
+     "notes": "2026-11-17"
+    }
+   ]
+  },
+  "min": {
+   "phases": []
+  }
+ },
+ "PlanPhasesPostResponse": {
+  "max": {
+   "id": 1.5
+  },
+  "min": {
+   "id": 1.5
+  }
+ },
+ "QuestionnairesResponse": {
+  "max": {
+   "questionnaires": [
+    {
+     "slug": "2026-11-17",
+     "name": "2026-11-17",
+     "description": "2026-11-17",
+     "kind": "wellness",
+     "schedule": "daily",
+     "version": 1.5,
+     "active": true,
+     "items": [
+      {
+       "key": "2026-11-17",
+       "label": "2026-11-17",
+       "help": "2026-11-17",
+       "type": "scale",
+       "required": true,
+       "min": 1.5,
+       "max": 1.5,
+       "step": 1.5,
+       "lowLabel": "2026-11-17",
+       "highLabel": "2026-11-17",
+       "higherIsBetter": true,
+       "unit": "2026-11-17",
+       "options": [
+        "2026-11-17"
+       ],
+       "wellness": true
+      }
+     ],
+     "due": true,
+     "streakDays": 1.5,
+     "lastAnswered": "2026-11-17"
+    }
+   ]
+  },
+  "min": {
+   "questionnaires": []
+  }
+ },
+ "QuestionnairesBySlugResponse": {
+  "max": {
+   "slug": "2026-11-17",
+   "name": "2026-11-17",
+   "description": "2026-11-17",
+   "kind": "wellness",
+   "schedule": "daily",
+   "version": 1.5,
+   "active": true,
+   "items": [
+    {
+     "key": "2026-11-17",
+     "label": "2026-11-17",
+     "help": "2026-11-17",
+     "type": "scale",
+     "required": true,
+     "min": 1.5,
+     "max": 1.5,
+     "step": 1.5,
+     "lowLabel": "2026-11-17",
+     "highLabel": "2026-11-17",
+     "higherIsBetter": true,
+     "unit": "2026-11-17",
+     "options": [
+      "2026-11-17"
+     ],
+     "wellness": true
+    }
+   ]
+  },
+  "min": {
+   "slug": "2026-11-17",
+   "name": "2026-11-17",
+   "description": null,
+   "kind": "wellness",
+   "schedule": "daily",
+   "version": 1.5,
+   "active": true,
+   "items": []
+  }
+ },
+ "QuestionnairesBySlugPutResponse": {
+  "max": {
+   "slug": "2026-11-17",
+   "name": "2026-11-17",
+   "description": "2026-11-17",
+   "kind": "wellness",
+   "schedule": "daily",
+   "version": 1.5,
+   "active": true,
+   "items": [
+    {
+     "key": "2026-11-17",
+     "label": "2026-11-17",
+     "help": "2026-11-17",
+     "type": "scale",
+     "required": true,
+     "min": 1.5,
+     "max": 1.5,
+     "step": 1.5,
+     "lowLabel": "2026-11-17",
+     "highLabel": "2026-11-17",
+     "higherIsBetter": true,
+     "unit": "2026-11-17",
+     "options": [
+      "2026-11-17"
+     ],
+     "wellness": true
+    }
+   ]
+  },
+  "min": {
+   "slug": "2026-11-17",
+   "name": "2026-11-17",
+   "description": null,
+   "kind": "wellness",
+   "schedule": "daily",
+   "version": 1.5,
+   "active": true,
+   "items": []
+  }
+ },
+ "QuestionnairesBySlugResponsesResponse": {
+  "max": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "responses": [
+    {
+     "date": "2026-11-17",
+     "version": 1.5,
+     "answers": {
+      "key": 1.5
+     },
+     "submittedAt": "2026-11-17"
+    }
+   ],
+   "owError": "2026-11-17"
+  },
+  "min": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "responses": []
+  }
+ },
+ "QuestionnairesBySlugResponsesByDatePutResponse": {
+  "max": {
+   "date": "2026-11-17",
+   "version": 1.5,
+   "answers": {
+    "key": 1.5
+   },
+   "submittedAt": "2026-11-17"
+  },
+  "min": {
+   "date": "2026-11-17",
+   "version": 1.5,
+   "answers": {},
+   "submittedAt": "2026-11-17"
+  }
+ },
+ "WellnessResponse": {
+  "max": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "days": [
+    {
+     "date": "2026-11-17",
+     "composite": 1.5,
+     "itemScores": {
+      "key": 1.5
+     }
+    }
+   ],
+   "owError": "2026-11-17"
+  },
+  "min": {
+   "start": "2026-11-17",
+   "end": "2026-11-17",
+   "days": []
+  }
+ },
+ "PushConfigResponse": {
+  "max": {
+   "publicKey": "2026-11-17",
+   "subscriptions": 1.5,
+   "reminders": {
+    "morningEnabled": true,
+    "morningTime": "2026-11-17",
+    "lateWindowHours": 1.5
+   }
+  },
+  "min": {
+   "publicKey": "2026-11-17",
+   "subscriptions": 1.5,
+   "reminders": {
+    "morningEnabled": true,
+    "morningTime": "2026-11-17",
+    "lateWindowHours": 1.5
+   }
+  }
+ },
+ "PushTestPostResponse": {
+  "max": {
+   "sent": 1.5,
+   "failed": 1.5
+  },
+  "min": {
+   "sent": 1.5,
+   "failed": 1.5
+  }
+ },
+ "SettingsResponse": {
+  "max": {
+   "timezone": "2026-11-17",
+   "ow": {
+    "includeRedundantRelays": true,
+    "cacheTtlSeconds": 2,
+    "historicalCacheTtlSeconds": 2
+   },
+   "phoneApp": {
+    "name": "2026-11-17",
+    "installUrl": ""
+   },
+   "devicePriority": {
+    "key": [
+     "2026-11-17"
+    ]
+   },
+   "hrv": {
+    "rollingDays": 2,
+    "baselineDays": 2,
+    "swcSd": 1.5,
+    "minBaselineN": 2
+   },
+   "baselines": {
+    "windowDays": 2,
+    "minN": 2,
+    "zFlag": 1.5
+   },
+   "load": {
+    "method": "srpe",
+    "trimpFallback": true,
+    "acuteDays": 2,
+    "chronicDays": 2,
+    "acwrModel": "ewma",
+    "hrRest": 1.5,
+    "hrMax": 1.5,
+    "trimpSex": "male"
+   },
+   "training": {
+    "excludeDevices": [
+     "2026-11-17"
+    ],
+    "excludeTypes": [
+     "2026-11-17"
+    ],
+    "minDurationMin": 1.5,
+    "maxDurationHours": 1.5,
+    "sameSessionOverlap": 1.5
+   },
+   "matching": {
+    "workoutDayToleranceHours": 1.5
+   },
+   "compare": {
+    "epochSeconds": 2,
+    "lagToleranceSeconds": 2,
+    "lagStepSeconds": 2,
+    "minPairs": 2
+   },
+   "coverage": {
+    "staleHours": 1.5,
+    "adherenceDays": 2
+   },
+   "review": {
+    "monotonyFlag": 1.5,
+    "complianceFlagPct": 1.5,
+    "comparisonWeeks": 2
+   },
+   "intensity": {
+    "lt1Hr": 1.5,
+    "lt2Hr": 1.5,
+    "z1MaxPctHrMax": 1.5,
+    "z2MaxPctHrMax": 1.5,
+    "maxGapSec": 2
+   },
+   "zones": {
+    "hr": {
+     "model": "lthr5",
+     "lthr": 1.5,
+     "custom": [
+      1.5
+     ]
+    },
+    "pace": {
+     "model": "threshold5",
+     "thresholdPaceSecPerKm": 1.5,
+     "custom": [
+      1.5
+     ]
+    },
+    "runpower": {
+     "model": "cp5",
+     "criticalPowerW": 1.5,
+     "custom": [
+      1.5
+     ]
+    },
+    "bikepower": {
+     "model": "ftp7",
+     "ftpW": 1.5,
+     "custom": [
+      1.5
+     ]
+    }
+   },
+   "illness": {
+    "baselineDays": 2,
+    "baselineLagDays": 2,
+    "minBaselineN": 2,
+    "z": 1.5,
+    "minSignals": 2
+   },
+   "reminders": {
+    "morningEnabled": true,
+    "morningTime": "2026-11-17",
+    "lateWindowHours": 1.5
+   },
+   "readiness": {
+    "weights": {
+     "hrv": 1.5,
+     "rhr": 1.5,
+     "sleep": 1.5,
+     "wellness": 1.5,
+     "load": 1.5
+    },
+    "acwrLow": 1.5,
+    "acwrHigh": 1.5,
+    "sleepTargetMin": 1.5,
+    "watchZ": 1.5
+   }
+  },
+  "min": {
+   "timezone": "2026-11-17",
+   "ow": {
+    "includeRedundantRelays": true,
+    "cacheTtlSeconds": 2,
+    "historicalCacheTtlSeconds": 2
+   },
+   "phoneApp": {
+    "name": "2026-11-17",
+    "installUrl": ""
+   },
+   "devicePriority": {},
+   "hrv": {
+    "rollingDays": 2,
+    "baselineDays": 2,
+    "swcSd": 1.5,
+    "minBaselineN": 2
+   },
+   "baselines": {
+    "windowDays": 2,
+    "minN": 2,
+    "zFlag": 1.5
+   },
+   "load": {
+    "method": "srpe",
+    "trimpFallback": true,
+    "acuteDays": 2,
+    "chronicDays": 2,
+    "acwrModel": "ewma",
+    "hrRest": 1.5,
+    "hrMax": 1.5,
+    "trimpSex": "male"
+   },
+   "training": {
+    "excludeDevices": [],
+    "excludeTypes": [],
+    "minDurationMin": 1.5,
+    "maxDurationHours": 1.5,
+    "sameSessionOverlap": 1.5
+   },
+   "matching": {
+    "workoutDayToleranceHours": 1.5
+   },
+   "compare": {
+    "epochSeconds": 2,
+    "lagToleranceSeconds": 2,
+    "lagStepSeconds": 2,
+    "minPairs": 2
+   },
+   "coverage": {
+    "staleHours": 1.5,
+    "adherenceDays": 2
+   },
+   "review": {
+    "monotonyFlag": 1.5,
+    "complianceFlagPct": 1.5,
+    "comparisonWeeks": 2
+   },
+   "intensity": {
+    "lt1Hr": null,
+    "lt2Hr": null,
+    "z1MaxPctHrMax": 1.5,
+    "z2MaxPctHrMax": 1.5,
+    "maxGapSec": 2
+   },
+   "zones": {
+    "hr": {
+     "model": "lthr5",
+     "lthr": null,
+     "custom": []
+    },
+    "pace": {
+     "model": "threshold5",
+     "thresholdPaceSecPerKm": null,
+     "custom": []
+    },
+    "runpower": {
+     "model": "cp5",
+     "criticalPowerW": null,
+     "custom": []
+    },
+    "bikepower": {
+     "model": "ftp7",
+     "ftpW": null,
+     "custom": []
+    }
+   },
+   "illness": {
+    "baselineDays": 2,
+    "baselineLagDays": 2,
+    "minBaselineN": 2,
+    "z": 1.5,
+    "minSignals": 2
+   },
+   "reminders": {
+    "morningEnabled": true,
+    "morningTime": "2026-11-17",
+    "lateWindowHours": 1.5
+   },
+   "readiness": {
+    "weights": {
+     "hrv": 1.5,
+     "rhr": 1.5,
+     "sleep": 1.5,
+     "wellness": 1.5,
+     "load": 1.5
+    },
+    "acwrLow": 1.5,
+    "acwrHigh": 1.5,
+    "sleepTargetMin": 1.5,
+    "watchZ": 1.5
+   }
+  }
+ },
+ "SettingsPatchResponse": {
+  "max": {
+   "timezone": "2026-11-17",
+   "ow": {
+    "includeRedundantRelays": true,
+    "cacheTtlSeconds": 2,
+    "historicalCacheTtlSeconds": 2
+   },
+   "phoneApp": {
+    "name": "2026-11-17",
+    "installUrl": ""
+   },
+   "devicePriority": {
+    "key": [
+     "2026-11-17"
+    ]
+   },
+   "hrv": {
+    "rollingDays": 2,
+    "baselineDays": 2,
+    "swcSd": 1.5,
+    "minBaselineN": 2
+   },
+   "baselines": {
+    "windowDays": 2,
+    "minN": 2,
+    "zFlag": 1.5
+   },
+   "load": {
+    "method": "srpe",
+    "trimpFallback": true,
+    "acuteDays": 2,
+    "chronicDays": 2,
+    "acwrModel": "ewma",
+    "hrRest": 1.5,
+    "hrMax": 1.5,
+    "trimpSex": "male"
+   },
+   "training": {
+    "excludeDevices": [
+     "2026-11-17"
+    ],
+    "excludeTypes": [
+     "2026-11-17"
+    ],
+    "minDurationMin": 1.5,
+    "maxDurationHours": 1.5,
+    "sameSessionOverlap": 1.5
+   },
+   "matching": {
+    "workoutDayToleranceHours": 1.5
+   },
+   "compare": {
+    "epochSeconds": 2,
+    "lagToleranceSeconds": 2,
+    "lagStepSeconds": 2,
+    "minPairs": 2
+   },
+   "coverage": {
+    "staleHours": 1.5,
+    "adherenceDays": 2
+   },
+   "review": {
+    "monotonyFlag": 1.5,
+    "complianceFlagPct": 1.5,
+    "comparisonWeeks": 2
+   },
+   "intensity": {
+    "lt1Hr": 1.5,
+    "lt2Hr": 1.5,
+    "z1MaxPctHrMax": 1.5,
+    "z2MaxPctHrMax": 1.5,
+    "maxGapSec": 2
+   },
+   "zones": {
+    "hr": {
+     "model": "lthr5",
+     "lthr": 1.5,
+     "custom": [
+      1.5
+     ]
+    },
+    "pace": {
+     "model": "threshold5",
+     "thresholdPaceSecPerKm": 1.5,
+     "custom": [
+      1.5
+     ]
+    },
+    "runpower": {
+     "model": "cp5",
+     "criticalPowerW": 1.5,
+     "custom": [
+      1.5
+     ]
+    },
+    "bikepower": {
+     "model": "ftp7",
+     "ftpW": 1.5,
+     "custom": [
+      1.5
+     ]
+    }
+   },
+   "illness": {
+    "baselineDays": 2,
+    "baselineLagDays": 2,
+    "minBaselineN": 2,
+    "z": 1.5,
+    "minSignals": 2
+   },
+   "reminders": {
+    "morningEnabled": true,
+    "morningTime": "2026-11-17",
+    "lateWindowHours": 1.5
+   },
+   "readiness": {
+    "weights": {
+     "hrv": 1.5,
+     "rhr": 1.5,
+     "sleep": 1.5,
+     "wellness": 1.5,
+     "load": 1.5
+    },
+    "acwrLow": 1.5,
+    "acwrHigh": 1.5,
+    "sleepTargetMin": 1.5,
+    "watchZ": 1.5
+   }
+  },
+  "min": {
+   "timezone": "2026-11-17",
+   "ow": {
+    "includeRedundantRelays": true,
+    "cacheTtlSeconds": 2,
+    "historicalCacheTtlSeconds": 2
+   },
+   "phoneApp": {
+    "name": "2026-11-17",
+    "installUrl": ""
+   },
+   "devicePriority": {},
+   "hrv": {
+    "rollingDays": 2,
+    "baselineDays": 2,
+    "swcSd": 1.5,
+    "minBaselineN": 2
+   },
+   "baselines": {
+    "windowDays": 2,
+    "minN": 2,
+    "zFlag": 1.5
+   },
+   "load": {
+    "method": "srpe",
+    "trimpFallback": true,
+    "acuteDays": 2,
+    "chronicDays": 2,
+    "acwrModel": "ewma",
+    "hrRest": 1.5,
+    "hrMax": 1.5,
+    "trimpSex": "male"
+   },
+   "training": {
+    "excludeDevices": [],
+    "excludeTypes": [],
+    "minDurationMin": 1.5,
+    "maxDurationHours": 1.5,
+    "sameSessionOverlap": 1.5
+   },
+   "matching": {
+    "workoutDayToleranceHours": 1.5
+   },
+   "compare": {
+    "epochSeconds": 2,
+    "lagToleranceSeconds": 2,
+    "lagStepSeconds": 2,
+    "minPairs": 2
+   },
+   "coverage": {
+    "staleHours": 1.5,
+    "adherenceDays": 2
+   },
+   "review": {
+    "monotonyFlag": 1.5,
+    "complianceFlagPct": 1.5,
+    "comparisonWeeks": 2
+   },
+   "intensity": {
+    "lt1Hr": null,
+    "lt2Hr": null,
+    "z1MaxPctHrMax": 1.5,
+    "z2MaxPctHrMax": 1.5,
+    "maxGapSec": 2
+   },
+   "zones": {
+    "hr": {
+     "model": "lthr5",
+     "lthr": null,
+     "custom": []
+    },
+    "pace": {
+     "model": "threshold5",
+     "thresholdPaceSecPerKm": null,
+     "custom": []
+    },
+    "runpower": {
+     "model": "cp5",
+     "criticalPowerW": null,
+     "custom": []
+    },
+    "bikepower": {
+     "model": "ftp7",
+     "ftpW": null,
+     "custom": []
+    }
+   },
+   "illness": {
+    "baselineDays": 2,
+    "baselineLagDays": 2,
+    "minBaselineN": 2,
+    "z": 1.5,
+    "minSignals": 2
+   },
+   "reminders": {
+    "morningEnabled": true,
+    "morningTime": "2026-11-17",
+    "lateWindowHours": 1.5
+   },
+   "readiness": {
+    "weights": {
+     "hrv": 1.5,
+     "rhr": 1.5,
+     "sleep": 1.5,
+     "wellness": 1.5,
+     "load": 1.5
+    },
+    "acwrLow": 1.5,
+    "acwrHigh": 1.5,
+    "sleepTargetMin": 1.5,
+    "watchZ": 1.5
+   }
+  }
+ }
+}

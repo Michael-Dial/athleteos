@@ -1,0 +1,61 @@
+name: iOS
+
+# Builds the iPhone app and runs AthleteKit's tests. A public repository, so
+# GitHub's hosted macOS runners only, never the org's self-hosted Macs (org CI
+# policy rule 3: a fork's pull request could run its own code on them).
+#
+# GitHub's Apple-silicon pool (macos-15) sometimes has no capacity; the job
+# then waits about 15 minutes and is cancelled with "not acquired by Runner
+# of type hosted". Re-run it, or run this workflow by hand on the PR's branch
+# (Actions → iOS → Run workflow) and pick macos-15-intel, a separate pool.
+on:
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  push:
+    branches: [main]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: GitHub-hosted Mac to build on
+        type: choice
+        options: [macos-15, macos-15-intel]
+        default: macos-15
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: AthleteKit tests and app build
+    runs-on: ${{ inputs.runner || 'macos-15' }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 16
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)" && xcodebuild -version
+      - name: AthleteKit tests
+        working-directory: ios/AthleteKit
+        run: swift test
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen
+      - name: Build app (simulator, unsigned)
+        working-directory: ios
+        # Every compiler error, from every file, not the last screen of output.
+        run: |
+          set -o pipefail
+          xcodebuild -project AthleteOS.xcodeproj -scheme AthleteOS \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || {
+            grep -E "error:|note:" build.log | sort -u | head -200
+            tail -30 build.log
+            exit 1
+          }
+          tail -5 build.log

@@ -100,6 +100,12 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                       <li>Open it and enter your code: <code className="mono" style={{ userSelect: "all" }}>{phoneCode.code}</code></li>
                       <li>Allow access to {p.name} when asked.</li>
                     </ol>
+                  ) : p.provider === "apple" ? (
+                    // The AthleteOS iPhone app signs in and starts Apple Health sync itself; no code needed.
+                    <ol className="small mt-sm" style={{ paddingLeft: 18, margin: 0 }}>
+                      <li>Install {phoneApp.installUrl ? <a href={phoneApp.installUrl} target="_blank" rel="noreferrer">{phoneApp.name || "the AthleteOS app"}</a> : phoneApp.name || "the AthleteOS app"} on your iPhone and sign in with your AthleteOS email and password.</li>
+                      <li>Open More → Connected accounts and turn on {p.name}.</li>
+                    </ol>
                   ) : (
                     <p className="small muted mt-sm">
                       {admin
