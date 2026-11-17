@@ -121,7 +121,7 @@ export default async function CoveragePage({ searchParams }: { searchParams: Pro
           {c.questionnaires.every((q) => q.missing.length === 0) ? <Empty title="Nothing missing" /> : c.questionnaires.map((q) => (
             <div key={q.slug} className="stack" style={{ gap: 4 }}>
               <h3>{q.name}</h3>
-              <div className="row" style={{ gap: 4 }}>{q.missing.map((d) => <Link key={d} className="chip" href={`/wellness/${q.slug}?date=${d}`}>{short(d)}</Link>)}</div>
+              <div className="row" style={{ gap: 6 }}>{q.missing.map((d) => <Link key={d} className="chip" href={`/wellness/${q.slug}?date=${d}`}>{short(d)}</Link>)}</div>
             </div>
           ))}
           {c.questionnaires.some((q) => q.missing.length) && <Notice kind="info">Back-filling a missed day from memory is possible but less reliable than answering on the day.</Notice>}

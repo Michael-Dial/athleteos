@@ -45,14 +45,15 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
       err = errorMessage(e);
     }
   }
-  const groups = new Map<string, { name: string; dsid: string | null; pts: [number, number | null][] }>();
+  const groups = new Map<string, { name: string; dsid: string | null; src: OwTimeSeriesSample["source"]; pts: [number, number | null][] }>();
   for (const s of data) {
     const k = s.source?.data_source_id ?? deviceKey(s.source);
-    const g = groups.get(k) ?? { name: deviceName(s.source), dsid: s.source?.data_source_id ?? null, pts: [] };
+    const g = groups.get(k) ?? { name: deviceName(s.source), dsid: s.source?.data_source_id ?? null, src: s.source, pts: [] };
     g.pts.push([Date.parse(s.timestamp), s.value]);
     groups.set(k, g);
   }
   const ordered = [...groups.entries()].sort((a, b) => b[1].pts.length - a[1].pts.length);
+  disambiguate(ordered.map(([, g]) => g));
   const unit = data[0]?.unit ?? seriesUnit(type);
   const exportEnd = addDays(end, 1); // export end_time is exclusive
   // The default window is the last day; with stale devices that is always
@@ -118,4 +119,26 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
 /** "Heart rate" → "heart rate" mid-sentence; leaves "HRV (RMSSD)" and "SpO2" alone. */
 function lowerFirst(s: string): string {
   return /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
+}
+
+/**
+ * One watch can reach the backend twice (directly, and relayed through the
+ * phone's health app), so two sources share a device name. Athletes don't see
+ * source ids, so name the route instead: "· via Michael's iPhone" for a relay,
+ * the app's own source name otherwise, and a number as a last resort.
+ */
+function disambiguate(groups: { name: string; src: OwTimeSeriesSample["source"] }[]): void {
+  const count = new Map<string, number>();
+  for (const g of groups) count.set(g.name, (count.get(g.name) ?? 0) + 1);
+  for (const g of groups) {
+    if ((count.get(g.name) ?? 0) < 2) continue;
+    const via = g.src?.original_source_name || g.src?.source;
+    if (via && via !== g.name) g.name = `${g.name} · ${g.src?.ingestion_route === "aggregator" ? "via " : ""}${via}`;
+  }
+  const seen = new Map<string, number>();
+  for (const g of groups) {
+    const n = (seen.get(g.name) ?? 0) + 1;
+    seen.set(g.name, n);
+    if (n > 1) g.name = `${g.name} (${n})`;
+  }
 }

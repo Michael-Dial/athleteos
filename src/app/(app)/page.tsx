@@ -79,6 +79,8 @@ export default async function TodayPage() {
   // ---- last night: the sleep device's stage timeline + three vitals
   const sleepRank = rankNight(ctx, r.nightly, today, "sleep");
   const sp = sleepRank.primary;
+  // With no sleep last night, point at the latest night a device did score.
+  const lastSlept = sp ? null : r.nightly.filter((x) => x.sleepMin != null && x.date < today).map((x) => x.date).sort().at(-1) ?? null;
   const night = sp ? events.find((e) => !e.is_nap && deviceKey(e.source) === sp.key && localDateWithOffset(e.end_time, e.zone_offset, tz) === today) : undefined;
   const hp = r.hrv.point;
   const hrvBand: [number, number] | null = hp?.swcLow != null ? [Math.exp(hp.swcLow), Math.exp(hp.swcHigh!)] : null;
@@ -157,13 +159,30 @@ export default async function TodayPage() {
       {ctx.ow && (
         <Card title="Last night" action={sp ? <SourceChip name={sp.name} fallback={sleepRank.fallback} /> : undefined}>
           <div className="night">
-            <div className="stack">
-              <div className="row" style={{ alignItems: "baseline", gap: 14 }}>
-                <span className="big">{sp?.sleepMin != null ? fmtDuration(sp.sleepMin) : "—"}</span>
-                {sp?.start && sp.end && <span className="ink2">{fmtTime(sp.start, tz)} → {fmtTime(sp.end, tz)}</span>}
+            {sp ? (
+              <div className="stack">
+                <div className="row" style={{ alignItems: "baseline", gap: 14 }}>
+                  <span className="big">{sp.sleepMin != null ? fmtDuration(sp.sleepMin) : "—"}</span>
+                  {sp.start && sp.end && <span className="ink2">{fmtTime(sp.start, tz)} → {fmtTime(sp.end, tz)}</span>}
+                </div>
+                {night?.sleep_stage_intervals?.length ? <Hypnogram intervals={night.sleep_stage_intervals} tz={tz} height={110} /> : <p className="small muted">No stage timeline from this device last night.</p>}
               </div>
-              {night?.sleep_stage_intervals?.length ? <Hypnogram intervals={night.sleep_stage_intervals} tz={tz} height={110} /> : <p className="small muted">No stage timeline from this device last night.</p>}
-            </div>
+            ) : (
+              <div className="stack" style={{ alignItems: "flex-start" }}>
+                <h3>No sleep recorded last night</h3>
+                {lastSlept ? (
+                  <>
+                    <p className="small muted">The latest night a device scored is {fmtDate(lastSlept, { month: "short", day: "numeric" })}.</p>
+                    <Link className="btn sm" href={`/wearables/sleep?night=${lastSlept}`}>Show {fmtDate(lastSlept, { weekday: "short", month: "short", day: "numeric" })}</Link>
+                  </>
+                ) : (
+                  <>
+                    <p className="small muted">Sleep appears here once a connected device scores a night.</p>
+                    <Link className="btn sm" href="/settings/accounts">Open connected accounts</Link>
+                  </>
+                )}
+              </div>
+            )}
             <div>
               {[
                 { name: "HRV", ser: hrvSer, band: hrvBand, now: hp?.rmssd ?? null, unit: "ms", d: 0, dev: r.hrv.device },
