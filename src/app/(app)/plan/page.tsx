@@ -61,13 +61,15 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
       </div>
       {sp.error && <Notice kind="bad">{sp.error}</Notice>}
 
-      <div className="cal" role="grid" aria-label="Plan calendar">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d} className="cal-h">{d}</div>)}
+      {/* A list of days, not an ARIA grid: VoiceOver reads each day with its
+          sessions in order, and the weekday headings are visual only. */}
+      <ol className="cal" aria-label="Plan calendar">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <li key={d} className="cal-h" aria-hidden="true">{d}</li>)}
         {days.map((d) => {
           const ph = phases.find((p) => d >= p.start_date && d <= p.end_date);
           const showPhase = ph && (d === ph.start_date || d === startOfWeek(d));
           return (
-            <div key={d} className={`cal-d${d.slice(0, 7) !== ym ? " out" : ""}${d === today ? " today" : ""}`} role="gridcell">
+            <li key={d} className={`cal-d${d.slice(0, 7) !== ym ? " out" : ""}${d === today ? " today" : ""}`} aria-label={fmtDate(d, { weekday: "long", month: "long", day: "numeric" })} aria-current={d === today ? "date" : undefined}>
               <div className="cal-n">
                 <span>{Number(d.slice(8))}<span className="small muted" style={{ fontWeight: 400 }}>{" "}{fmtDate(d, { weekday: "short" }).slice(0, 3)}</span></span>
                 <Link href={`/plan?month=${ym}&new=${d}#form`} className="muted" aria-label={`Add session on ${fmtDate(d)}`} title="Add session"><IconPlus size={14} /></Link>
@@ -84,10 +86,10 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
                   {u.title} · {fmtDuration(u.durationMin)}
                 </Link>
               ))}
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
       <div className="row small muted" style={{ gap: 16 }}>
         <span className="row" style={{ gap: 6 }}><span className="dot" style={{ background: "var(--accent)" }} />Planned</span>
         <span className="row" style={{ gap: 6 }}><span className="dot" style={{ background: "var(--good)" }} />Done</span>

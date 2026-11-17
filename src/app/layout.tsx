@@ -17,12 +17,27 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export const viewport: Viewport = { themeColor: "#0c0d0f", viewportFit: "cover" };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0c0d0f" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f3ef" },
+  ],
+  viewportFit: "cover",
+};
+
+// With no saved choice the theme follows the phone. This runs before first
+// paint, so a light-mode phone never flashes the dark theme, and it keeps
+// following the system while the app is open.
+const FOLLOW_SYSTEM = `(function(){var d=document.documentElement;if(d.dataset.theme)return;var m=matchMedia("(prefers-color-scheme: light)");var s=function(){d.dataset.theme=m.matches?"light":"dark";d.dataset.themeSource="system"};s();m.addEventListener("change",function(){if(d.dataset.themeSource==="system")s()})})()`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const theme = (await cookies()).get("aos_theme")?.value === "light" ? "light" : "dark";
+  const saved = (await cookies()).get("aos_theme")?.value;
+  const theme = saved === "light" || saved === "dark" ? saved : undefined;
   return (
-    <html lang="en" data-theme={theme} className={`${body.variable} ${display.variable}`}>
+    <html lang="en" data-theme={theme} className={`${body.variable} ${display.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: FOLLOW_SYSTEM }} />
+      </head>
       <body>
         {children}
         <PwaRegister />

@@ -17,7 +17,7 @@ export const currentUser = cache(async (): Promise<User | null> => {
     let row = await q1<{ id: number }>("SELECT id FROM app_user WHERE role = 'admin' AND disabled_at IS NULL ORDER BY id LIMIT 1");
     // Nobody ever signs in on such an install, so its owner is created here.
     row ??= await q1<{ id: number }>(
-      `INSERT INTO app_user (athlete_id, email, role) SELECT id, 'owner@localhost', 'admin' FROM athlete ORDER BY id LIMIT 1
+      `INSERT INTO app_user (athlete_id, email, role, onboarded_at) SELECT id, 'owner@localhost', 'admin', now() FROM athlete ORDER BY id LIMIT 1
        ON CONFLICT DO NOTHING RETURNING id`);
     return row ? userById(row.id) : null;
   }

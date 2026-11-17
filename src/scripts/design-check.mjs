@@ -40,8 +40,10 @@ const PAGES = [
   ["readiness", "/readiness"], ["review", "/review"], ["body", "/wearables"], ["checkin", "/wellness"],
   ["questionnaire", "/questionnaires/morning-wellness"], ["more", "/more"], ["settings", "/settings"],
   ["accounts", "/settings/accounts"], ["notifications", "/settings/notifications"], ["security", "/settings/security"],
+  ["analysis", "/settings/analysis"], ["welcome", "/welcome"], ["welcome-connect", "/welcome?step=connect"], ["welcome-checkin", "/welcome?step=checkin"],
+  ["welcome-reminders", "/welcome?step=reminders"], ["welcome-install", "/welcome?step=install"],
 ];
-const PUBLIC = [["login", "/login"], ["login-error", "/login?error=1"], ["invite-entry", "/invite"], ["invite-bad", "/invite/AAAA-AAAA-AAAA"]];
+const PUBLIC = [["login", "/login"], ["login-error", "/login?error=1"], ["forgot", "/forgot"], ["invite-entry", "/invite"], ["invite-bad", "/invite/AAAA-AAAA-AAAA"]];
 
 // 375 = iPhone SE/mini width, 440 = Pro Max. "text200" approximates Safari's
 // largest page text size: a 188-pt-wide layout drawn at 4x.

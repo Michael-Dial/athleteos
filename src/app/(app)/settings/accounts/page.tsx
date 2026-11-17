@@ -64,21 +64,19 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   // A cloud provider without client credentials can't complete OAuth; offering
   // it would only end on an error page, so it waits on the admin's list.
   const cloud = enabled.filter((p) => p.has_cloud_api && p.credentials_configured);
-  const phone = enabled.filter((p) => !p.has_cloud_api);
+  // The phone's own health store is the obvious first choice: Apple Health on
+  // an iPhone, Health Connect on Android. Put it, and its card, first there.
+  const ua = h.get("user-agent") ?? "";
+  const platform = /iPhone|iPad|iPod/i.test(ua) ? "ios" : /Android/i.test(ua) ? "android" : null;
+  const native = (p: OwProvider) => (platform === "ios" ? /apple/i.test(`${p.provider} ${p.name}`) : platform === "android" ? /health.?connect|google.?health|samsung/i.test(`${p.provider} ${p.name}`) : false);
+  const phone = enabled.filter((p) => !p.has_cloud_api).sort((a, b) => Number(native(b)) - Number(native(a)));
+  const phoneFirst = platform !== null && phone.length > 0;
   const nameOf = new Map(enabled.map((p) => [p.provider, p.name]));
   const connectedName = sp.connected ? nameOf.get(sp.connected) ?? sp.connected : null;
   const syncedName = sp.synced ? nameOf.get(sp.synced) ?? sp.synced : null;
   const appName = phoneApp.name || "the sync app";
 
-  return (
-    <div className="stack-lg">
-      {sp.error && <Notice kind="bad">{sp.error}</Notice>}
-      {connectedName && <p className="small" style={{ color: "var(--good)" }} role="status">{connectedName} is connected. Its data appears after the first sync, usually within a few minutes.</p>}
-      {syncedName && <p className="small" style={{ color: "var(--good)" }} role="status">Asked {syncedName} for new data.</p>}
-      {providers.e && <Notice kind="bad">{providers.e}</Notice>}
-      {conns.e && <Notice kind="bad">{conns.e}</Notice>}
-
-      {providers.v && (
+  const wearCard = providers.v && (
         <Card title="Wearable accounts" hint="you sign in on the maker's site, then come back here">
           {cloud.length === 0 ? <p className="small muted">No wearable accounts are available to connect yet.</p> : (
             <div className="grid cols-4">
@@ -86,9 +84,8 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
             </div>
           )}
         </Card>
-      )}
-
-      {phone.length > 0 && (
+      );
+  const phoneCard = phone.length > 0 && (
         <Card title="On your phone" hint="health data stored on the phone syncs through an app">
           <div className="grid cols-2">
             {phone.map((p) => {
@@ -106,7 +103,9 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                     </ol>
                   ) : (
                     <p className="small muted mt-sm">
-                      Your phone pairing code isn&apos;t ready yet. {admin ? <Link href={`/settings/users`}>Add one under Users</Link> : "Your admin adds it; check back soon."}
+                      {admin
+                        ? <>No pairing code yet for this account. <Link href="/settings/users">Add it under Users</Link>, then these steps appear.</>
+                        : <>Your admin is setting this up. The steps to connect {p.name} appear here when it&apos;s ready.</>}
                     </p>
                   )}
                 </div>
@@ -114,7 +113,17 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
             })}
           </div>
         </Card>
-      )}
+      );
+
+  return (
+    <div className="stack-lg">
+      {sp.error && <Notice kind="bad">{sp.error}</Notice>}
+      {connectedName && <p className="small" style={{ color: "var(--good)" }} role="status">{connectedName} is connected. Its data appears after the first sync, usually within a few minutes.</p>}
+      {syncedName && <p className="small" style={{ color: "var(--good)" }} role="status">Asked {syncedName} for new data.</p>}
+      {providers.e && <Notice kind="bad">{providers.e}</Notice>}
+      {conns.e && <Notice kind="bad">{conns.e}</Notice>}
+
+      {phoneFirst ? <>{phoneCard}{wearCard}</> : <>{wearCard}{phoneCard}</>}
 
       {all.length > 0 && (
         <Card title="Your accounts" className="flush">

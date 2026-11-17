@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { DEF_DOC } from "@/lib/domain/questionnaire-doc";
 import { Card } from "@/components/ui";
 import { DefEditor } from "@/components/def-editor";
+import { requireAdmin } from "@/lib/current-user";
 
 export const metadata: Metadata = { title: "New questionnaire" };
 
@@ -19,7 +20,8 @@ const STARTER = JSON.stringify({
   ],
 }, null, 2);
 
-export default function NewDefPage() {
+export default async function NewDefPage() {
+  await requireAdmin();
   return (
     <div className="stack-lg">
       <div className="page-head">
