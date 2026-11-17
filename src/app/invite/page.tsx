@@ -26,7 +26,7 @@ export default async function InviteCodePage({ searchParams }: { searchParams: P
         </label>
         {code && <p className="field-error" role="alert">That doesn&apos;t look like a code. It has 12 letters and digits, like K7QM-2XRA-9TPD.</p>}
         <button className="btn primary" type="submit" style={{ minHeight: 44 }}>Continue</button>
-        <Link className="small" href="/login">Back to sign in</Link>
+        <Link className="small auth-link" href="/login">Back to sign in</Link>
       </form>
     </main>
   );

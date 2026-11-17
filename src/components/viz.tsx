@@ -55,7 +55,7 @@ export function Sparkline({ values, band, width = 160, height = 40, color = "var
   values: (number | null)[]; band?: [number, number] | null; width?: number; height?: number; color?: string; title: string; kind?: "line" | "bars";
 }) {
   const v = values.filter((x): x is number => x != null);
-  if (v.length < 2 && kind === "line") return <svg width={width} height={height} role="img" aria-label={`${title}: not enough data`}><title>{`${title}: not enough data`}</title><line x1={0} x2={width} y1={height / 2} y2={height / 2} stroke="var(--line)" strokeDasharray="3 4" /></svg>;
+  if (v.length < 2 && kind === "line") return <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ maxWidth: "100%" }} role="img" aria-label={`${title}: not enough data`}><title>{`${title}: not enough data`}</title><line x1={0} x2={width} y1={height / 2} y2={height / 2} stroke="var(--line)" strokeDasharray="3 4" /></svg>;
   let lo = Math.min(...v, ...(band ?? [])), hi = Math.max(...v, ...(band ?? []));
   if (kind === "bars") lo = 0;
   if (hi === lo) { hi += 1; lo -= kind === "bars" ? 0 : 1; }
@@ -96,7 +96,7 @@ export interface DayColumn {
 export function WeekStrip({ days, height = 150 }: { days: DayColumn[]; height?: number }) {
   const max = Math.max(60, ...days.map((d) => Math.max(d.plannedMin, d.sessions.reduce((a, s) => a + s.minutes, 0))));
   return (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(${days.length}, 1fr)`, gap: 8, alignItems: "end" }}>
+    <div className="week-strip" style={{ display: "grid", gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`, alignItems: "end" }}>
       {days.map((d) => {
         const done = d.sessions.reduce((a, s) => a + s.minutes, 0);
         return (
@@ -109,7 +109,7 @@ export function WeekStrip({ days, height = 150 }: { days: DayColumn[]; height?: 
                 <div key={i} style={{ height: `${(s.minutes / max) * 100}%`, minHeight: 4, background: SPORT_COLOR[s.family], borderRadius: 4, marginInline: 4 }} title={`${s.title}: ${Math.round(s.minutes)} min`} />
               ))}
             </div>
-            <div style={{ textAlign: "center", fontFamily: "var(--display)", fontWeight: 600, letterSpacing: "0.06em", fontSize: 13, color: d.isToday ? "var(--accent-text)" : "var(--muted)" }}>{d.label}</div>
+            <div style={{ textAlign: "center", fontFamily: "var(--display)", fontWeight: 600, letterSpacing: "0.06em", fontSize: 13, overflow: "hidden", color: d.isToday ? "var(--accent-text)" : "var(--muted)" }}>{d.label}</div>
           </div>
         );
       })}

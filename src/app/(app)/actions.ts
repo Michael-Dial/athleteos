@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { isISODate } from "@/lib/dates";
 import { getCtx, type AppCtx } from "@/lib/domain/context";
-import { requireAdmin } from "@/lib/current-user";
-import { userById, type User } from "@/lib/users";
+import { requireAdmin, requireUser } from "@/lib/current-user";
+import { markOnboarded, userById, type User } from "@/lib/users";
 import { DefSchema, validateAnswers } from "@/lib/domain/questionnaire-schema";
 import { getDef, submitResponse, upsertDef } from "@/lib/domain/questionnaires";
 import { patchSettings, METRICS } from "@/lib/settings";
@@ -18,7 +18,6 @@ import {
 import { invalidate } from "@/lib/cache";
 import { authorizeUrl, bootstrapApplication, createUser, getUser, syncProvider } from "@/lib/ow/api";
 import { ensureOwUser } from "@/lib/ow/provision";
-import { oauthReturn } from "@/lib/domain/accounts";
 import { PHONE_CODE_RE, setPhoneApp, setPhoneCode } from "@/lib/domain/phone-code";
 import { errorMessage } from "@/lib/domain/errors";
 import { issueToken, revokeToken } from "@/lib/api/tokens";
@@ -205,6 +204,7 @@ export interface DefState {
 }
 
 export async function saveQuestionnaireDef(_prev: DefState, fd: FormData): Promise<DefState> {
+  await requireAdmin();
   const { athlete } = await writeCtx();
   const text = String(fd.get("json") ?? "");
   let parsed: unknown;
@@ -244,7 +244,7 @@ const NULLABLE_FIELDS = new Set(["intensity.lt1Hr", "intensity.lt2Hr"]);
  */
 export async function updateSettings(fd: FormData) {
   const ctx = await writeCtx();
-  const backTo = back(fd, "/settings");
+  const backTo = back(fd, "/settings/analysis");
   const patch: Record<string, unknown> = {};
   const set = (path: string, v: unknown) => {
     const parts = path.split(".");
@@ -346,7 +346,7 @@ export async function renameAthlete(fd: FormData) {
   const { athlete } = await writeCtx();
   const name = str(fd, "name");
   if (name) await W.renameAthlete(athlete.id, name);
-  redirect(done("/settings"));
+  redirect(done("/settings/analysis"));
 }
 
 export async function bootstrapOwApplication() {
@@ -366,15 +366,23 @@ export async function connectProvider(fd: FormData) {
   const ctx = await writeCtx();
   const provider = str(fd, "provider");
   const origin = str(fd, "origin");
-  if (!provider || !origin) redirect("/settings/accounts");
+  // Onboarding sends people back to its connect step; everyone else to Connected accounts.
+  const home = str(fd, "return") === "welcome" ? "/welcome?step=connect" : "/settings/accounts";
+  if (!provider || !origin) redirect(home);
   let url: string;
   try {
     const userId = await ensureOwUser(ctx.athlete);
-    url = await authorizeUrl(provider, userId, oauthReturn("web", provider, origin));
+    url = await authorizeUrl(provider, userId, `${origin}${withParam(home, "connected", provider)}`);
   } catch (e) {
-    redirect("/settings/accounts?error=" + encodeURIComponent(errorMessage(e)));
+    redirect(withParam(home, "error", errorMessage(e)));
   }
   redirect(url);
+}
+
+/** Finish (or skip) first-run setup and land on Today. */
+export async function finishOnboarding() {
+  await markOnboarded((await requireUser()).id);
+  redirect(done("/"));
 }
 
 export async function syncNow(fd: FormData) {

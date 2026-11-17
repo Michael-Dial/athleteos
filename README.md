@@ -95,7 +95,11 @@ athlete. Then, in the app:
    never named on this page or anywhere else an athlete looks.
 4. **Settings → Device priority**: rank devices per metric (HRV, RHR, sleep, respiratory rate,
    SpO₂, workouts). Unranked devices fall back to the one with the most data and are labelled.
-5. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights.
+5. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights
+   (cache and relay options sit under Advanced).
+
+Settings opens as a grouped list you tap into, as on iOS. Appearance follows the phone
+(Automatic) unless set to Light or Dark there, and Sign out is at the bottom of that list.
 
 ## Dashboards
 
@@ -170,6 +174,23 @@ other people's accounts.
 - **One device-data account per person.** The same account can't be linked to two
   people.
 
+## First run for new people
+
+Someone who accepts an invite lands in a short full-screen setup before Today.
+Every step can be skipped, and "Skip setup" ends it at any point:
+
+1. **Welcome**: what the app shows, with an example readiness gauge.
+2. **Connect**: the phone's own health app first (Apple Health on iPhone,
+   Health Connect on Android), then wearables. A pre-linked account says so.
+3. **First check-in**: the morning wellness form, inline.
+4. **Reminders**: notification permission is asked only here, after saying
+   why; saying no changes nothing else.
+5. **Home Screen**: the two taps that install it (skipped when it already is).
+
+Today then explains that readiness appears after about 14 nights of data and
+shows how far along it is. Existing users and the install's first admin skip
+the setup.
+
 ## Sign-in codes by email (optional second factor)
 
 Set up email in Settings → Credentials. Then each person can turn codes on in
@@ -192,7 +213,10 @@ emailed code for a token.
 - If email broke while codes were on, set `LOGIN_2FA=off` in the server
   environment (Portainer stack env or `.env`) and restart. It overrides
   everyone's code setting.
-- A member who forgot their password: an admin sends a reset link from Users.
+- Forgot your password: "Forgot password?" on the sign-in page emails a reset
+  code (when email is set up; otherwise it says to ask an admin, who can send
+  one from Users). The reply is the same whether or not the address has an
+  account.
 - An admin who forgot theirs, with no other admin: clear the hash, then sign in
   with `ATHLETEOS_PASSWORD` and that admin's email, and set a new password.
 

@@ -9,7 +9,7 @@ export function RateSelect({ action, hidden, value, label }: { action: (fd: Form
       {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       <label className="sr-only" htmlFor={`rpe-${hidden.key}`}>{label}</label>
       <select id={`rpe-${hidden.key}`} name="rpe" defaultValue={value ?? ""} onChange={() => ref.current?.requestSubmit()}
-        style={{ minHeight: 28, padding: "2px 6px", width: 64, fontSize: 13 }}>
+        className="rate-select">
         <option value="">—</option>
         {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
       </select>

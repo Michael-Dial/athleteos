@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getCtx } from "@/lib/domain/context";
+import { requireUser } from "@/lib/current-user";
+import { redirect } from "next/navigation";
 import { getReadiness, type Readiness } from "@/lib/domain/readiness";
 import { getIllness } from "@/lib/domain/illness";
 import { listPlanSessions, matchPlan } from "@/lib/domain/plan";
@@ -12,7 +14,6 @@ import { addDays, fmtDate, fmtDuration, fmtTime, localDateWithOffset, startOfWee
 import { SPORT_LABEL, isSportFamily, type SportFamily } from "@/lib/sports";
 import { Card, SourceChip } from "@/components/ui";
 import { OwErrors, SetupBanner } from "@/components/setup-banner";
-import { InstallHint } from "@/components/pwa";
 import { Hypnogram } from "@/components/hypnogram";
 import { ReadinessGauge, SPORT_COLOR, Sparkline, WeekStrip, ZScale, type DayColumn, type VizState } from "@/components/viz";
 import { TimeChart } from "@/components/charts";
@@ -32,6 +33,8 @@ function last<T>(m: Map<string, T>, days: string[]): (T | null)[] {
 
 export default async function TodayPage() {
   const ctx = await getCtx();
+  // New people start with the short setup; viewing someone else never does.
+  if (!ctx.viewing && !(await requireUser()).onboarded) redirect("/welcome");
   const s = ctx.settings;
   const tz = s.timezone;
   const today = todayIn(tz);
@@ -51,6 +54,12 @@ export default async function TodayPage() {
   const due = [];
   for (const d of defs) if (await isDue(d, today, weekStart)) due.push(d);
   const o = OVERALL[r.overall];
+  // While baselines form, say how long it takes and how far along it is.
+  const need = s.hrv.minBaselineN;
+  const nights = r.hrv.device ? seriesFor(r.nightly, r.hrv.device.key, "hrv").size : 0;
+  const building = !ctx.ow
+    ? "Connect a wearable and your readiness starts building from the first night."
+    : `Readiness appears after about ${need} nights of data${nights ? `: ${Math.min(nights, need)} of ${need} so far` : ""}.`;
 
   // ---- pillars: one sparkline + one position on the shared SD scale each
   const nightSeries = (metric: "hrv" | "rhr" | "sleep", key: string | undefined) => (key ? seriesFor(r.nightly, key, metric) : new Map<string, number>());
@@ -101,7 +110,6 @@ export default async function TodayPage() {
           <h1>Today</h1>
         </div>
       </div>
-      <InstallHint />
       <SetupBanner ctx={ctx} />
       <OwErrors errors={r.errors} />
       {ill.latest && (ill.latest.level === "watch" || ill.latest.level === "alert") && (
@@ -112,11 +120,25 @@ export default async function TodayPage() {
         </div>
       )}
 
+      {due.length > 0 && (
+        <Card className="checkin-due">
+          <div className="row between" style={{ gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <div className="stat-label">Check-in due</div>
+              <div className="small ink2">About a minute. It feeds today&apos;s readiness.</div>
+            </div>
+            <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+              {due.map((d) => <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary">{d.schedule === "daily" ? "Morning check-in" : d.name}</Link>)}
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="today-hero">
         <Card>
           <div className="stack" style={{ alignItems: "center", gap: 6 }}>
             <ReadinessGauge index={r.index} state={o.state} label={o.label} zFlag={s.baselines.zFlag} watchZ={s.readiness.watchZ} />
-            <p className="small ink2" style={{ textAlign: "center", maxWidth: 280 }}>{o.line}</p>
+            <p className="small ink2" style={{ textAlign: "center", maxWidth: 280 }}>{r.overall === "unknown" ? building : o.line}</p>
             <Link className="small" href="/readiness">How this is worked out</Link>
           </div>
         </Card>
@@ -184,11 +206,6 @@ export default async function TodayPage() {
                 <span className="kicker" style={{ color: actual ? "var(--good)" : "var(--muted)" }}>{actual ? "Done" : p.skipped ? "Skipped" : "To do"}</span>
               </div>
             ))}
-            {due.length > 0 && (
-              <div className="stack mt-sm">
-                {due.map((d) => <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary" style={{ minHeight: 44 }}>{d.schedule === "daily" ? "Morning check-in" : d.name}</Link>)}
-              </div>
-            )}
           </div>
         </Card>
       </div>

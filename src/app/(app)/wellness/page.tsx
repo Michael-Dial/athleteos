@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
+import { requireUser } from "@/lib/current-user";
 import { isDue, listDefs, listResponses, listWellness, streak } from "@/lib/domain/questionnaires";
 import { addDays, fmtDate, startOfWeek, todayIn } from "@/lib/dates";
 import { mean, sd } from "@/lib/stats/basic";
@@ -8,11 +9,13 @@ import { Card, Empty, fmt } from "@/components/ui";
 import { TimeChart } from "@/components/charts";
 import { setQuestionnaireActive } from "../actions";
 
-export const metadata: Metadata = { title: "Questionnaires" };
+export const metadata: Metadata = { title: "Check-in" };
 
 export default async function WellnessPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const sp = await searchParams;
   const ctx = await getCtx();
+  // Editing a form's definition is an admin task; everyone answers and toggles forms.
+  const admin = (await requireUser()).role === "admin";
   const today = todayIn(ctx.settings.timezone);
   const start = addDays(today, -89);
   const [defs, wellness] = await Promise.all([listDefs(ctx.athlete.id, true), listWellness(ctx.athlete.id, start, today)]);
@@ -39,8 +42,8 @@ export default async function WellnessPage({ searchParams }: { searchParams: Pro
   return (
     <div className="stack-lg">
       <div className="page-head">
-        <div><h1>Questionnaires</h1><p className="sub">Daily wellness and any custom forms. Definitions are data: edit them as JSON.</p></div>
-        <Link className="btn" href="/questionnaires/new">New questionnaire</Link>
+        <div><h1>Check-in</h1><p className="sub">Your morning wellness check and any other forms, with how your answers are trending.</p></div>
+        {admin && <Link className="btn" href="/questionnaires/new">New form</Link>}
       </div>
       {sp.saved && <p className="small" style={{ color: "var(--good)" }}>Saved “{sp.saved}”.</p>}
 
@@ -60,7 +63,7 @@ export default async function WellnessPage({ searchParams }: { searchParams: Pro
                   <td className="num">
                     <div className="row" style={{ justifyContent: "flex-end" }}>
                       {d.active && <Link className="btn sm primary" href={`/wellness/${d.slug}`}>Answer</Link>}
-                      <Link className="btn sm" href={`/questionnaires/${d.slug}`}>Edit</Link>
+                      {admin && <Link className="btn sm" href={`/questionnaires/${d.slug}`}>Edit</Link>}
                       <form action={setQuestionnaireActive}>
                         <input type="hidden" name="slug" value={d.slug} /><input type="hidden" name="active" value={String(!d.active)} />
                         <button className="btn sm" type="submit">{d.active ? "Deactivate" : "Activate"}</button>

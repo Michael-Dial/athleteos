@@ -63,7 +63,8 @@ export async function signIn(email: string, password: string): Promise<SignInRes
       const athlete = (await c.query<{ id: number }>("SELECT id FROM athlete ORDER BY id LIMIT 1")).rows[0];
       if (!athlete) throw new Error("No athlete row; database seed did not run");
       return (await c.query<{ id: number }>(
-        "INSERT INTO app_user (athlete_id, email, role, password_hash, login_codes) VALUES ($1, $2, 'admin', $3, $4) RETURNING id",
+        // The install's owner already has their data, so first-run setup is skipped.
+        "INSERT INTO app_user (athlete_id, email, role, password_hash, login_codes, onboarded_at) VALUES ($1, $2, 'admin', $3, $4, now()) RETURNING id",
         [athlete.id, addr, hash, codesWereOn])).rows[0].id;
     });
     if (id === null) return signIn(email, password);

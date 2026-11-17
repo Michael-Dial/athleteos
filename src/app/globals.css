@@ -60,7 +60,8 @@
   --surface-3: #e2e2db;
   --ink: #101114;
   --ink-2: #4a4d55;
-  --muted: #6b6f78;
+  /* 4.85:1 on the darkest light surface (surface-3), 5.3:1 on surface-2. */
+  --muted: #5c6068;
   --line: #e0e0d9;
   --line-strong: #c6c6bd;
   --ring: rgba(16,17,20,0.08);
@@ -121,8 +122,10 @@ small, .small { font-size: 13px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
 /* ---------- shell: top bar (desktop), bottom tabs (phone) ---------- */
-.topbar { position: sticky; top: 0; z-index: 20; height: var(--topbar); background: var(--page); border-bottom: 1px solid var(--line); }
-.topbar-in { max-width: 1320px; margin: 0 auto; height: 100%; padding: 0 24px; display: flex; align-items: center; gap: 28px; }
+/* The installed app draws under the status bar (black-translucent), so the bar
+   adds the top safe area itself; side insets cover landscape notches. */
+.topbar { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-inset-top); background: var(--page); border-bottom: 1px solid var(--line); }
+.topbar-in { max-width: 1320px; margin: 0 auto; height: var(--topbar); padding: 0 max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left)); display: flex; align-items: center; gap: 28px; min-width: 0; }
 .brand { display: flex; align-items: center; gap: 9px; color: var(--ink); font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: 0.08em; text-transform: uppercase; }
 .brand:hover { text-decoration: none; }
 .brand svg { color: var(--accent); }
@@ -131,7 +134,7 @@ small, .small { font-size: 13px; }
 .topnav a:hover { color: var(--ink); text-decoration: none; }
 .topnav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
 .topbar-tools { display: flex; align-items: center; gap: 4px; }
-.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; color: var(--ink-2); background: transparent; border: 0; cursor: pointer; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; color: var(--ink-2); background: transparent; border: 0; cursor: pointer; }
 .icon-btn:hover { background: var(--surface-2); color: var(--ink); text-decoration: none; }
 .main { max-width: 1320px; margin: 0 auto; padding: 28px 24px 72px; min-width: 0; }
 .tabbar { display: none; }
@@ -139,10 +142,13 @@ small, .small { font-size: 13px; }
 .page-head .sub { color: var(--muted); margin-top: 6px; }
 @media (max-width: 900px) {
   .topnav { display: none; }
-  .topbar-in { padding: 0 16px; justify-content: space-between; }
+  /* Phones: the tab bar is the navigation and Settings holds the rest, so the
+     bar is just the brand and can never push the page wider than the screen. */
+  .topbar-tools { display: none; }
+  .topbar-in { padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); justify-content: space-between; }
   .main { padding: 18px 16px calc(84px + env(safe-area-inset-bottom)); }
   h1 { font-size: 28px; }
-  .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); padding: 6px max(4px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left)); }
   .tabbar a { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; color: var(--muted); font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; min-height: 48px; justify-content: center; }
   .tabbar a:hover { text-decoration: none; }
   .tabbar a[aria-current="page"] { color: var(--accent-text); }
@@ -220,7 +226,7 @@ textarea.code { font-family: var(--mono); font-size: 12px; min-height: 420px; }
 input[type="checkbox"], input[type="radio"] { width: auto; min-height: 0; accent-color: var(--accent); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 .field-error { color: var(--bad); font-size: 12px; font-weight: 500; }
-.form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); }
 .form-grid .wide { grid-column: 1 / -1; }
 
 .btn {
@@ -236,13 +242,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
 
 .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; }
-.seg a { padding: 6px 12px; font-size: 13px; font-weight: 500; color: var(--ink-2); border-right: 1px solid var(--line); }
+.seg a { display: inline-flex; align-items: center; min-height: 36px; padding: 6px 12px; font-size: 13px; font-weight: 500; color: var(--ink-2); border-right: 1px solid var(--line); }
 .seg a:last-child { border-right: 0; }
 .seg a:hover { background: var(--surface-2); text-decoration: none; }
 .seg a[aria-current="page"], .seg a.on { background: var(--accent-weak); color: var(--accent-text); }
 
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; overflow-x: auto; }
-.tabs a { padding: 8px 12px; color: var(--ink-2); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; color: var(--ink-2); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tabs a:hover { color: var(--ink); text-decoration: none; }
 .tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
 
@@ -256,7 +262,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .anchors { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; gap: 12px; }
 
 /* ---------- calendar ---------- */
-.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--line); gap: 1px; }
+.cal { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--line); gap: 1px; }
 .cal-h { background: var(--surface-2); font-size: 11px; font-weight: 600; color: var(--muted); padding: 6px 8px; }
 .cal-d { background: var(--surface); min-height: 112px; padding: 6px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .cal-d.out { background: var(--surface-2); }
@@ -350,8 +356,123 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 
 /* ---------- sign-in ---------- */
-.auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.auth-wrap { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .auth-card { width: 100%; max-width: 380px; padding: 28px; }
 
 /* Admin looking at another user's dashboards: always visible, never mistaken for their own. */
-.view-banner { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: var(--warn-weak); color: var(--ink); font-size: 14px; border-bottom: 1px solid var(--line); }
+.view-banner { position: sticky; top: calc(var(--topbar) + env(safe-area-inset-top)); z-index: 20; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: var(--warn-weak); color: var(--ink); font-size: 14px; border-bottom: 1px solid var(--line); }
+
+/* ---------- iPhone ergonomics ----------
+   Fields under 16px make iOS Safari zoom the page on focus; anything tappable
+   is at least 44 pt; a checkbox's whole row is its target. */
+@media (max-width: 900px) {
+  input, select, textarea { font-size: 16px; min-height: 44px; }
+  textarea.code { font-size: 14px; }
+  input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; min-height: 0; flex: none; }
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: 44px; display: flex; align-items: center; gap: 10px; }
+  .btn, .btn.sm { min-height: 44px; }
+  .btn.sm { padding: 6px 12px; font-size: 13px; }
+  .btn.icon { width: 44px; min-height: 44px; }
+  .seg a { min-height: 44px; }
+  .sess { min-height: 44px; display: flex; flex-direction: column; justify-content: center; font-size: 13px; padding: 6px 8px; }
+  .cal-n a { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -10px -6px -10px 0; }
+  details > summary { min-height: 44px; display: flex; align-items: center; }
+}
+
+/* Links inside running text carry an underline, not just a colour. */
+/* Prose only: list rows, chips and segmented controls are links too but are
+   clearly controls, so they stay plain. */
+:is(p, .notice, .help, .sub, dd, .steps li) a:not(.btn) { text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+
+/* ---------- tables become cards on phones ----------
+   components/responsive-tables.tsx copies each column header into its cells'
+   data-label, so a row reads as "label: value" pairs without sideways scroll. */
+@media (max-width: 600px) {
+  /* Headers are repeated in each cell's label (read by VoiceOver too), so the header row can go. */
+  table.t:not(.keep-table) thead { display: none; }
+  table.t:not(.keep-table), table.t:not(.keep-table) tbody { display: block; }
+  table.t:not(.keep-table) tr { display: block; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  table.t:not(.keep-table) tr:last-child { border-bottom: 0; }
+  table.t:not(.keep-table) td { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; padding: 3px 0; border: 0; text-align: right; overflow-wrap: anywhere; }
+  table.t:not(.keep-table) td::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 600; text-align: left; flex: none; max-width: 50%; }
+  /* The first cell is the card's title and may hold a name, a tag and a description: let it flow as a block. */
+  table.t:not(.keep-table) td:first-child { display: block; text-align: left; font-weight: 600; font-size: 14px; padding-bottom: 6px; }
+  table.t:not(.keep-table) td:first-child::before, table.t:not(.keep-table) td:not([data-label])::before, table.t:not(.keep-table) td[data-label=""]::before { content: none; }
+  table.t:not(.keep-table) td:empty { display: none; }
+  table.t:not(.keep-table) td.num { justify-content: space-between; }
+  .table-wrap:has(> table.t:not(.keep-table)) { overflow-x: visible; }
+}
+
+/* ---------- Settings: inset grouped list (iOS style) ---------- */
+.group { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.group li + li { border-top: 1px solid var(--line); }
+.group-title { font-family: var(--display); font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px 4px; }
+.group-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 10px 16px; color: var(--ink); width: 100%; background: none; border: 0; font: inherit; font-size: 16px; text-align: left; cursor: pointer; flex-wrap: wrap; }
+.group-row:hover { background: var(--surface-2); text-decoration: none; }
+.group-row.static { cursor: default; }
+.group-row.static:hover { background: none; }
+.group-row.danger { color: var(--bad); justify-content: center; font-weight: 600; }
+.settings-back { display: none; align-items: center; gap: 2px; min-height: 44px; margin: -8px 0 4px -6px; color: var(--accent-text); font-weight: 500; }
+.settings-back:hover { text-decoration: none; }
+@media (max-width: 900px) {
+  .settings-back { display: inline-flex; }
+  .settings-tabs { display: none; }
+}
+.auth-link { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* ---------- onboarding (/welcome): full screen, one task per step ---------- */
+.onboard { min-height: 100vh; min-height: 100dvh; max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;
+  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+.onboard-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.onboard-dots { display: flex; gap: 6px; }
+.onboard-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+.onboard-dots i.on { background: var(--accent); width: 22px; border-radius: 4px; }
+.onboard-body { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.onboard-body h1 { font-size: 32px; line-height: 1.1; }
+.onboard-actions { display: flex; flex-direction: column; gap: 8px; position: sticky; bottom: 0; padding: 12px 0 max(4px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--page) 30%); }
+.onboard-actions .btn { min-height: 50px; font-size: 16px; width: 100%; }
+.link-btn { background: none; border: 0; padding: 0 4px; min-height: 44px; color: var(--accent-text); font: inherit; font-weight: 500; cursor: pointer; }
+.value-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.value-list li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; }
+.value-list svg { color: var(--accent-text); margin-top: 2px; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; line-height: 1.45; }
+.connect-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 0; }
+.connect-row + .connect-row { border-top: 1px solid var(--line); }
+
+details.adv > summary { cursor: pointer; list-style: none; color: var(--accent-text); font-weight: 500; }
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary::before { content: "▸ "; }
+details.adv[open] > summary::before { content: "▾ "; }
+
+/* Rating picker in session lists: compact on desktop, full size on phones. */
+.rate-select { width: 64px; min-height: 28px; padding: 2px 6px; font-size: 13px; }
+
+/* ---------- small screens and large text ----------
+   At the largest text sizes the layout is only ~190 pt wide: graphics shrink
+   to fit, buttons wrap their labels, and tab labels give way to icons (the
+   links keep their names for VoiceOver). */
+main svg { max-width: 100%; }
+main svg:not([width]) { height: auto; }
+.night .row { flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .rate-select { width: 72px; min-height: 44px; font-size: 16px; }
+  .brand { min-height: 44px; }
+  .banner a, a.small, .pillar .name, td a, .card-head a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+@media (max-width: 360px) {
+  .btn { white-space: normal; text-align: center; }
+  .onboard-top { flex-wrap: wrap; }
+}
+@media (max-width: 300px) {
+  .tabbar a .tab-label { display: none; }
+  .tabbar a { min-height: 52px; }
+}
+/* Grid columns may shrink below their content's natural width, so nothing in
+   them can force the page wider than the screen. */
+.grid > *, .today-hero > *, .night > *, .vital > * { min-width: 0; }
+@media (max-width: 360px) {
+  .vital { grid-template-columns: 1fr; }
+  .vital > div:last-child { width: 100% !important; }
+}
+.week-strip { gap: 8px; }
+@media (max-width: 360px) { .week-strip { gap: 3px; } }

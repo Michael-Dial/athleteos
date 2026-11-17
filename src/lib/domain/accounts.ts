@@ -4,8 +4,9 @@ import { getConnections, listProviders } from "../ow/api";
 import type { OwConnection } from "../ow/types";
 import { errorMessage } from "./errors";
 
-// The athlete's view of their device accounts, shared by the web page and the
-// app API. Brands and statuses only: no backend user ids, no provider setup.
+// The athlete's view of their device accounts for the app API (the web page
+// keeps its own, which also orders phone providers by platform). Brands and
+// statuses only: no backend user ids, no provider setup.
 
 export type AccountStatus = "connected" | "lapsed" | "none";
 
