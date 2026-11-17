@@ -49,7 +49,7 @@ export default async function SleepPage({ searchParams }: { searchParams: Promis
       </div>
       <OwErrors errors={[owError, evError]} />
       <Card title="Time asleep by device" hint="main sleep, naps excluded">
-        <TimeChart ariaLabel="Sleep duration by device" unit="min"
+        <TimeChart ariaLabel="Sleep duration by device" yAs="duration"
           refs={[{ y: ctx.settings.readiness.sleepTargetMin, label: `target ${fmtDuration(ctx.settings.readiness.sleepTargetMin)}` }]}
           series={keys.map((k, i) => ({ id: k, label: nameOf.get(k)!, color: SLOTS[i], kind: "line" as const,
             points: rows.filter((r) => r.key === k && r.date >= start).map((r) => [dx(r.date), r.sleepMin] as [number, number | null]) }))} />

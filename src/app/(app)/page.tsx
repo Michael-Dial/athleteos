@@ -128,7 +128,7 @@ export default async function TodayPage() {
               <div className="small ink2">About a minute. It feeds today&apos;s readiness.</div>
             </div>
             <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-              {due.map((d) => <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary">{d.schedule === "daily" ? "Morning check-in" : d.name}</Link>)}
+              {due.map((d) => <Link key={d.id} href={`/wellness/${d.slug}`} className="btn primary">{d.schedule === "daily" ? "Start morning check-in" : `Start ${lowerFirst(d.name)}`}</Link>)}
             </div>
           </div>
         </Card>
@@ -217,4 +217,9 @@ export default async function TodayPage() {
       )}
     </div>
   );
+}
+
+/** "Weekly check-in" → "weekly check-in" after a verb; leaves acronyms such as "RPE log" alone. */
+function lowerFirst(s: string): string {
+  return /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
 }
