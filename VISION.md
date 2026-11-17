@@ -24,7 +24,7 @@ screen every day — and a history that compounds for years.
 
 ### Phase 1 — Foundation
 - Next.js app + Postgres, deployed on the homelab Docker host (port **3020**),
-  exposed via Cloudflare Tunnel at `athleteos.dialedup.info`.
+  exposed via Cloudflare Tunnel at `athleteos.michaeldialphd.com`.
 - Open Wearables integration: OAuth-connect the user's providers, pull
   timeseries, sleep summaries/events, workouts, and devices-history.
 - Single-user (family-ready) auth.
@@ -70,5 +70,5 @@ screen every day — and a history that compounds for years.
 |---|---|
 | AthleteOS app | Docker on the homelab CT (`192.168.8.222`), port **3020** |
 | Open Wearables backend | Already running at `http://192.168.8.222:8000` (API at `/api/v1`) |
-| Public URL | `https://athleteos.dialedup.info` via Cloudflare Tunnel |
+| Public URL | `https://athleteos.michaeldialphd.com` via Cloudflare Tunnel |
 | Source | `github.com/Michael-Dial/athleteos` (public) |
