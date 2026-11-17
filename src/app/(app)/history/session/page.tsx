@@ -88,7 +88,7 @@ export default async function SessionPage({ searchParams }: { searchParams: Prom
         )}
       </Card>
 
-      <Card title="Your annotation" hint="stored in AthleteOS; the device record in Open Wearables is untouched">
+      <Card title="Your annotation" hint="stored in AthleteOS; the device's own record is untouched">
         <form action={annotateWorkout} className="stack">
           <input type="hidden" name="ow_workout_id" value={s.primary!.id} />
           <input type="hidden" name="date" value={s.date} />

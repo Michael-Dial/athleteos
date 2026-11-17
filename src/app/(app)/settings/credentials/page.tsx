@@ -86,7 +86,7 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
           <form action={saveCredentials} className="stack" id="ow">
             <input type="hidden" name="group" value="ow" />
             {fields(["OW_API_BASE", "OW_API_KEY", "OW_EMAIL", "OW_PASSWORD"])}
-            <p className="small muted">Saving makes one signed-in request to Open Wearables first and refuses settings it rejects. Link your OW user and connect devices under <Link href="/settings/connections">Open Wearables</Link>.</p>
+            <p className="small muted">Saving makes one signed-in request to Open Wearables first and refuses settings it rejects. Link the athlete&apos;s Open Wearables user under <Link href="/settings/backend">Data backend</Link>; athletes connect devices under <Link href="/settings/accounts">Connected accounts</Link>.</p>
             <SaveRow test />
           </form>
         </Card>

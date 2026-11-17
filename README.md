@@ -80,11 +80,17 @@ On first start the app migrates Postgres and seeds one athlete plus two question
 
 1. **Settings → Credentials**: Open Wearables URL and API key (or developer login),
    SMTP for emailed codes, push contact. Each is tested before it is saved.
-2. **Settings → Open Wearables**: link your OW user (search by name) and, if you want,
-   create the AthleteOS application and connect providers.
-3. **Settings → Device priority**: rank devices per metric (HRV, RHR, sleep, respiratory rate,
+2. **Settings → Data backend** (admin): if you already have an OW user with history,
+   link it here (search by name); otherwise the first connect creates one. Paste the
+   phone pairing code OW issues for the user, and the phone app's name and install link.
+   Providers enabled in OW without client credentials are listed here and hidden from
+   athletes.
+3. **Settings → Connected accounts** (what an athlete sees): connect Garmin, Oura and
+   the rest, and follow the Apple Health / Health Connect steps. Open Wearables is
+   never named on this page or anywhere else an athlete looks.
+4. **Settings → Device priority**: rank devices per metric (HRV, RHR, sleep, respiratory rate,
    SpO₂, workouts). Unranked devices fall back to the one with the most data and are labelled.
-4. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights.
+5. **Settings → Analysis**: windows, SWC, load unit, ACWR model, lag tolerance, readiness weights.
 
 ## Dashboards
 

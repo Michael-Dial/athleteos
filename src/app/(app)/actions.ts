@@ -15,6 +15,8 @@ import {
 } from "@/lib/domain/writes";
 import { invalidate } from "@/lib/cache";
 import { authorizeUrl, bootstrapApplication, createUser, getUser, syncProvider } from "@/lib/ow/api";
+import { ensureOwUser } from "@/lib/ow/provision";
+import { PHONE_CODE_RE, setPhoneCode } from "@/lib/domain/phone-code";
 import { errorMessage } from "@/lib/domain/errors";
 import { issueToken, revokeToken } from "@/lib/api/tokens";
 import { parsePace } from "@/lib/zones";
@@ -218,7 +220,7 @@ export async function setQuestionnaireActive(fd: FormData) {
 
 // Fields that are comma-separated lists in the form.
 const LIST_FIELDS = new Set(["training.excludeTypes"]);
-const TEXT_FIELDS = new Set(["timezone", "load.method", "load.acwrModel", "load.trimpSex", "reminders.morningTime"]);
+const TEXT_FIELDS = new Set(["timezone", "phoneApp.name", "phoneApp.installUrl", "load.method", "load.acwrModel", "load.trimpSex", "reminders.morningTime"]);
 // Optional numbers: an emptied field means "unset" (null), not "unchanged".
 const NULLABLE_FIELDS = new Set(["intensity.lt1Hr", "intensity.lt2Hr"]);
 
@@ -283,15 +285,15 @@ export async function toggleTrainingDeviceExcluded(fd: FormData) {
 export async function linkOwUser(fd: FormData) {
   const { athlete } = await getCtx();
   const id = str(fd, "ow_user_id");
-  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) redirect("/settings/connections?error=" + encodeURIComponent("Pick a user from the list."));
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) redirect("/settings/backend?error=" + encodeURIComponent("Pick a user from the list."));
   try {
     await getUser(id);
   } catch (e) {
-    redirect("/settings/connections?error=" + encodeURIComponent(errorMessage(e)));
+    redirect("/settings/backend?error=" + encodeURIComponent(errorMessage(e)));
   }
   await W.linkOwUser(athlete.id, id);
   invalidate("ow:");
-  redirect(done("/settings/connections?linked=1"));
+  redirect(done("/settings/backend?linked=1"));
 }
 
 export async function createAndLinkOwUser(fd: FormData) {
@@ -301,10 +303,10 @@ export async function createAndLinkOwUser(fd: FormData) {
     const u = await createUser(str(fd, "first_name") ?? athlete.name, str(fd, "last_name") ?? "");
     id = u.id;
   } catch (e) {
-    redirect("/settings/connections?error=" + encodeURIComponent(errorMessage(e)));
+    redirect("/settings/backend?error=" + encodeURIComponent(errorMessage(e)));
   }
   await W.linkOwUser(athlete.id, id);
-  redirect(done("/settings/connections?linked=1"));
+  redirect(done("/settings/backend?linked=1"));
 }
 
 export async function renameAthlete(fd: FormData) {
@@ -322,19 +324,21 @@ export async function bootstrapOwApplication() {
   } catch (e) {
     msg = "error=" + encodeURIComponent(errorMessage(e));
   }
-  redirect(done(`/settings/connections?${msg}`));
+  redirect(done(`/settings/backend?${msg}`));
 }
 
+/** Athlete-facing: the backend user is created here on first connect, never asked for. */
 export async function connectProvider(fd: FormData) {
   const ctx = await getCtx();
   const provider = str(fd, "provider");
   const origin = str(fd, "origin");
-  if (!ctx.athlete.ow_user_id || !provider || !origin) redirect("/settings/connections?error=" + encodeURIComponent("Link an Open Wearables user first."));
+  if (!provider || !origin) redirect("/settings/accounts");
   let url: string;
   try {
-    url = await authorizeUrl(provider, ctx.athlete.ow_user_id, `${origin}/settings/connections?connected=${encodeURIComponent(provider)}`);
+    const userId = await ensureOwUser(ctx.athlete);
+    url = await authorizeUrl(provider, userId, `${origin}/settings/accounts?connected=${encodeURIComponent(provider)}`);
   } catch (e) {
-    redirect("/settings/connections?error=" + encodeURIComponent(errorMessage(e)));
+    redirect("/settings/accounts?error=" + encodeURIComponent(errorMessage(e)));
   }
   redirect(url);
 }
@@ -342,7 +346,7 @@ export async function connectProvider(fd: FormData) {
 export async function syncNow(fd: FormData) {
   const ctx = await getCtx();
   const provider = str(fd, "provider");
-  if (!ctx.ow || !provider) redirect("/settings/connections");
+  if (!ctx.ow || !provider) redirect("/settings/accounts");
   let msg = `synced=${encodeURIComponent(provider)}`;
   try {
     await syncProvider(ctx.ow, provider);
@@ -350,7 +354,20 @@ export async function syncNow(fd: FormData) {
     msg = "error=" + encodeURIComponent(errorMessage(e));
   }
   invalidate(`ow:${ctx.ow.userId}`);
-  redirect(done(`/settings/connections?${msg}`));
+  redirect(done(`/settings/accounts?${msg}`));
+}
+
+/** Admin: the phone app pairing code issued by the backend for this athlete's user. */
+export async function savePhoneCode(fd: FormData) {
+  const { athlete } = await getCtx();
+  if (fd.get("clear")) {
+    await setPhoneCode(athlete.id, null);
+    redirect(done("/settings/backend?code=cleared"));
+  }
+  const code = str(fd, "phone_code");
+  if (!code || !PHONE_CODE_RE.test(code)) redirect(withParam("/settings/backend", "error", "Paste the pairing code as issued: 4 to 128 characters, no spaces."));
+  await setPhoneCode(athlete.id, code);
+  redirect(done("/settings/backend?code=saved"));
 }
 
 export async function refreshDeviceData() {

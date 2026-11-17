@@ -5,11 +5,12 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <div>
       <div className="page-head"><div><h1>Settings</h1><p className="sub">Every tuning knob lives here; nothing in the analysis is hardcoded.</p></div></div>
       <Tabs items={[
+        { href: "/settings/accounts", label: "Connected accounts" },
         { href: "/settings", label: "Analysis" },
         { href: "/settings/devices", label: "Device priority" },
         { href: "/settings/zones", label: "Zones" },
         { href: "/settings/credentials", label: "Credentials" },
-        { href: "/settings/connections", label: "Open Wearables" },
+        { href: "/settings/backend", label: "Data backend" },
         { href: "/settings/notifications", label: "Notifications" },
         { href: "/settings/security", label: "Security" },
         { href: "/settings/api", label: "API tokens" },

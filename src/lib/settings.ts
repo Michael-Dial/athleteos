@@ -27,6 +27,14 @@ export const SettingsSchema = z.object({
       historicalCacheTtlSeconds: z.number().int().min(0).max(86400).default(1800),
     })
     .prefault({}),
+  // The phone app that relays Apple Health / Health Connect into the device
+  // backend. Named here so the athlete-facing setup steps can link to it.
+  phoneApp: z
+    .object({
+      name: z.string().max(60).default(""),
+      installUrl: z.union([z.literal(""), z.url({ protocol: /^https$/ })]).default(""),
+    })
+    .prefault({}),
   // Ordered OW device_ids per metric. The first device with data on a given day
   // is shown as primary; every other device's value stays visible beside it.
   devicePriority: z.record(z.string(), z.array(z.string())).default({}),

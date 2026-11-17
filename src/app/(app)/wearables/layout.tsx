@@ -7,7 +7,7 @@ export default async function WearablesLayout({ children }: { children: React.Re
   return (
     <div>
       <div className="page-head">
-        <div><h1>Wearables</h1><p className="sub">Every number names its device. Open Wearables keeps every source; nothing here is silently merged.</p></div>
+        <div><h1>Wearables</h1><p className="sub">Every number names its device. Every source is kept; nothing here is silently merged.</p></div>
       </div>
       <Tabs items={[
         { href: "/wearables", label: "Recovery" },

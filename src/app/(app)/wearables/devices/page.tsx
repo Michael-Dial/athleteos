@@ -25,7 +25,7 @@ export default async function DevicesPage() {
   return (
     <div className="stack-lg">
       <OwErrors errors={[devices.e, history.e, conns.e]} />
-      <p className="small muted">Devices are managed in Open Wearables (labels, merges, retirement). AthleteOS reads them to name every number and to let you <Link href="/settings/devices">rank devices per metric</Link>.</p>
+      <p className="small muted">Devices come from your <Link href="/settings/accounts">connected accounts</Link>. AthleteOS uses them to name every number and to let you <Link href="/settings/devices">rank devices per metric</Link>.</p>
       <Card title={`Devices (${active.length} active)`} className="flush">
         {active.length === 0 ? <Empty title="No devices yet">They appear once a connected provider syncs data.</Empty> : (
           <div className="table-wrap">
@@ -55,7 +55,7 @@ export default async function DevicesPage() {
           </tbody></table></div>
         </Card>
       )}
-      <Card title="Provider accounts" className="flush" action={<Link className="small" href="/settings/connections">Manage</Link>}>
+      <Card title="Provider accounts" className="flush" action={<Link className="small" href="/settings/accounts">Manage</Link>}>
         <div className="table-wrap">
           <table className="t">
             <thead><tr><th>Provider</th><th>Account</th><th>Type</th><th>Status</th><th>Sync</th><th>Last synced</th></tr></thead>

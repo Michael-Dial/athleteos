@@ -6,7 +6,7 @@ export default function Loading() {
       <div className="grid cols-3">
         {[0, 1, 2].map((i) => <div key={i} className="card" style={{ height: 180, background: "var(--surface-2)", borderColor: "transparent" }} />)}
       </div>
-      <p className="small muted">Loading device data from Open Wearables…</p>
+      <p className="small muted">Loading device data…</p>
     </div>
   );
 }
