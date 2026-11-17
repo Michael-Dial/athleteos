@@ -38,7 +38,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </label>
         {error && <p className="field-error" role="alert">{ERRORS[error] ?? "Sign-in didn't work. Try again."}</p>}
         <button className="btn primary" type="submit" style={{ minHeight: 44 }}>Sign in</button>
-        <a className="small" href="/invite">Have an invite code?</a>
+        <div className="row between small" style={{ flexWrap: "wrap", gap: 8 }}>
+          <a href="/forgot" className="auth-link">Forgot password?</a>
+          <a href="/invite" className="auth-link">Have an invite code?</a>
+        </div>
       </form>
     </main>
   );

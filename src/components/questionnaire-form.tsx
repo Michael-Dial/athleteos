@@ -3,13 +3,14 @@ import { useActionState } from "react";
 import type { Item } from "@/lib/domain/questionnaire-schema";
 import { submitQuestionnaire, type SubmitState } from "@/app/(app)/actions";
 
-export function QuestionnaireForm({ slug, date, items, initial }: { slug: string; date: string; items: Item[]; initial: Record<string, string> }) {
+/** continueHref: shown as the next step once saved (onboarding uses it to move on). */
+export function QuestionnaireForm({ slug, date, items, initial, continueHref, hideDate }: { slug: string; date: string; items: Item[]; initial: Record<string, string>; continueHref?: string; hideDate?: boolean }) {
   const [state, action, pending] = useActionState<SubmitState, FormData>(submitQuestionnaire, { errors: {}, values: initial });
   const v = (k: string) => state.values[k] ?? initial[k] ?? "";
   return (
     <form action={action} className="stack-lg" noValidate>
       <input type="hidden" name="slug" value={slug} />
-      <label className="field" style={{ maxWidth: 220 }}>Date<input type="date" name="date" defaultValue={date} required /></label>
+      {hideDate ? <input type="hidden" name="date" value={date} /> : <label className="field" style={{ maxWidth: 220 }}>Date<input type="date" name="date" defaultValue={date} required /></label>}
       {items.map((it) => {
         const err = state.errors[it.key];
         const id = `q-${it.key}`;
@@ -40,19 +41,23 @@ export function QuestionnaireForm({ slug, date, items, initial }: { slug: string
               </div>
             )}
             {it.type === "choice" && (
-              <select id={id} name={`a_${it.key}`} defaultValue={v(it.key)} style={{ maxWidth: 360 }}>
+              <select id={id} name={`a_${it.key}`} aria-label={it.label} defaultValue={v(it.key)} style={{ maxWidth: 360 }}>
                 <option value="">Choose…</option>
                 {it.options!.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             )}
-            {it.type === "text" && <textarea id={id} name={`a_${it.key}`} defaultValue={v(it.key)} style={{ maxWidth: 640 }} />}
+            {it.type === "text" && <textarea id={id} name={`a_${it.key}`} aria-label={it.label} defaultValue={v(it.key)} style={{ maxWidth: 640 }} />}
             {err && <p id={`${id}-err`} className="field-error" style={{ marginTop: 4 }}>{err}</p>}
           </fieldset>
         );
       })}
       {state.errors._form && <p className="field-error" role="alert">{state.errors._form}</p>}
       <div className="row">
-        <button className="btn primary" type="submit" disabled={pending}>{pending ? "Saving…" : "Save answers"}</button>
+        {state.saved && continueHref ? (
+          <a className="btn primary" href={continueHref}>Continue</a>
+        ) : (
+          <button className="btn primary" type="submit" disabled={pending}>{pending ? "Saving…" : "Save answers"}</button>
+        )}
         {state.saved && <span className="small" role="status" style={{ color: "var(--good)" }}>Saved.</span>}
       </div>
     </form>

@@ -17,6 +17,8 @@ export interface User {
   disabled: boolean;
   session_epoch: number;
   trust_epoch: number;
+  /** Finished or skipped the first-run setup. */
+  onboarded: boolean;
 }
 
 export interface UserRow extends User {
@@ -28,7 +30,7 @@ export interface UserRow extends User {
 }
 
 const COLS = `u.id, u.athlete_id, u.email, u.role, a.name, u.login_codes, u.password_hash IS NOT NULL AS has_password,
-  u.disabled_at IS NOT NULL AS disabled, u.session_epoch, u.trust_epoch`;
+  u.disabled_at IS NOT NULL AS disabled, u.session_epoch, u.trust_epoch, u.onboarded_at IS NOT NULL AS onboarded`;
 
 /** The invite/reset code shown to the admin after issuing it: an httpOnly cookie for two minutes, never a URL. */
 export const LINK_FLASH_COOKIE = "aos_link";
@@ -93,6 +95,10 @@ export async function setEmail(userId: number, email: string): Promise<void> {
 
 export async function setLoginCodes(userId: number, on: boolean): Promise<void> {
   await q("UPDATE app_user SET login_codes = $1 WHERE id = $2", [on, userId]);
+}
+
+export async function markOnboarded(userId: number): Promise<void> {
+  await q("UPDATE app_user SET onboarded_at = coalesce(onboarded_at, now()) WHERE id = $1", [userId]);
 }
 
 export async function touchLogin(userId: number): Promise<void> {

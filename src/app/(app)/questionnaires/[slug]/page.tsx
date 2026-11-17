@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
+import { requireAdmin } from "@/lib/current-user";
 import { getDef } from "@/lib/domain/questionnaires";
 import { DEF_DOC } from "@/lib/domain/questionnaire-doc";
 import { Card } from "@/components/ui";
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: "Edit questionnaire" };
 
 export default async function EditDefPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  await requireAdmin();
   const ctx = await getCtx();
   const def = await getDef(ctx.athlete.id, slug);
   if (!def) notFound();

@@ -276,4 +276,14 @@ CREATE UNIQUE INDEX athlete_ow_user ON athlete (ow_user_id) WHERE ow_user_id IS 
 DELETE FROM system_kv WHERE key IN ('session_epoch', 'trust_epoch');
 `,
   },
+  {
+    version: 8,
+    name: "onboarding",
+    sql: `
+-- Set when someone finishes or skips the first-run setup (/welcome). People
+-- already using the app are treated as set up.
+ALTER TABLE app_user ADD COLUMN onboarded_at timestamptz;
+UPDATE app_user SET onboarded_at = now();
+`,
+  },
 ];

@@ -44,7 +44,9 @@ function useWidth<T extends HTMLElement>(initial = 720) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(240, Math.floor(e.contentRect.width))));
+    // Follow the container down to phone widths at the largest text sizes; below
+    // ~140 pt the axes stop being legible, so that is the floor.
+    const ro = new ResizeObserver(([e]) => setW(Math.max(140, Math.floor(e.contentRect.width))));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);

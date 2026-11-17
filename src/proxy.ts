@@ -5,7 +5,7 @@ import { sessionUser } from "./lib/user-session";
 
 // Admin-only pages. Their pages and actions check the role too; turning
 // members away here means they get a plain 404 before anything renders.
-const ADMIN_PATHS = ["/settings/users", "/settings/credentials", "/settings/backend"];
+const ADMIN_PATHS = ["/settings/users", "/settings/credentials", "/settings/backend", "/questionnaires"];
 
 // Everything except the login page, the healthcheck and static assets requires
 // a session: the app is reachable from the public tunnel.
@@ -33,5 +33,5 @@ export const config = {
   // Logout stays reachable without a session so a stale cookie can always be cleared.
   // /api/v1 authenticates itself (bearer token or session) inside apiRoute().
   // PWA files stay public: browsers fetch the manifest without cookies.
-  matcher: ["/((?!login|invite|api/health|api/auth/login|api/auth/invite|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
+  matcher: ["/((?!login|invite|forgot|api/health|api/auth/login|api/auth/invite|api/auth/forgot|api/auth/logout|api/auth/verify|api/auth/resend|api/v1/|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|sw.js|offline.html|icons/).*)"],
 };

@@ -89,7 +89,7 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
       {status === "loading" && <p className="small muted">Checking this device…</p>}
       {status === "unsupported" && <p className="small">This browser doesn&apos;t support push notifications.</p>}
       {status === "needs-install" && <p className="small">On iPhone, notifications need the installed app: tap <b>Share</b>, then <b>Add to Home Screen</b>, open AthleteOS from the home screen, and come back here.</p>}
-      {status === "denied" && <p className="small">Notifications are blocked for this site. Allow them in the browser&apos;s site settings, then reload.</p>}
+      {status === "denied" && <p className="small">Notifications are turned off for AthleteOS. On iPhone, turn them on in <b>Settings → Notifications → AthleteOS</b>; in a browser, allow them in the site settings. Then come back here.</p>}
       {(status === "off" || status === "on") && (
         <div className="row">
           {status === "off"

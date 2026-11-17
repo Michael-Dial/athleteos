@@ -14,7 +14,7 @@ const PAGES = [
   "/", "/more", "/review", "/trends", "/history", "/history/intensity", "/history/zones", "/history/zones?metric=pace", "/history/zones?metric=bikepower", "/readiness/illness", "/wearables/coverage", "/plan", "/plan/phases", "/wellness", "/wellness/morning-wellness",
   "/questionnaires/morning-wellness", "/questionnaires/new", "/readiness",
   "/wearables", "/wearables/sleep", "/wearables/explore", "/wearables/compare", "/wearables/devices",
-  "/settings", "/settings/devices", "/settings/accounts", "/settings/backend", "/settings/api", "/settings/notifications", "/settings/zones", "/settings/security", "/settings/credentials", "/settings/users", "/settings/users/1",
+  "/settings", "/settings/analysis", "/settings/devices", "/settings/accounts", "/settings/backend", "/settings/api", "/settings/notifications", "/settings/zones", "/settings/security", "/settings/credentials", "/settings/users", "/settings/users/1", "/welcome", "/welcome?step=connect", "/welcome?step=checkin", "/welcome?step=reminders", "/welcome?step=install",
 ];
 
 let failed = 0;

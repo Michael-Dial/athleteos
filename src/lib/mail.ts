@@ -96,10 +96,13 @@ export async function sendLoginCode(code: string, ctx: { ip: string; purpose: Co
 }
 
 /** An invite or password-reset code, with a link that fills it in. It goes only to the user's own address. */
-export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset"; url: string; code: string; name: string; by: string; expires: string }): Promise<void> {
+export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset"; url: string; code: string; name: string; by: string | null; expires: string }): Promise<void> {
   const invite = ctx.kind === "invite";
   const subject = invite ? "You're invited to AthleteOS" : "Set a new AthleteOS password";
-  const lead = invite ? `${ctx.by} invited you to AthleteOS.` : `${ctx.by} sent you a code to set a new AthleteOS password.`;
+  // by = null: the person asked for it themselves from the sign-in page.
+  const lead = invite ? `${ctx.by ?? "Someone"} invited you to AthleteOS.`
+    : ctx.by ? `${ctx.by} sent you a code to set a new AthleteOS password.`
+    : "You asked to reset your AthleteOS password. If that wasn't you, ignore this email; your password stays the same.";
   const text = [
     `Hi ${ctx.name},`, "", lead, "",
     `Your ${invite ? "invite" : "reset"} code: ${ctx.code}`,

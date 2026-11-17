@@ -49,7 +49,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
             <input type="hidden" name="next" value={next} />
             <button className="btn sm" type="submit">Send a new code</button>
           </form>
-          <Link href="/login">Start over</Link>
+          <Link href="/login" className="auth-link">Start over</Link>
         </div>
       </div>
     </main>

@@ -30,7 +30,7 @@ export default async function InvitePage({ params, searchParams }: { params: Pro
             <h1 style={{ fontSize: 26 }}>That code didn&apos;t work</h1>
             <p className="ink2">Codes work once and expire. Check it against the email, or ask whoever invited you for a new one.</p>
             <Link className="btn" href="/invite">Enter a code</Link>
-            <Link className="small" href="/login">Go to sign in</Link>
+            <Link className="small auth-link" href="/login">Go to sign in</Link>
           </div>
         ) : (
           <form action="/api/auth/invite" method="post" className="stack-lg">
