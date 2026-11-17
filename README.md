@@ -169,6 +169,23 @@ On iPhone, notifications work only from the installed app (iOS 16.4+).
 The service worker caches static assets and an offline page only; pages and API
 responses (your health data) are never cached on the device.
 
+## iPhone app (TestFlight)
+
+`ios/` is a native iPhone app that opens the site above in a web view, with pull to refresh, an
+offline screen, downloads through the share sheet, and links to other sites in Safari. It stays signed
+in like Safari does. Every web deploy reaches it at once; a new build is needed only when `ios/`
+changes. Bundle ID `info.dialedup.athleteos`, version `MARKETING_VERSION` in `ios/project.yml`.
+
+- **Ship to TestFlight:** in `Michael-Dial/app-store-release`, Actions → *Ship to App Store Connect*,
+  repo `Michael-Dial/athleteos`, mode `upload` (`build` only checks that it compiles). Its
+  `apps/athleteos.yml` names the project. TestFlight builds expire after 90 days, so ship again
+  before then.
+- **Run it from Xcode:** `brew install xcodegen`, then `cd ios && xcodegen generate && open AthleteOS.xcodeproj`,
+  choose your team under Signing & Capabilities, and run. To point a build at another server, change
+  `ATHLETEOS_URL` in `ios/project.yml`.
+- **Not yet in the app:** morning reminders. Web push does not reach an embedded web view; until the
+  app gets native notifications, turn reminders on from the home-screen web app (above).
+
 ## API (for native apps and scripts)
 
 A versioned JSON API lives at `/api/v1`, described by `/api/v1/openapi.json`

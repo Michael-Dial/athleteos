@@ -1,0 +1,40 @@
+# XcodeGen spec for the iPhone app: a native shell around the AthleteOS web app. Generate the project
+# with `xcodegen generate` in this folder; the .xcodeproj is not committed. TestFlight builds come from
+# Michael-Dial/app-store-release (apps/athleteos.yml), which sets the team, signing and build number.
+name: AthleteOS
+options:
+  bundleIdPrefix: info.dialedup
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    # The version testers see. The build number is overwritten by the release workflow.
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    # The server the app opens. Change it here (or pass ATHLETEOS_URL=… to xcodebuild) to point a
+    # build at another instance; Info.plist reads it as AthleteOSBaseURL.
+    ATHLETEOS_URL: https://athleteos.dialedup.info
+
+targets:
+  AthleteOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: AthleteOS
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: info.dialedup.athleteos
+        PRODUCT_NAME: AthleteOS
+        INFOPLIST_FILE: AthleteOS/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        # iPhone only: iPads run it in compatibility mode, and an iPad build would have to support
+        # every orientation and multitasking size before the layout has been checked there.
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    scheme: {}

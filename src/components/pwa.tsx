@@ -10,6 +10,15 @@ export function PwaRegister() {
   return null;
 }
 
+/**
+ * True inside the AthleteOS iPhone app (ios/), whose web view adds this token to the user agent.
+ * Advice for Safari (Add to Home Screen, web push) doesn't apply there: the app is already installed,
+ * and an embedded web view has no service worker or Push API.
+ */
+export function inIosApp(): boolean {
+  return /\bAthleteOSApp\//.test(navigator.userAgent);
+}
+
 const DISMISS_KEY = "aos-install-hint-dismissed";
 
 /**
@@ -23,7 +32,7 @@ export function InstallHint() {
     const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
     let dismissed = false;
     try { dismissed = localStorage.getItem(DISMISS_KEY) === "1"; } catch { /* storage blocked */ }
-    setShow(ios && !standalone && !dismissed);
+    setShow(ios && !standalone && !dismissed && !inIosApp());
   }, []);
   if (!show) return null;
   return (

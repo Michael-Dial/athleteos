@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { inIosApp } from "./pwa";
 
-type Status = "loading" | "unsupported" | "needs-install" | "denied" | "off" | "on";
+type Status = "loading" | "unsupported" | "needs-install" | "in-app" | "denied" | "off" | "on";
 
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   const pad = "=".repeat((4 - (base64url.length % 4)) % 4);
@@ -32,6 +33,7 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
 
   useEffect(() => {
     (async () => {
+      if (inIosApp()) return setStatus("in-app");
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
         // iOS Safari only exposes push to home-screen apps.
         setStatus(/iphone|ipad|ipod/i.test(navigator.userAgent) ? "needs-install" : "unsupported");
@@ -89,6 +91,7 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
       {status === "loading" && <p className="small muted">Checking this device…</p>}
       {status === "unsupported" && <p className="small">This browser doesn&apos;t support push notifications.</p>}
       {status === "needs-install" && <p className="small">On iPhone, notifications need the installed app: tap <b>Share</b>, then <b>Add to Home Screen</b>, open AthleteOS from the home screen, and come back here.</p>}
+      {status === "in-app" && <p className="small">Reminders can&apos;t be sent to the iPhone app yet. To get them, open AthleteOS in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>, and turn them on there.</p>}
       {status === "denied" && <p className="small">Notifications are blocked for this site. Allow them in the browser&apos;s site settings, then reload.</p>}
       {(status === "off" || status === "on") && (
         <div className="row">
