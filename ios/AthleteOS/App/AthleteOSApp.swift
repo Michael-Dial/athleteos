@@ -13,9 +13,6 @@ struct AthleteOSApp: App {
             RootView()
                 .environment(model)
                 .tint(Palette.accentText)
-                // Invite links (athleteos://invite/CODE). OAuth returns are caught by the web
-                // authentication session before they reach here.
-                .onOpenURL { model.open($0) }
         }
     }
 }

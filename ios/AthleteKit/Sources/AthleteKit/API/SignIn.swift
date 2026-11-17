@@ -22,11 +22,11 @@ public enum PasswordSignIn: Sendable {
     case needsCode(EmailChallenge)
 }
 
-private struct TokenRequest: Encodable { let password: String; let name: String }
+private struct TokenRequest: Encodable { let email: String; let password: String; let name: String }
 
 public extension APIClient {
-    func postAuthToken(password: String, deviceName: String) async throws -> PasswordSignIn {
-        let (data, status) = try await raw("POST", "/auth/token", body: try APIClient.encoder.encode(TokenRequest(password: password, name: deviceName)))
+    func postAuthToken(email: String, password: String, deviceName: String) async throws -> PasswordSignIn {
+        let (data, status) = try await raw("POST", "/auth/token", body: try APIClient.encoder.encode(TokenRequest(email: email, password: password, name: deviceName)))
         if status == 202 { return .needsCode(try APIClient.decode(EmailChallenge.self, data, "/auth/token")) }
         return .signedIn(try APIClient.decode(GrantedToken.self, data, "/auth/token"))
     }

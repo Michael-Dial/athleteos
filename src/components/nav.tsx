@@ -57,7 +57,7 @@ export function Tabs({ items }: { items: { href: string; label: string }[] }) {
   return (
     <div className="tabs" role="navigation">
       {items.map((t) => (
-        <Link key={t.href} href={t.href} aria-current={path === t.href ? "page" : undefined}>{t.label}</Link>
+        <Link key={t.href} href={t.href} aria-current={path === t.href || (t.href.split("/").length > 2 && path.startsWith(`${t.href}/`)) ? "page" : undefined}>{t.label}</Link>
       ))}
     </div>
   );

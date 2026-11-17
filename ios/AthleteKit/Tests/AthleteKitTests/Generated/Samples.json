@@ -133,6 +133,11 @@
  },
  "MeResponse": {
   "max": {
+   "user": {
+    "id": 1.5,
+    "email": "2026-11-17",
+    "role": "admin"
+   },
    "athlete": {
     "id": 1.5,
     "name": "2026-11-17"
@@ -146,6 +151,11 @@
    "auth": "token"
   },
   "min": {
+   "user": {
+    "id": 1.5,
+    "email": "2026-11-17",
+    "role": "admin"
+   },
    "athlete": {
     "id": 1.5,
     "name": "2026-11-17"

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { credentialStates, type CredName, type CredState } from "@/lib/credentials";
 import { owConfig } from "@/lib/ow/client";
 import { smtpConfig } from "@/lib/mail";
+import { requireAdmin } from "@/lib/current-user";
 import { Card, Notice, StatePill } from "@/components/ui";
 import { discardUnreadable, saveCredentials, sendTestEmail } from "../security-actions";
 
@@ -62,6 +63,7 @@ function SaveRow({ test }: { test: boolean }) {
 
 export default async function CredentialsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; sent?: string; discarded?: string }> }) {
   const sp = await searchParams;
+  const admin = await requireAdmin();
   const [{ states, unreadable }, ow, smtp] = await Promise.all([credentialStates(), owConfig(), smtpConfig()]);
   const fields = (names: CredName[]) => names.map((n) => <Field key={n} s={states[n]} />);
   return (
@@ -79,7 +81,7 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
         </Notice>
       )}
       <p className="small ink2" style={{ maxWidth: 720 }}>
-        Values saved here are encrypted in the database and take effect immediately, with no restart. They override the same setting in <code className="mono">.env</code>; remove one to fall back to <code className="mono">.env</code>. Secrets are never shown again after saving. The sign-in password and emailed codes are under <Link href="/settings/security">Security</Link>.
+        Values saved here are encrypted in the database and take effect immediately, with no restart. They override the same setting in <code className="mono">.env</code>; remove one to fall back to <code className="mono">.env</code>. Secrets are never shown again after saving. Each person&apos;s password and emailed codes are under their own <Link href="/settings/security">Security</Link> tab.
       </p>
       <div className="grid cols-2">
         <Card title="Open Wearables" action={<StatePill state={ow ? "ok" : "nodata"} label={ow ? (ow.apiKey ? "API key" : "Developer login") : "Not set up"} />}>
@@ -94,12 +96,12 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
           <form action={saveCredentials} className="stack" id="smtp">
             <input type="hidden" name="group" value="smtp" />
             {fields(["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"])}
-            <p className="small muted">Used for sign-in codes. Saving connects and logs in to the mail server first, without sending anything. Brevo: host smtp-relay.brevo.com, port 587, your SMTP login and an SMTP key.</p>
+            <p className="small muted">Used for sign-in codes and invites. Saving connects and logs in to the mail server first, without sending anything. Brevo: host smtp-relay.brevo.com, port 587, your SMTP login and an SMTP key.</p>
             <SaveRow test />
           </form>
           <form action={sendTestEmail} className="row mt" style={{ alignItems: "flex-end", borderTop: "1px solid var(--line)", paddingTop: 12 }}>
             <input type="hidden" name="back" value="credentials" />
-            <label className="field" style={{ flex: 1 }}>Send a test to<input name="to" type="email" autoComplete="email" required /></label>
+            <label className="field" style={{ flex: 1 }}>Send a test to<input name="to" type="email" autoComplete="email" defaultValue={admin.email} required /></label>
             <button className="btn" type="submit" disabled={!smtp}>Send test</button>
           </form>
         </Card>

@@ -76,16 +76,19 @@ curl -s localhost:3020/api/health   # {"status":"ok"}
 ```
 
 On first start the app migrates Postgres and seeds one athlete plus two questionnaires
-(McLean-style morning wellness, weekly check-in). Then, in the app:
+(McLean-style morning wellness, weekly check-in). The first sign-in, with any email and
+`ATHLETEOS_PASSWORD`, makes that email the admin's sign-in and the admin owns that
+athlete. Then, in the app:
 
 1. **Settings → Credentials**: Open Wearables URL and API key (or developer login),
    SMTP for emailed codes, push contact. Each is tested before it is saved.
-2. **Settings → Data backend** (admin): if you already have an OW user with history,
-   link it here (search by name); otherwise the first connect creates one. To add
-   another athlete, search for their OW user and press **Invite**: they enter the
-   one-time code in the iPhone app (single use, 7 days). Set the app's install link
-   here too. Providers enabled in OW without client credentials are listed here and
-   hidden from athletes.
+2. **Settings → Users** (admin): invite people with a one-time code; each gets their own
+   sign-in and data. Link an OW user that already has their history (search by name or
+   email) while inviting, or later on their page, or leave it and their first connect
+   creates one. An invited person can enter the code on the web or in the iPhone app.
+   **Settings → Data backend** (admin): the OW application, the iPhone app's name and
+   install link, and the providers that are enabled in OW without client credentials
+   (hidden from athletes).
 3. **Settings → Connected accounts** (what an athlete sees): connect Garmin, Oura and
    the rest. Apple Health syncs from the iPhone app, which reaches OW through this
    server (`/ow/api/v1`), so OW never needs its own public address. Open Wearables is
@@ -111,14 +114,14 @@ Every dashboard is also an API endpoint (`/review`, `/trends`, `/zones`, `/inten
 
 ## Credentials in the app
 
-Settings → Credentials holds the Open Wearables URL and API key (or developer
-login), the SMTP settings and the push contact. Settings → Security holds the
-sign-in password and emailed codes. Nothing needs a restart.
+Settings → Credentials (admins only) holds the Open Wearables URL and API key (or
+developer login), the SMTP settings and the push contact. Each person's own
+Settings → Security holds their password and emailed codes. Nothing needs a restart.
 
 - **Stored sealed.** Values are AES-256-GCM encrypted in Postgres with a key
   derived from `SESSION_SECRET`, so a database dump alone doesn't reveal them.
-  The OW application secret is kept the same way. The sign-in password is kept
-  only as a scrypt hash. Secrets are write-only: after saving, the page shows at
+  The OW application secret is kept the same way. Passwords are kept only as
+  scrypt hashes. Secrets are write-only: after saving, the page shows at
   most the last four characters of a key.
 - **App over `.env`.** A value saved in the app wins. Remove it and the `.env`
   value applies again, so an existing `.env` keeps working unchanged. Only
@@ -129,35 +132,72 @@ sign-in password and emailed codes. Nothing needs a restart.
   that fail aren't stored unless you tick "Save without testing".
 - **Your password guards every change.** A stolen session cookie can't point the
   stored keys at another server.
-- **Changing `SESSION_SECRET`** makes saved values unreadable. The page says so,
-  and sign-in falls back to `ATHLETEOS_PASSWORD`.
+- **Changing `SESSION_SECRET`** makes saved values unreadable (the page says so)
+  and signs everyone out.
+
+## Users and roles
+
+Everyone signs in with their own email and password and sees only their own
+athlete: plan, check-ins, settings, connected accounts, API tokens.
+
+| | Member | Admin |
+|---|---|---|
+| Own dashboards, plan, check-ins, settings | ✓ | ✓ |
+| Connect their own wearables (a new device-data account is created on the first connect) | ✓ | ✓ |
+| Link someone to an existing device-data account, set pairing codes | | ✓ |
+| Users: invite, change role, disable, remove, send a reset link | | ✓ |
+| Credentials, Data backend | | ✓ |
+| View someone's dashboards (read-only, with a banner; writes are refused) | | ✓ |
+
+Members never see the admin tabs, and those pages and their actions return 404
+for them. Searching the device-data backend is admin-only because it can hold
+other people's accounts.
+
+- **Invites.** An admin enters a name and email and, optionally, picks the
+  person's existing device-data account from a search; it is linked before they
+  ever sign in, so their history is there on day one. The person gets a one-time
+  invite code like `K7QM-2XRA-9TPD` (7 days). They enter it under "Have an
+  invite code?" on the sign-in page, or open the emailed link that fills it in,
+  then choose a password. If email isn't set up, the admin sees the code once
+  and passes it on. A reset code (24 hours) works the same way, and the old
+  password keeps working until the new one is set. Codes are single use, stored
+  hashed, and wrong codes share the sign-in throttle.
+- **Safeguards.** Inviting, changing roles and removing a user ask for the
+  admin's own password. Removing also needs the person's email typed, and deletes
+  their AthleteOS data; their device-data account in the backend isn't touched.
+  The last active admin can't be demoted, disabled or removed.
+- **Disabling** signs the person out at once and stops their API tokens.
+- **One device-data account per person.** The same account can't be linked to two
+  people.
 
 ## Sign-in codes by email (optional second factor)
 
-Set up email in Settings → Credentials. Then turn codes on in Settings → Security:
-a confirmation code goes to the address first, so a typo can't lock you out.
-Signing in then needs the password plus a 6-digit code. Codes expire in 10 minutes
-and allow 5 tries, and only a keyed hash of each code is stored. A device you
-choose to trust skips the code for 30 days.
+Set up email in Settings → Credentials. Then each person can turn codes on in
+their own Settings → Security: a confirmation code goes to their address first,
+so a dead inbox can't lock them out. Signing in then needs the password plus a
+6-digit code. Codes expire in 10 minutes and allow 5 tries, and only a keyed hash
+of each code is stored. A device they choose to trust skips the code for 30 days.
 
 Settings → Security also covers the rest:
 - change the password, which signs out every other device;
+- change the email address (confirmed by a code to the new one);
 - sign out other devices;
 - forget every trusted device.
 
-Native apps get the same check: `POST /api/v1/auth/token` returns a
-`challengeId`, then `POST /api/v1/auth/token/verify` exchanges the emailed code
-for a token.
+Native apps get the same check: `POST /api/v1/auth/token` with email and password
+returns a `challengeId`, then `POST /api/v1/auth/token/verify` exchanges the
+emailed code for a token.
 
 **Locked out?**
 - If email broke while codes were on, set `LOGIN_2FA=off` in the server
-  environment (Portainer stack env or `.env`) and restart. It overrides the app
-  setting.
-- If you forgot a password you set in the app, remove the stored hash so
-  `ATHLETEOS_PASSWORD` applies again:
+  environment (Portainer stack env or `.env`) and restart. It overrides
+  everyone's code setting.
+- A member who forgot their password: an admin sends a reset link from Users.
+- An admin who forgot theirs, with no other admin: clear the hash, then sign in
+  with `ATHLETEOS_PASSWORD` and that admin's email, and set a new password.
 
 ```bash
-docker exec athleteos-db psql -U athleteos -c "DELETE FROM credential WHERE name = 'APP_PASSWORD_HASH'"
+docker exec athleteos-db psql -U athleteos -c "UPDATE app_user SET password_hash = NULL WHERE email = 'you@example.com'"
 ```
 
 ## iPhone app
@@ -193,7 +233,8 @@ responses (your health data) are never cached on the device.
 A versioned JSON API lives at `/api/v1`, described by `/api/v1/openapi.json`
 (generate a typed client from it). Authenticate with `Authorization: Bearer <token>`:
 create tokens in Settings → API tokens, or have an app sign in with
-`POST /api/v1/auth/token` and the AthleteOS password. Tokens are stored hashed and
+`POST /api/v1/auth/token` and the person's email and password. A token acts as
+the person it belongs to, on their own data. Tokens are stored hashed and
 can be revoked. The web app and the API share one domain layer, so they validate
 and behave identically.
 

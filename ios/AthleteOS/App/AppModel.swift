@@ -12,8 +12,6 @@ final class AppModel {
     private(set) var client: APIClient?
     /// An emailed-code step in progress for a password sign-in.
     private(set) var pendingChallenge: (server: URL, challenge: EmailChallenge)?
-    /// An invite link opened before sign-in fills the code in for the person.
-    var pendingInvite: (code: String, server: URL?)?
     private(set) var sync: SyncState = .off
     var syncMessage: String?
 
@@ -48,23 +46,23 @@ final class AppModel {
     private func save(_ c: Credentials) throws {
         try store.save(c)
         pendingChallenge = nil
-        pendingInvite = nil
         adopt(c)
         Task { await reconcileSync() }
     }
 
     // MARK: sign-in
 
-    func redeem(code raw: String, server: URL) async throws {
+    /// An invite (or reset) code from Settings → Users and the password the person chooses.
+    func redeem(code raw: String, password: String, server: URL) async throws {
         guard let code = InviteCode.normalize(raw) else {
-            throw APIError(status: 0, code: "bad_code_format", message: "An invite code is 10 letters and digits, like 7KQ2M-X9D4R.")
+            throw APIError(status: 0, code: "bad_code_format", message: "An invite code has 12 letters and digits, like K7QM-2XRA-9TPD.")
         }
-        let r = try await APIClient(baseURL: server, token: nil).postAuthInvite(body: AuthInvitePostBody(code: code, name: deviceName))
+        let r = try await APIClient(baseURL: server, token: nil).postAuthInvite(body: AuthInvitePostBody(code: code, password: password, name: deviceName))
         try save(Credentials(server: server, token: r.token, tokenId: Int(r.id), athleteId: Int(r.athlete.id), athleteName: r.athlete.name))
     }
 
-    func signIn(password: String, server: URL) async throws {
-        switch try await APIClient(baseURL: server, token: nil).postAuthToken(password: password, deviceName: deviceName) {
+    func signIn(email: String, password: String, server: URL) async throws {
+        switch try await APIClient(baseURL: server, token: nil).postAuthToken(email: email.trimmingCharacters(in: .whitespaces), password: password, deviceName: deviceName) {
         case .signedIn(let t): try await finishPasswordSignIn(server: server, token: t)
         case .needsCode(let c): pendingChallenge = (server, c)
         }
@@ -81,12 +79,6 @@ final class AppModel {
     private func finishPasswordSignIn(server: URL, token: GrantedToken) async throws {
         let me = try await APIClient(baseURL: server, token: token.token).getMe()
         try save(Credentials(server: server, token: token.token, tokenId: Int(token.id), athleteId: Int(me.athlete.id), athleteName: me.athlete.name))
-    }
-
-    func open(_ url: URL) {
-        guard let invite = InviteCode.fromLink(url) else { return }
-        // Already signed in as someone: the link is ignored rather than silently switching athletes.
-        if credentials == nil { pendingInvite = invite }
     }
 
     /// Sign out: Apple Health sync on this phone stops and the server forgets this phone's token.

@@ -5,12 +5,14 @@ import { DateParam } from "./params";
 // Request schemas shared by the route handlers and the OpenAPI generator.
 
 export const TokenRequest = z.object({
+  email: z.string().trim().min(3).max(254).describe("The address you sign in with"),
   password: z.string().min(1),
   name: z.string().trim().min(1).max(80).describe("Shown in Settings so you can revoke it, e.g. 'iPhone'"),
 });
 
 export const InviteRedeem = z.object({
-  code: z.string().trim().min(1).max(40).describe("The invite code the admin gave you, e.g. 7KQ2M-X9D4R"),
+  code: z.string().trim().min(1).max(40).describe("The invite or reset code, e.g. K7QM-2XRA-9TPD"),
+  password: z.string().min(1).max(200).describe("The new password; at least 12 characters"),
   name: z.string().trim().min(1).max(80).describe("This device's name, shown in Settings so it can be revoked"),
 });
 

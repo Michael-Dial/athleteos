@@ -57,13 +57,16 @@ public struct AuthInvitePostResponse: Codable, Hashable, Sendable {
 }
 
 public struct AuthInvitePostBody: Codable, Hashable, Sendable {
-    /// The invite code the admin gave you, e.g. 7KQ2M-X9D4R
+    /// The invite or reset code, e.g. K7QM-2XRA-9TPD
     public var code: String
+    /// The new password; at least 12 characters
+    public var password: String
     /// This device's name, shown in Settings so it can be revoked
     public var name: String
 
-    public init(code: String, name: String) {
+    public init(code: String, password: String, name: String) {
         self.code = code
+        self.password = password
         self.name = name
     }
 }
@@ -252,18 +255,42 @@ public struct WearablesSdkTokenPostResponse: Codable, Hashable, Sendable {
 }
 
 public struct MeResponse: Codable, Hashable, Sendable {
+    public var user: User
     public var athlete: Athlete
     public var timezone: String
     public var today: String
     public var openWearables: OpenWearables
     public var auth: Auth
 
-    public init(athlete: Athlete, timezone: String, today: String, openWearables: OpenWearables, auth: Auth) {
+    public init(user: User, athlete: Athlete, timezone: String, today: String, openWearables: OpenWearables, auth: Auth) {
+        self.user = user
         self.athlete = athlete
         self.timezone = timezone
         self.today = today
         self.openWearables = openWearables
         self.auth = auth
+    }
+
+    public struct User: Codable, Hashable, Sendable {
+        public var id: Double
+        public var email: String
+        public var role: Role
+
+        public init(id: Double, email: String, role: Role) {
+            self.id = id
+            self.email = email
+            self.role = role
+        }
+
+        public enum Role: String, Codable, Hashable, Sendable, CaseIterable {
+            case admin = "admin"
+            case member = "member"
+            case unrecognized = "\u{0}unrecognized"
+            public init(from decoder: Decoder) throws {
+                let raw = try decoder.singleValueContainer().decode(String.self)
+                self = Role(rawValue: raw) ?? .unrecognized
+            }
+        }
     }
 
     public struct Athlete: Codable, Hashable, Sendable {
@@ -4103,7 +4130,7 @@ public extension APIClient {
         try await send("POST", "/auth/token/verify", body: body)
     }
 
-    /// Invited athlete sign-in: exchange the admin's one-time invite code for a token for that athlete
+    /// Accept an invite (or reset) code in the app: sets the password and returns a token for this device
     func postAuthInvite(body: AuthInvitePostBody) async throws -> AuthInvitePostResponse {
         try await send("POST", "/auth/invite", body: body)
     }
@@ -4143,7 +4170,7 @@ public extension APIClient {
         try await send("POST", "/wearables/sdk-token")
     }
 
-    /// Athlete, timezone, today's date and Open Wearables status
+    /// Signed-in user, their athlete, timezone, today's date and device-data status
     func getMe() async throws -> MeResponse {
         try await send("GET", "/me")
     }

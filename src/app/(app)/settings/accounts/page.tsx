@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getCtx } from "@/lib/domain/context";
 import { accountsView, type ServiceView } from "@/lib/domain/accounts";
+import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
+import { requireUser } from "@/lib/current-user";
 import { fmtDate, localDate } from "@/lib/dates";
 import { Card, Notice } from "@/components/ui";
 import { connectProvider, syncNow } from "../../actions";
@@ -11,19 +13,20 @@ export const metadata: Metadata = { title: "Connected accounts" };
 
 // What an athlete sees of the device backend: brands, a Connect button, and
 // whether each account is syncing. The backend product, its user ids and its
-// application live on the admin's Data backend tab, never here. The app's
-// Accounts screen reads the same view (lib/domain/accounts.ts).
+// application live on the admin's Data backend tab, never here. The iPhone
+// app's Accounts screen reads the same view (lib/domain/accounts.ts).
 
 export default async function AccountsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  const ctx = await getCtx();
+  const [ctx, user] = await Promise.all([getCtx(), requireUser()]);
+  const admin = user.role === "admin";
 
   if (!ctx.owConfigured) {
     return (
       <Card title="Connected accounts">
         <div className="stack">
-          <Notice>Account linking isn&apos;t set up on this server yet. Plan, history and questionnaires work without it.</Notice>
-          <div><Link className="btn primary" href="/settings/credentials">Finish setup</Link></div>
+          <Notice>Account linking isn&apos;t set up on this server yet{admin ? "" : "; your admin needs to finish it"}. Plan, history and questionnaires work without it.</Notice>
+          {admin && <div><Link className="btn primary" href="/settings/credentials">Finish setup</Link></div>}
         </div>
       </Card>
     );
@@ -36,14 +39,14 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const tz = ctx.settings.timezone;
   const day = (iso: string | null) => (iso ? fmtDate(localDate(iso, tz), { month: "short", day: "numeric" }) : "not yet");
 
-  const view = await accountsView(ctx);
+  const [view, phoneCode, phoneApp] = await Promise.all([accountsView(ctx), getPhoneCode(ctx.athlete.id), getPhoneApp()]);
   const cloud = view.services.filter((v) => v.kind === "cloud");
   const phone = view.services.filter((v) => v.kind === "phone");
   const nameOf = new Map(view.services.map((v) => [v.provider, v.name]));
   const connectedName = sp.connected ? nameOf.get(sp.connected) ?? sp.connected : null;
   const syncedName = sp.synced ? nameOf.get(sp.synced) ?? sp.synced : null;
-  const appName = ctx.settings.phoneApp.name || "the AthleteOS app";
-  const install = ctx.settings.phoneApp.installUrl;
+  const appName = phoneApp.name || "the AthleteOS app";
+  const app = phoneApp.installUrl ? <a href={phoneApp.installUrl} target="_blank" rel="noreferrer">{appName}</a> : appName;
 
   return (
     <div className="stack-lg">
@@ -70,10 +73,17 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                 <div className="row between"><b>{p.name}</b><Pill s={p} /></div>
                 {p.status === "connected" ? (
                   <p className="small muted mt-sm">Last synced {day(p.lastSyncedAt)}. Keep {appName} installed; it syncs in the background.</p>
+                ) : phoneCode.state === "set" ? (
+                  // An admin issued a pairing code for a separate sync app: show it as before.
+                  <ol className="small mt-sm" style={{ paddingLeft: 18, margin: 0 }}>
+                    <li>Install {app} on your phone.</li>
+                    <li>Open it and enter your code: <code className="mono" style={{ userSelect: "all" }}>{phoneCode.code}</code></li>
+                    <li>Allow access to {p.name} when asked.</li>
+                  </ol>
                 ) : (
                   <ol className="small mt-sm" style={{ paddingLeft: 18, margin: 0 }}>
-                    <li>Install {install ? <a href={install} target="_blank" rel="noreferrer">{appName}</a> : appName} on your phone and sign in.</li>
-                    <li>Open Accounts and turn on {p.name}.</li>
+                    <li>Install {app} on your iPhone and sign in with your AthleteOS email and password.</li>
+                    <li>Open More → Connected accounts and turn on {p.name}.</li>
                   </ol>
                 )}
               </div>

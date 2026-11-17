@@ -1,7 +1,7 @@
 # CLAUDE.md — build brief for AthleteOS
 
-AthleteOS is an AMS-style (athlete management system) personal health/fitness
-dashboard for a single user (family-ready later). **Open Wearables is the device
+AthleteOS is an AMS-style (athlete management system) health/fitness dashboard
+with per-person accounts (admin or member), one athlete per user. **Open Wearables is the device
 data backend — never call vendor APIs directly.**
 
 ## Environment (homelab, already provisioned)
@@ -59,12 +59,13 @@ data backend — never call vendor APIs directly.**
   and provider setup appear only on the admin's Settings → Data backend and
   Credentials tabs. The OW user is created on an athlete's first connect
   (`lib/ow/provision.ts`), never asked for.
-- Athletes beyond the admin come in by invite (`lib/invites.ts`): the admin
-  picks an existing OW user on Data backend and hands over a one-time code;
-  the iOS app redeems it at `POST /api/v1/auth/invite` for that athlete's API
-  token. One OW user belongs to at most one athlete (unique index). The web UI
-  is the admin's; invited athletes use the app, so every `/api/v1` handler
-  scopes by `ctx.athlete`, never by "the first athlete".
+- The iPhone app (`ios/`) signs in at `POST /api/v1/auth/token` (email and
+  password) or `POST /api/v1/auth/invite` (an invite or reset code from
+  Settings → Users plus a new password, the same codes the web accepts). Its
+  token is the user's own, so every `/api/v1` handler scopes by `ctx.athlete`.
+  AthleteKit's models are generated from the route table
+  (`src/lib/api/swift-gen.ts`); after an API change run
+  `UPDATE_SWIFT=1 npx vitest run lib/api/swift-gen` and commit `ios/`.
 - The phone's Apple Health sync runs OW's iOS SDK with a token minted per
   athlete (`POST /api/v1/wearables/sdk-token`). OW is LAN-only, so the SDK
   reaches it through `/ow/api/v1/*` (`lib/ow/sdk-proxy.ts`), which passes only
@@ -80,4 +81,10 @@ data backend — never call vendor APIs directly.**
   them before saving, and require the current password to change them. `.env`
   is the fallback, plus the bootstrap-only `SESSION_SECRET`, first
   `ATHLETEOS_PASSWORD` and `DATABASE_URL`.
+- Users and roles: each user owns one athlete. Pages and actions read the
+  athlete through `getCtx()` (an admin may be viewing someone read-only; write
+  actions go through `writeCtx()` in `actions.ts`, which refuses then). Anything
+  admin-only calls `requireAdmin()` in its page and action and is listed in
+  `ADMIN_PATHS` in `proxy.ts`. Searching the device backend and linking an
+  existing backend account are admin-only.
 - Comments explain why; no TODO left in a merged commit.

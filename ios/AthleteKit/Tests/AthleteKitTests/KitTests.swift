@@ -4,24 +4,15 @@ import Testing
 
 @Suite struct InviteCodeTests {
     @Test func normalizesWhatPeopleType() {
-        #expect(InviteCode.normalize(" 7kq2m x9d4r ") == "7KQ2M-X9D4R")
-        #expect(InviteCode.normalize("7KQ2MX9D4R") == "7KQ2M-X9D4R")
-        #expect(InviteCode.normalize("O0IL1-ABCDE") == "00111-ABCDE")
+        #expect(InviteCode.normalize(" k7qm 2xra 9tpd ") == "K7QM-2XRA-9TPD")
+        #expect(InviteCode.normalize("K7QM2XRA9TPD") == "K7QM-2XRA-9TPD")
+        #expect(InviteCode.normalize("O0IL-1ABC-DEFG") == "0011-1ABC-DEFG")
     }
 
     @Test func refusesNonCodes() {
         #expect(InviteCode.normalize("") == nil)
-        #expect(InviteCode.normalize("7KQ2M-X9D4") == nil)
-        #expect(InviteCode.normalize("7KQ2M-X9D4U") == nil)
-    }
-
-    @Test func readsInviteLinks() throws {
-        let a = try #require(InviteCode.fromLink(URL(string: "athleteos://invite/7kq2m-x9d4r")!))
-        #expect(a.code == "7KQ2M-X9D4R")
-        #expect(a.server == nil)
-        let b = try #require(InviteCode.fromLink(URL(string: "athleteos://invite/7KQ2M-X9D4R?server=https://example.org/")!))
-        #expect(b.server?.absoluteString == "https://example.org")
-        #expect(InviteCode.fromLink(URL(string: "https://invite/7KQ2M-X9D4R")!) == nil)
+        #expect(InviteCode.normalize("K7QM-2XRA-9TP") == nil)
+        #expect(InviteCode.normalize("K7QM-2XRA-9TPU") == nil)
     }
 }
 
@@ -72,14 +63,14 @@ import Testing
         StubProtocol.handler = { _ in (401, Data(#"{"error":{"code":"bad_invite","message":"That invite code isn't valid."}}"#.utf8)) }
         let client = APIClient(baseURL: URL(string: "https://a.example")!, token: nil, session: StubProtocol.session())
         await #expect(throws: APIError(status: 401, code: "bad_invite", message: "That invite code isn't valid.")) {
-            _ = try await client.postAuthInvite(body: AuthInvitePostBody(code: "x", name: "iPhone"))
+            _ = try await client.postAuthInvite(body: AuthInvitePostBody(code: "x", password: "long enough password", name: "iPhone"))
         }
     }
 
     @Test func passwordSignInCanAskForACode() async throws {
         StubProtocol.handler = { _ in (202, Data(#"{"challengeId":"c1","delivery":"email","destination":"m***@x.org","expiresInSec":600}"#.utf8)) }
         let client = APIClient(baseURL: URL(string: "https://a.example")!, token: nil, session: StubProtocol.session())
-        guard case .needsCode(let c) = try await client.postAuthToken(password: "p", deviceName: "iPhone") else {
+        guard case .needsCode(let c) = try await client.postAuthToken(email: "a@example.org", password: "p", deviceName: "iPhone") else {
             Issue.record("expected a challenge"); return
         }
         #expect(c.challengeId == "c1")

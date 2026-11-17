@@ -18,17 +18,18 @@ export type ChallengePurpose = "web" | "token" | "setup";
 export interface Challenge {
   id: string;
   purpose: ChallengePurpose;
+  userId: number;
   meta: Record<string, string>;
 }
 
 /** Start a challenge; returns the plaintext code for sending (never stored). */
-export async function createChallenge(purpose: ChallengePurpose, ip: string, meta: Record<string, string>): Promise<{ id: string; code: string }> {
+export async function createChallenge(purpose: ChallengePurpose, userId: number, ip: string, meta: Record<string, string>): Promise<{ id: string; code: string }> {
   // Opportunistic cleanup keeps the table to recent rows.
   await q("DELETE FROM auth_challenge WHERE expires_at < now() - interval '1 day'");
   const row = await q1<{ id: string }>(
-    `INSERT INTO auth_challenge (purpose, code_hash, expires_at, ip, meta)
-     VALUES ($1, 'pending', now() + make_interval(mins => $2), $3, $4) RETURNING id`,
-    [purpose, CODE_TTL_MIN, ip, JSON.stringify(meta)],
+    `INSERT INTO auth_challenge (purpose, user_id, code_hash, expires_at, ip, meta)
+     VALUES ($1, $2, 'pending', now() + make_interval(mins => $3), $4, $5) RETURNING id`,
+    [purpose, userId, CODE_TTL_MIN, ip, JSON.stringify(meta)],
   );
   const code = newCode();
   await q("UPDATE auth_challenge SET code_hash = $1 WHERE id = $2", [await codeHash(row!.id, code), row!.id]);
@@ -41,10 +42,10 @@ const UUID = /^[0-9a-f-]{36}$/i;
 
 export async function verifyChallenge(id: string | undefined, code: string, purpose: ChallengePurpose): Promise<VerifyResult> {
   if (!id || !UUID.test(id)) return { ok: false, reason: "unknown" };
-  const c = await q1<{ id: string; purpose: ChallengePurpose; code_hash: string; expired: boolean; attempts: number; consumed: boolean; meta: Record<string, string> }>(
-    `SELECT id, purpose, code_hash, expires_at < now() AS expired, attempts, consumed_at IS NOT NULL AS consumed, meta
+  const c = await q1<{ id: string; purpose: ChallengePurpose; user_id: number | null; code_hash: string; expired: boolean; attempts: number; consumed: boolean; meta: Record<string, string> }>(
+    `SELECT id, purpose, user_id, code_hash, expires_at < now() AS expired, attempts, consumed_at IS NOT NULL AS consumed, meta
      FROM auth_challenge WHERE id = $1`, [id]);
-  if (!c || c.purpose !== purpose || c.consumed) return { ok: false, reason: "unknown" };
+  if (!c || c.purpose !== purpose || c.consumed || c.user_id === null) return { ok: false, reason: "unknown" };
   if (c.expired) return { ok: false, reason: "expired" };
   if (c.attempts >= MAX_ATTEMPTS) return { ok: false, reason: "locked" };
   // Count the attempt before comparing, so parallel guesses can't exceed the limit.
@@ -58,17 +59,17 @@ export async function verifyChallenge(id: string | undefined, code: string, purp
   }
   const used = await q1("UPDATE auth_challenge SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL RETURNING id", [id]);
   if (!used) return { ok: false, reason: "unknown" };
-  return { ok: true, challenge: { id: c.id, purpose: c.purpose, meta: c.meta } };
+  return { ok: true, challenge: { id: c.id, purpose: c.purpose, userId: c.user_id, meta: c.meta } };
 }
 
-export type ResendResult = { ok: true; code: string; meta: Record<string, string> } | { ok: false; reason: "unknown" | "too_soon" | "too_many"; waitSec?: number };
+export type ResendResult = { ok: true; code: string; userId: number; meta: Record<string, string> } | { ok: false; reason: "unknown" | "too_soon" | "too_many"; waitSec?: number };
 
 /** New code for a live challenge (the old one stops working); rate limited. */
 export async function resendChallenge(id: string | undefined, purpose: ChallengePurpose): Promise<ResendResult> {
   if (!id || !UUID.test(id)) return { ok: false, reason: "unknown" };
-  const c = await q1<{ sends: number; since: number; meta: Record<string, string> }>(
-    `SELECT sends, EXTRACT(EPOCH FROM now() - last_sent_at)::int AS since, meta FROM auth_challenge
-     WHERE id = $1 AND purpose = $2 AND consumed_at IS NULL AND expires_at > now()`, [id, purpose]);
+  const c = await q1<{ sends: number; since: number; user_id: number; meta: Record<string, string> }>(
+    `SELECT sends, EXTRACT(EPOCH FROM now() - last_sent_at)::int AS since, user_id, meta FROM auth_challenge
+     WHERE id = $1 AND purpose = $2 AND consumed_at IS NULL AND expires_at > now() AND user_id IS NOT NULL`, [id, purpose]);
   if (!c) return { ok: false, reason: "unknown" };
   if (c.sends >= MAX_SENDS) return { ok: false, reason: "too_many" };
   if (c.since < RESEND_GAP_SEC) return { ok: false, reason: "too_soon", waitSec: RESEND_GAP_SEC - c.since };
@@ -77,17 +78,5 @@ export async function resendChallenge(id: string | undefined, purpose: Challenge
     `UPDATE auth_challenge SET code_hash = $1, sends = sends + 1, last_sent_at = now(), attempts = 0,
        expires_at = now() + make_interval(mins => $2) WHERE id = $3`,
     [await codeHash(id, code), CODE_TTL_MIN, id]);
-  return { ok: true, code, meta: c.meta };
-}
-
-export async function trustEpoch(): Promise<number> {
-  const r = await q1<{ value: number }>("SELECT value FROM system_kv WHERE key = 'trust_epoch'");
-  return r ? Number(r.value) : 0;
-}
-
-/** Invalidate every trusted device; each must enter a code at its next sign-in. */
-export async function forgetTrustedDevices(): Promise<void> {
-  await q(
-    `INSERT INTO system_kv (key, value) VALUES ('trust_epoch', '1')
-     ON CONFLICT (key) DO UPDATE SET value = to_jsonb((system_kv.value)::text::int + 1), updated_at = now()`);
+  return { ok: true, code, userId: c.user_id, meta: c.meta };
 }

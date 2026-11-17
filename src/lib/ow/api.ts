@@ -70,6 +70,20 @@ export async function listProviders(): Promise<OwProvider[]> {
 }
 
 export async function searchUsers(search: string): Promise<OwUser[]> {
+  // OW matches one field at a time (first name, last name or email), so a full
+  // name like "Ada Lovelace" finds nothing. Ask for the longest word, then keep
+  // the users matching every word typed.
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const term = words.reduce((a, b) => (b.length > a.length ? b : a));
+  const all = await searchUsersRaw(term);
+  return words.length === 1 ? all : all.filter((u) => {
+    const hay = `${u.first_name ?? ""} ${u.last_name ?? ""} ${u.email ?? ""}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+}
+
+async function searchUsersRaw(search: string): Promise<OwUser[]> {
   // /users is page-numbered (not cursor) and capped at 100 per page.
   const out: OwUser[] = [];
   for (let page = 1; page <= 50; page++) {

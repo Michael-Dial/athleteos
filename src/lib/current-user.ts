@@ -1,0 +1,39 @@
+import "server-only";
+import { cache } from "react";
+import { cookies } from "next/headers";
+import { notFound, redirect } from "next/navigation";
+import { SESSION_COOKIE, authDisabled } from "./auth";
+import { q1 } from "./db";
+import { sessionUserId } from "./user-session";
+import { userById, type User } from "./users";
+
+/**
+ * The signed-in user for this request (pages, server actions). proxy.ts has
+ * already turned away requests without a valid session; this resolves who it
+ * is. With AUTH_DISABLED (LAN-only installs) it is the first admin.
+ */
+export const currentUser = cache(async (): Promise<User | null> => {
+  if (authDisabled()) {
+    let row = await q1<{ id: number }>("SELECT id FROM app_user WHERE role = 'admin' AND disabled_at IS NULL ORDER BY id LIMIT 1");
+    // Nobody ever signs in on such an install, so its owner is created here.
+    row ??= await q1<{ id: number }>(
+      `INSERT INTO app_user (athlete_id, email, role) SELECT id, 'owner@localhost', 'admin' FROM athlete ORDER BY id LIMIT 1
+       ON CONFLICT DO NOTHING RETURNING id`);
+    return row ? userById(row.id) : null;
+  }
+  const id = await sessionUserId((await cookies()).get(SESSION_COOKIE)?.value);
+  return id === null ? null : userById(id);
+});
+
+export async function requireUser(): Promise<User> {
+  const u = await currentUser();
+  if (!u) redirect("/login");
+  return u;
+}
+
+/** Admin-only pages and actions. Members get a plain 404, so admin features don't announce themselves. */
+export async function requireAdmin(): Promise<User> {
+  const u = await requireUser();
+  if (u.role !== "admin") notFound();
+  return u;
+}

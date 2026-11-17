@@ -27,7 +27,7 @@ struct MoreView: View {
         .confirmationDialog("Sign out of AthleteOS on this phone?", isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) { Task { await model.signOut() } }
         } message: {
-            Text("Apple Health sync on this phone stops. To sign in again you'll need a new invite code or your password.")
+            Text("Apple Health sync on this phone stops. You can sign in again with your email and password.")
         }
     }
 }

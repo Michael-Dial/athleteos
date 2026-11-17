@@ -1,12 +1,14 @@
 import Foundation
 
-/// The admin's one-time code, read off a message and typed on a phone. Mirrors
-/// the server's normalisation (src/lib/invite-code.ts) so the app can say
-/// "that isn't a code" before asking the server, and accepts the
-/// athleteos://invite/CODE link the admin can send instead.
+/// An invite or password-reset code from Settings → Users, read off an email
+/// or a message and typed on a phone. Mirrors the server's normalisation
+/// (normalizeCode in src/lib/users.ts) so the app can say "that isn't a code"
+/// before asking the server.
 public enum InviteCode {
     static let alphabet = Set("0123456789ABCDEFGHJKMNPQRSTVWXYZ")
-    public static let length = 10
+    public static let length = 12
+    /// The server's minimum (MIN_PASSWORD_LENGTH in src/lib/signin.ts).
+    public static let minPasswordLength = 12
 
     public static func normalize(_ input: String) -> String? {
         let s = input.uppercased()
@@ -15,15 +17,8 @@ public enum InviteCode {
             .replacingOccurrences(of: "I", with: "1")
             .replacingOccurrences(of: "L", with: "1")
         guard s.count == length, s.allSatisfy({ alphabet.contains($0) }) else { return nil }
-        return "\(s.prefix(5))-\(s.suffix(5))"
-    }
-
-    /// athleteos://invite/7KQ2M-X9D4R, optionally with ?server=https://… for a server other than the default.
-    public static func fromLink(_ url: URL) -> (code: String, server: URL?)? {
-        guard url.scheme == "athleteos", url.host == "invite" else { return nil }
-        guard let code = normalize(url.lastPathComponent) else { return nil }
-        let server = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "server" }?.value.flatMap(ServerAddress.parse)
-        return (code, server)
+        let c = Array(s)
+        return "\(String(c[0..<4]))-\(String(c[4..<8]))-\(String(c[8..<12]))"
     }
 }
 
