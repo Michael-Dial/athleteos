@@ -201,8 +201,7 @@
    "user": {
     "id": 1.5,
     "email": "2026-11-17",
-    "role": "admin",
-    "onboarded": true
+    "role": "admin"
    },
    "athlete": {
     "id": 1.5,

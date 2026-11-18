@@ -366,10 +366,10 @@ public struct MeResponse: Codable, Hashable, Sendable {
         public var id: Double
         public var email: String
         public var role: Role
-        /// First-run setup finished or skipped, on the web or in an app
-        public var onboarded: Bool
+        /// First-run setup finished or skipped, on the web or in an app. Absent from servers older than first-run setup in the app; treat that as set up
+        public var onboarded: Bool?
 
-        public init(id: Double, email: String, role: Role, onboarded: Bool) {
+        public init(id: Double, email: String, role: Role, onboarded: Bool? = nil) {
             self.id = id
             self.email = email
             self.role = role

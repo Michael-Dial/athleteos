@@ -154,7 +154,7 @@ final class AppModel {
             let me = try await client.getMe()
             let askHealth = me.openWearables.configured && sync != .syncing && !setupDefaults.bool(forKey: healthAskedKey(c))
             let plan = SetupPlan(firstName: c.athleteName.split(separator: " ").first.map(String.init) ?? c.athleteName,
-                                 today: me.today, account: !me.user.onboarded, health: askHealth, wearables: me.openWearables.configured)
+                                 today: me.today, account: !(me.user.onboarded ?? true), health: askHealth, wearables: me.openWearables.configured)
             setup = plan.isEmpty ? nil : plan
         } catch {
             // Setup is a convenience: when the server can't be reached the app opens as usual and asks next launch.
