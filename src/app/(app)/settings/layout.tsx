@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/current-user";
+import { actsAsAdmin } from "@/lib/current-user";
 import { SettingsHead } from "@/components/settings-nav";
 
 // Admin-only sections aren't shown to members; their pages also 404 for members.
@@ -16,8 +16,8 @@ const ALL = [
 ];
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireUser();
-  const sections = ALL.filter((t) => !t.admin || user.role === "admin").map(({ href, label }) => ({ href, label }));
+  const admin = await actsAsAdmin();
+  const sections = ALL.filter((t) => !t.admin || admin).map(({ href, label }) => ({ href, label }));
   return (
     <div>
       <SettingsHead sections={sections} />

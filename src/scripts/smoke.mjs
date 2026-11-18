@@ -62,8 +62,13 @@ check(gt.headers.get("location") === "https://athleteos.example/login?next=%2Fpl
 const lo = await get("/api/auth/logout", { method: "POST", headers: tunneled });
 check(lo.status === 303 && lo.headers.get("location") === "/login", "logout works without a session and redirects relatively", `${lo.status} ${lo.headers.get("location")}`);
 
+// Admins start in participant view: admin pages 404 until they switch to Admin.
+const asParticipant = await get("/settings/users", { headers: { cookie } });
+check(asParticipant.status === 404, "admin pages are hidden in participant view (the default)", String(asParticipant.status));
+const adminCookie = `${cookie}; aos_admin_mode=1`;
+
 for (const p of PAGES) {
-  const res = await get(p, { headers: { cookie } });
+  const res = await get(p, { headers: { cookie: adminCookie } });
   const html = await res.text();
   const broken = html.includes("This page couldn") || html.includes("Application error");
   check(res.status === 200 && !broken, `GET ${p}`, `status ${res.status}${broken ? ", error boundary rendered" : ""}`);

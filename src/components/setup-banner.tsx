@@ -1,15 +1,17 @@
 import Link from "next/link";
 import type { AppCtx } from "@/lib/domain/context";
-import { currentUser } from "@/lib/current-user";
+import { actsAsAdmin, switchToAdminHint } from "@/lib/current-user";
 import { Notice } from "./ui";
 
 export async function SetupBanner({ ctx }: { ctx: AppCtx }) {
   if (!ctx.owConfigured) {
-    const admin = (await currentUser())?.role === "admin";
+    const [admin, hint] = await Promise.all([actsAsAdmin(), switchToAdminHint(!!ctx.viewing)]);
     return (
       <Notice>
         Device data isn&apos;t set up on this server yet, so it&apos;s hidden.{" "}
-        {admin ? <><Link href="/settings/credentials">Finish setup</Link>.</> : "Your admin needs to finish setting it up."}{" "}
+        {admin ? <><Link href="/settings/credentials">Finish setup</Link>.</>
+          : hint ? <>Switch to Admin in <Link href="/settings">Settings</Link> to finish setting it up.</>
+          : "Your admin needs to finish setting it up."}{" "}
         Plan, history and questionnaires work without it.
       </Notice>
     );

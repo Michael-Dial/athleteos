@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
-import { requireUser } from "@/lib/current-user";
+import { actsAsAdmin } from "@/lib/current-user";
 import { getDef, getResponse, listResponses } from "@/lib/domain/questionnaires";
 import { addDays, fmtDate, isISODate, todayIn } from "@/lib/dates";
 import { Card, Empty } from "@/components/ui";
@@ -18,7 +18,7 @@ export default async function AnswerPage({ params, searchParams }: { params: Pro
   const sp = await searchParams;
   const ctx = await getCtx();
   // Editing a form's definition is an admin task; everyone answers and toggles forms.
-  const admin = (await requireUser()).role === "admin";
+  const admin = await actsAsAdmin();
   const def = await getDef(ctx.athlete.id, slug);
   if (!def) notFound();
   const today = todayIn(ctx.settings.timezone);

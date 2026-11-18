@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { requireUser } from "@/lib/current-user";
+import { memberView, requireUser } from "@/lib/current-user";
+import { setViewMode } from "./users/actions";
 import { getCtx } from "@/lib/domain/context";
 import { authDisabled } from "@/lib/auth";
 import { AppearancePicker } from "@/components/theme-toggle";
@@ -22,13 +23,23 @@ function Row({ href, label, sub }: { href: string; label: string; sub?: string }
 }
 
 export default async function SettingsHome() {
-  const [user, ctx, jar] = await Promise.all([requireUser(), getCtx(), cookies()]);
+  const [user, ctx, jar, asMember] = await Promise.all([requireUser(), getCtx(), cookies(), memberView()]);
+  const admin = user.role === "admin" && !asMember;
   const saved = jar.get("aos_theme")?.value;
   const appearance = saved === "light" || saved === "dark" ? saved : "system";
   return (
     <div className="stack-lg" style={{ maxWidth: 640 }}>
       <ul className="group">
         <Row href="/settings/security" label={ctx.athlete.name} sub={user.email} />
+        {user.role === "admin" && (
+          <li className="group-row static">
+            <span className="stack" style={{ gap: 0 }}><span>View</span><span className="small muted">{admin ? "Admin settings and controls shown" : "The app as participants see it"}</span></span>
+            <form action={setViewMode} className="seg" role="radiogroup" aria-label="View">
+              <button type="submit" name="mode" value="participant" role="radio" aria-checked={!admin} className={admin ? undefined : "on"}>Participant</button>
+              <button type="submit" name="mode" value="admin" role="radio" aria-checked={admin} className={admin ? "on" : undefined}>Admin</button>
+            </form>
+          </li>
+        )}
       </ul>
 
       <section>
@@ -60,7 +71,7 @@ export default async function SettingsHome() {
         </ul>
       </section>
 
-      {user.role === "admin" && (
+      {admin && (
         <section>
           <h2 className="group-title">Admin</h2>
           <ul className="group">
