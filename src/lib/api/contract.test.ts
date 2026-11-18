@@ -166,6 +166,16 @@ live("API v1 contract (live)", () => {
     expect((await call("GET", "/me")).status).toBe(200);
   });
 
+  it("admin service tests use only saved settings", async () => {
+    const list = await ok("get", "/admin/services", "/admin/services");
+    expect(list.services.map((x: { id: string }) => x.id)).toEqual(["ow", "smtp"]);
+    // CI has no Open Wearables: the test answers 200 with ok false and says why.
+    const ow = await ok("post", "/admin/services/ow/test", "/admin/services/{service}/test");
+    expect(ow.service).toBe("ow");
+    if (!list.services[0].configured) expect(ow.ok).toBe(false);
+    expect((await call("POST", "/admin/services/nope/test")).status).toBe(404);
+  });
+
   it("publishes the OpenAPI document without auth", async () => {
     const res = await fetch(`${BASE}/api/v1/openapi.json`);
     expect(res.status).toBe(200);

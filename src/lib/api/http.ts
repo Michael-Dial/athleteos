@@ -64,6 +64,11 @@ async function authenticate(req: NextRequest): Promise<{ user: User; auth: "toke
   throw new ApiError(401, "unauthorized", "Send Authorization: Bearer <token> or sign in");
 }
 
+/** Admin-only endpoints. The token is the user's own, so the role is theirs, not a viewing mode. */
+export function requireAdminUser(user: User): void {
+  if (user.role !== "admin") throw new ApiError(403, "forbidden", "Only an admin can do this");
+}
+
 export function apiRoute<P = Record<string, never>>(
   handler: (call: ApiCall<P>) => Promise<NextResponse | unknown>,
 ) {

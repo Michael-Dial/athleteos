@@ -1622,6 +1622,37 @@
    "failed": 1.5
   }
  },
+ "AdminServicesResponse": {
+  "max": {
+   "services": [
+    {
+     "id": "ow",
+     "name": "2026-11-17",
+     "configured": true,
+     "target": "2026-11-17"
+    }
+   ]
+  },
+  "min": {
+   "services": []
+  }
+ },
+ "AdminServicesByServiceTestPostResponse": {
+  "max": {
+   "service": "ow",
+   "ok": true,
+   "message": "2026-11-17",
+   "testedAt": "2026-11-17",
+   "durationMs": 1.5
+  },
+  "min": {
+   "service": "ow",
+   "ok": true,
+   "message": "2026-11-17",
+   "testedAt": "2026-11-17",
+   "durationMs": 1.5
+  }
+ },
  "SettingsResponse": {
   "max": {
    "timezone": "2026-11-17",

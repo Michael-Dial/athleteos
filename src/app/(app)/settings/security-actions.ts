@@ -12,7 +12,8 @@ import { VIEW_COOKIE } from "@/lib/domain/context";
 import { q } from "@/lib/db";
 import { createChallenge, verifyChallenge } from "@/lib/login-challenge";
 import { probeSmtp, sendLoginCode, sendMail, smtpConfig } from "@/lib/mail";
-import { owConfig, probeOw } from "@/lib/ow/client";
+import { probeOw } from "@/lib/ow/client";
+import { isService, testService } from "@/lib/connection-test";
 import { MIN_PASSWORD_LENGTH, confirmPassword } from "@/lib/signin";
 import { clearFailures, clientIp, isLocked, recordFailure } from "@/lib/throttle";
 import { EMAIL_RE, UserError, bumpSessionEpoch, bumpTrustEpoch, setEmail, setLoginCodes, setPassword, userById, type User } from "@/lib/users";
@@ -130,33 +131,13 @@ export interface ConnectionTest {
   at: string | null;
 }
 
-/**
- * Test the settings already in effect. Unlike saving, this takes nothing from
- * the form but which service to test, so the stored key or password can only
- * go to the host it is already configured for, and no password is needed.
- */
+/** Test the settings already in effect; see lib/connection-test.ts for why no password is needed. */
 export async function testConnection(_prev: ConnectionTest, fd: FormData): Promise<ConnectionTest> {
   await requireAdmin();
   const group = field(fd, "group");
-  const at = new Date().toISOString();
-  const started = Date.now();
-  const took = () => `${Date.now() - started} ms`;
-  if (group === "ow") {
-    const c = await owConfig();
-    if (!c) return { ok: false, message: "Not set up: add the API base URL and an API key or a developer login, then save.", at };
-    const err = await probeOw(c);
-    if (err) return { ok: false, message: err, at };
-    const how = c.apiKey && c.email && c.password ? "API key and developer login" : c.apiKey ? "API key" : "developer login";
-    return { ok: true, message: `Connected to ${c.base} with the ${how} (${took()}).`, at };
-  }
-  if (group === "smtp") {
-    const c = await smtpConfig();
-    if (!c) return { ok: false, message: "Not set up: add an SMTP host and From address, then save.", at };
-    const err = await probeSmtp(c);
-    if (err) return { ok: false, message: `${c.host}:${c.port}: ${err}`, at };
-    return { ok: true, message: `Connected to ${c.host}:${c.port}${c.user ? " and logged in" : ""} (${took()}). Nothing was sent.`, at };
-  }
-  return { ok: false, message: "Unknown service", at };
+  if (!isService(group)) return { ok: false, message: "Unknown service", at: new Date().toISOString() };
+  const r = await testService(group);
+  return { ok: r.ok, message: `${r.message} (${r.durationMs} ms)`, at: r.testedAt };
 }
 
 export async function discardUnreadable() {

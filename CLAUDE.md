@@ -99,6 +99,8 @@ data backend — never call vendor APIs directly.**
   with `actsAsAdmin()`, never `role === "admin"`, so participant view stays
   exactly what a member sees. Searching the device backend and linking an
   existing backend account are admin-only.
+  Admin-only `/api/v1` handlers call `requireAdminUser()`; the iPhone app has
+  no admin view toggle, so it shows admin screens from the user's role.
 - Comments explain why; no TODO left in a merged commit.
 
 <!-- ci-policy:start -->
