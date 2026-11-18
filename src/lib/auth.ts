@@ -3,11 +3,11 @@
 
 export const SESSION_COOKIE = "aos_session";
 /**
- * An admin's "see it as a participant" switch. It only narrows what the admin
- * sees and may do (never widens it), so it needs no signature: a member who
- * sets it by hand gets exactly what they already had.
+ * An admin's Participant/Admin switch (Settings). Admins use the app as a
+ * participant unless it says "1". It is read only for users whose role is
+ * admin, so it needs no signature: a member who sets it by hand gets nothing.
  */
-export const MEMBER_VIEW_COOKIE = "aos_as_member";
+export const ADMIN_MODE_COOKIE = "aos_admin_mode";
 const SESSION_DAYS = 30;
 
 function secret(): string {

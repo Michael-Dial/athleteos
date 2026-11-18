@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { MEMBER_VIEW_COOKIE, SESSION_COOKIE, authDisabled } from "./auth";
+import { ADMIN_MODE_COOKIE, SESSION_COOKIE, authDisabled } from "./auth";
 import { q1 } from "./db";
 import { sessionUserId } from "./user-session";
 import { userById, type User } from "./users";
@@ -32,19 +32,28 @@ export async function requireUser(): Promise<User> {
 }
 
 /**
- * True while an admin has switched to seeing the app as a participant
- * (Settings → Admin → See it as a participant). Admin pages, actions and
- * controls then behave exactly as they do for a member.
+ * True while an admin is using the app as a participant: the default, until
+ * they switch to Admin in Settings. Admin pages, actions and controls then
+ * behave exactly as they do for a member.
  */
 export const memberView = cache(async (): Promise<boolean> => {
   const u = await currentUser();
-  return u?.role === "admin" && (await cookies()).get(MEMBER_VIEW_COOKIE)?.value === "1";
+  return u?.role === "admin" && (await cookies()).get(ADMIN_MODE_COOKIE)?.value !== "1";
 });
 
-/** Whether to show admin-only controls: an admin who isn't seeing the app as a participant. */
+/** Whether to show admin-only controls: an admin who has switched to Admin. */
 export async function actsAsAdmin(): Promise<boolean> {
   const u = await currentUser();
   return u?.role === "admin" && !(await memberView());
+}
+
+/**
+ * An admin in participant view on their own data. Where a participant would
+ * read "your admin needs to set this up", that admin is told to switch
+ * instead; while viewing someone else they see exactly what that person sees.
+ */
+export async function switchToAdminHint(viewingSomeone: boolean): Promise<boolean> {
+  return !viewingSomeone && (await currentUser())?.role === "admin" && (await memberView());
 }
 
 /** Admin-only pages and actions. Members (and an admin seeing the app as one) get a plain 404, so admin features don't announce themselves. */
@@ -54,7 +63,7 @@ export async function requireAdmin(): Promise<User> {
   return u;
 }
 
-/** The admin role itself, ignoring the participant view: only for switching that view off and on. */
+/** The admin role itself, ignoring the Participant/Admin switch: only for flipping that switch. */
 export async function requireRealAdmin(): Promise<User> {
   const u = await requireUser();
   if (u.role !== "admin") notFound();

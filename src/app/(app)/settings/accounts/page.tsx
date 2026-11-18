@@ -5,7 +5,7 @@ import { getCtx } from "@/lib/domain/context";
 import { getConnections, listProviders } from "@/lib/ow/api";
 import type { OwConnection, OwProvider } from "@/lib/ow/types";
 import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
-import { actsAsAdmin } from "@/lib/current-user";
+import { actsAsAdmin, switchToAdminHint } from "@/lib/current-user";
 import { phoneProvidersFor, platformOf } from "@/lib/platform";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
@@ -36,12 +36,13 @@ function statusOf(provider: string, conns: OwConnection[]): Status {
 
 export default async function AccountsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  const [ctx, admin] = await Promise.all([getCtx(), actsAsAdmin()]);
+  const ctx = await getCtx();
+  const [admin, hint] = await Promise.all([actsAsAdmin(), switchToAdminHint(!!ctx.viewing)]);
 
   if (!ctx.owConfigured) {
     return (
       <Card title="Connected accounts">
-        <Empty admin={admin} />
+        <Empty admin={admin} hint={hint} />
       </Card>
     );
   }
@@ -109,6 +110,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                     <p className="small muted mt-sm">
                       {admin
                         ? <>No pairing code yet for this account. <Link href="/settings/users">Add it under Users</Link>, then these steps appear.</>
+                        : hint ? <>No pairing code yet for this account. Switch to Admin in <Link href="/settings">Settings</Link> to add it.</>
                         : <>Your admin is setting this up. The steps to connect {p.name} appear here when it&apos;s ready.</>}
                     </p>
                   )}
@@ -155,10 +157,10 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   );
 }
 
-function Empty({ admin }: { admin: boolean }) {
+function Empty({ admin, hint }: { admin: boolean; hint: boolean }) {
   return (
     <div className="stack">
-      <Notice>Account linking isn&apos;t set up on this server yet{admin ? "" : "; your admin needs to finish it"}. Plan, history and questionnaires work without it.</Notice>
+      <Notice>Account linking isn&apos;t set up on this server yet{admin ? "" : hint ? <>; switch to Admin in <Link href="/settings">Settings</Link> to finish it</> : "; your admin needs to finish it"}. Plan, history and questionnaires work without it.</Notice>
       {admin && <div><Link className="btn primary" href="/settings/credentials">Finish setup</Link></div>}
     </div>
   );

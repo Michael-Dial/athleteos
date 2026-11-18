@@ -4,7 +4,7 @@ import { IconLogo, IconSettings } from "@/components/icons";
 import { ResponsiveTables } from "@/components/responsive-tables";
 import { getCtx } from "@/lib/domain/context";
 import { memberView } from "@/lib/current-user";
-import { stopMemberView, stopViewing } from "./settings/users/actions";
+import { stopViewing } from "./settings/users/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -23,15 +23,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      {viewing ? (
+      {/* Participant view of your own data is ordinary use, so it gets no banner; someone else's is read-only and says so. */}
+      {viewing && (
         <div className="view-banner" role="status">
           <span>Viewing <b>{viewing.userName}</b>&apos;s dashboards{asMember ? " as they see them" : ""}, read-only.</span>
           <form action={stopViewing}><button className="btn sm" type="submit">Back to mine</button></form>
-        </div>
-      ) : asMember && (
-        <div className="view-banner" role="status">
-          <span>Seeing the app as a participant does. Admin settings and controls are hidden.</span>
-          <form action={stopMemberView}><button className="btn sm" type="submit">Back to admin</button></form>
         </div>
       )}
       <main className="main">{children}</main>

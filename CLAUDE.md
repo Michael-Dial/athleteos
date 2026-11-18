@@ -85,7 +85,10 @@ data backend — never call vendor APIs directly.**
   athlete through `getCtx()` (an admin may be viewing someone read-only; write
   actions go through `writeCtx()` in `actions.ts`, which refuses then). Anything
   admin-only calls `requireAdmin()` in its page and action and is listed in
-  `ADMIN_PATHS` in `proxy.ts`. Searching the device backend and linking an
+  `ADMIN_PATHS` in `proxy.ts`. Admins use the app as a participant by default
+  and flip Settings → View to Admin (`aos_admin_mode` cookie); gate admin UI
+  with `actsAsAdmin()`, never `role === "admin"`, so participant view stays
+  exactly what a member sees. Searching the device backend and linking an
   existing backend account are admin-only.
 - Comments explain why; no TODO left in a merged commit.
 
