@@ -49,3 +49,18 @@ export async function setPhoneApp(v: PhoneApp): Promise<void> {
   await q(`INSERT INTO system_kv (key, value, updated_at) VALUES ('phone_app', $1, now())
            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [JSON.stringify(clean)]);
 }
+
+// The AthleteOS iPhone app's App Store or TestFlight link. Separate from the
+// phone sync app above, which may still serve Android: the iPhone app signs in
+// with the athlete's own email and needs no pairing code.
+export async function getIosAppUrl(): Promise<string> {
+  const row = await q1<{ value: { url?: unknown } }>("SELECT value FROM system_kv WHERE key = 'ios_app'");
+  return typeof row?.value.url === "string" ? row.value.url : "";
+}
+
+export async function setIosAppUrl(url: string): Promise<void> {
+  const clean = url.trim();
+  if (clean && !/^https:\/\/\S+$/.test(clean)) throw new Error("Use an https link (App Store or TestFlight).");
+  await q(`INSERT INTO system_kv (key, value, updated_at) VALUES ('ios_app', $1, now())
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [JSON.stringify({ url: clean })]);
+}

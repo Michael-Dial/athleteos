@@ -60,8 +60,17 @@ data backend — never call vendor APIs directly.**
   Credentials tabs. The OW user is created on an athlete's first connect
   (`lib/ow/provision.ts`), never asked for.
 - The iPhone app (`ios/`) signs in at `POST /api/v1/auth/token` (email and
-  password) or `POST /api/v1/auth/invite` (an invite or reset code from
-  Settings → Users plus a new password, the same codes the web accepts). Its
+  password), `POST /api/v1/auth/invite` (an invite or reset code from
+  Settings → Users plus a new password, the same codes the web accepts) or
+  signs up at `POST /api/v1/auth/register` + `/verify` (an emailed code,
+  like the web's `/register`). Sign-up is open by default; admins switch it
+  to invite only in Settings → Users, and it stays closed until email works
+  and the install's first admin exists (`lib/registration.ts`).
+- First-run setup: `/welcome` on the web, `SetupFlow` in the app. The account's
+  part is one flag (`onboarded`, `POST /api/v1/me/onboarded`) shared by both;
+  the app's Apple Health step is asked once per phone. A person can delete
+  their own account (Settings → Security, the app's More → Delete account),
+  which also deletes their device-data user (`lib/account-deletion.ts`). Its
   token is the user's own, so every `/api/v1` handler scopes by `ctx.athlete`.
   AthleteKit's models are generated from the route table
   (`src/lib/api/swift-gen.ts`); after an API change run

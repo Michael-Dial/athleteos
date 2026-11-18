@@ -286,4 +286,16 @@ ALTER TABLE app_user ADD COLUMN onboarded_at timestamptz;
 UPDATE app_user SET onboarded_at = now();
 `,
   },
+  {
+    version: 9,
+    name: "self registration",
+    sql: `
+-- 'register' codes confirm a new account's address. They have no user yet:
+-- the account is created only when the code is right, so an unconfirmed
+-- sign-up never holds an email address.
+ALTER TABLE auth_challenge DROP CONSTRAINT auth_challenge_purpose_check;
+ALTER TABLE auth_challenge ADD CONSTRAINT auth_challenge_purpose_check CHECK (purpose IN ('web', 'token', 'setup', 'register'));
+CREATE INDEX auth_challenge_register_email ON auth_challenge (lower(meta->>'email')) WHERE purpose = 'register';
+`,
+  },
 ];

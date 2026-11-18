@@ -9,7 +9,8 @@ import { searchUsers } from "@/lib/ow/api";
 import { owConfig } from "@/lib/ow/client";
 import { errorMessage } from "@/lib/domain/errors";
 import { Card, Notice } from "@/components/ui";
-import { inviteUser } from "./actions";
+import { registrationStatus } from "@/lib/registration";
+import { inviteUser, saveRegistration } from "./actions";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -19,10 +20,10 @@ function Status({ u }: { u: UserRow }) {
   return <span className="pill ok">Active</span>;
 }
 
-export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; removed?: string; q?: string }> }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ error?: string; removed?: string; q?: string; registration?: string }> }) {
   const sp = await searchParams;
   const me = await requireAdmin();
-  const [users, ctx, mail, ow] = await Promise.all([listUsers(), getCtx(), mailConfigured(), owConfig()]);
+  const [users, ctx, mail, ow, reg] = await Promise.all([listUsers(), getCtx(), mailConfigured(), owConfig(), registrationStatus()]);
   // Search the backend only when asked: it can hold other people's accounts.
   const q = (sp.q ?? "").trim();
   let found: { id: string; label: string; synced: string | null; takenBy: string | null }[] | null = null;
@@ -44,6 +45,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   return (
     <div className="stack-lg">
       {sp.error && <Notice kind="bad">{sp.error}</Notice>}
+      {sp.registration && <p className="small" style={{ color: "var(--good)" }} role="status">Sign-up setting saved.</p>}
       {sp.removed && <p className="small" style={{ color: "var(--good)" }} role="status">{sp.removed} and their data were removed.</p>}
       <Card title="People" className="flush">
         <div className="table-wrap">
@@ -110,6 +112,20 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn primary" type="submit">Create invite</button></div>
             </form>
           </div>
+        </Card>
+        <Card title="New accounts" hint="who can create an account without an invite">
+          <form action={saveRegistration} className="stack">
+            <label className="row" style={{ gap: 10, alignItems: "flex-start", flexWrap: "nowrap" }}>
+              <input type="radio" name="mode" value="open" defaultChecked={reg.mode === "open"} />
+              <span style={{ flex: 1, minWidth: 0 }}><b>Anyone can sign up</b><br /><span className="small muted">From the sign-in page or the iPhone app. They confirm their email with a code and join as members.</span></span>
+            </label>
+            <label className="row" style={{ gap: 10, alignItems: "flex-start", flexWrap: "nowrap" }}>
+              <input type="radio" name="mode" value="invite" defaultChecked={reg.mode === "invite"} />
+              <span style={{ flex: 1, minWidth: 0 }}><b>Invite only</b><br /><span className="small muted">Only people you invite here can create an account.</span></span>
+            </label>
+            {reg.mode === "open" && !mail && <Notice kind="info">Sign-up is hidden until email works, because the address has to be confirmed. Set up email in <Link href="/settings/credentials">Credentials</Link>.</Notice>}
+            <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn" type="submit">Save</button></div>
+          </form>
         </Card>
         <Card title="What admins can do">
           <ul className="small ink2 stack" style={{ margin: 0, paddingLeft: 18 }}>

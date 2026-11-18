@@ -6,7 +6,7 @@ import { smtpConfig } from "@/lib/mail";
 import { MIN_PASSWORD_LENGTH, codesForcedOff } from "@/lib/signin";
 import { Card, Notice, StatePill } from "@/components/ui";
 import {
-  changePassword, confirmEmailCode, forgetAllDevices, signOutOtherDevices, startEmailConfirm, turnOffEmailCodes,
+  changePassword, confirmEmailCode, deleteMyAccount, forgetAllDevices, signOutOtherDevices, startEmailConfirm, turnOffEmailCodes,
 } from "../security-actions";
 
 export const metadata: Metadata = { title: "Security" };
@@ -114,6 +114,17 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
           </div>
         </Card>
       </div>
+
+      <Card title="Delete account">
+        <form action={deleteMyAccount} className="stack" style={{ maxWidth: 520 }}>
+          <p className="small ink2">
+            Deletes your sign-in, plan, check-ins, settings and the device data synced to AthleteOS, and disconnects your wearables from it. Your watch and ring makers keep their own copies. This can&apos;t be undone.
+          </p>
+          <label className="field">{`Type ${user.email} to confirm`}<input name="confirm_email" type="email" autoComplete="off" required /></label>
+          <PasswordField />
+          <div className="row" style={{ justifyContent: "flex-end" }}><button className="btn danger" type="submit">Delete my account</button></div>
+        </form>
+      </Card>
 
       {user.role !== "admin" && (
         <p className="small muted">Admins of this AthleteOS can view your dashboards (read-only) and manage your account. They can&apos;t see your password.</p>

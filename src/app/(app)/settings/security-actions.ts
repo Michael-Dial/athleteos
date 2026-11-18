@@ -6,6 +6,9 @@ import { SESSION_COOKIE, TRUST_COOKIE, createSessionToken, createTrustToken } fr
 import { invalidate } from "@/lib/cache";
 import { CREDENTIALS, credentialStates, cred, forgetCredentialCache, writeCredentials, type CredGroup, type CredName, type StoreName } from "@/lib/credentials";
 import { requireAdmin, requireUser } from "@/lib/current-user";
+import { deleteOwnAccount } from "@/lib/account-deletion";
+import { errorMessage } from "@/lib/domain/errors";
+import { VIEW_COOKIE } from "@/lib/domain/context";
 import { q } from "@/lib/db";
 import { createChallenge, verifyChallenge } from "@/lib/login-challenge";
 import { probeSmtp, sendLoginCode, sendMail, smtpConfig } from "@/lib/mail";
@@ -227,4 +230,23 @@ export async function sendTestEmail(fd: FormData) {
     fail(path, `Sending failed: ${e instanceof Error ? e.message : String(e)}`);
   }
   redirect(`${path}?sent=1`);
+}
+
+// ---------- deleting your own account ----------
+
+/** Delete the signed-in user's account and data, after their password and their typed address. */
+export async function deleteMyAccount(fd: FormData) {
+  const path = "/settings/security";
+  const user = await requireUser();
+  if (field(fd, "confirm_email").toLowerCase() !== user.email.toLowerCase()) fail(path, `Type ${user.email} to confirm deleting your account.`);
+  await requirePassword(user, fd, path);
+  try {
+    await deleteOwnAccount(user);
+  } catch (e) {
+    fail(path, e instanceof UserError ? e.message : `Nothing was deleted: ${errorMessage(e)} Try again in a few minutes.`);
+  }
+  const jar = await cookies();
+  jar.delete(SESSION_COOKIE);
+  jar.delete(VIEW_COOKIE);
+  redirect("/login?deleted=1");
 }

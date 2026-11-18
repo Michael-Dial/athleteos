@@ -145,6 +145,27 @@ live("API v1 contract (live)", () => {
     expect(ill.nights).toHaveLength(7);
   });
 
+  // CI has no email, so sign-up must say it's closed and why, and refuse rather than create an unconfirmed account.
+  it("sign-up reports its status and needs email", async () => {
+    const st = spec("get", "/auth/registration").parse((await call("GET", "/auth/registration", undefined, false)).data) as { available: boolean; reason: string | null };
+    expect(st.available).toBe(false);
+    expect(st.reason).toBeTruthy();
+    const r = await call("POST", "/auth/register", { name: "Nobody", email: "nobody@example.test", password: "long-enough-password", device: "test" }, false);
+    expect(r.status).toBe(403);
+    expect(r.data.error.code).toBe("closed");
+  });
+
+  it("first-run setup and account deletion", async () => {
+    expect((await call("POST", "/me/onboarded")).status).toBe(204);
+    expect((await ok("get", "/me", "/me")).user.onboarded).toBe(true);
+    const wrong = await call("POST", "/me/delete", { password: "not-the-password" });
+    expect(wrong.status).toBe(401);
+    // The only admin can't delete themselves, so this refuses without touching anything.
+    const last = await call("POST", "/me/delete", { password: PASSWORD });
+    expect(last.status).toBe(409);
+    expect((await call("GET", "/me")).status).toBe(200);
+  });
+
   it("publishes the OpenAPI document without auth", async () => {
     const res = await fetch(`${BASE}/api/v1/openapi.json`);
     expect(res.status).toBe(200);

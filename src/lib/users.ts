@@ -120,9 +120,14 @@ async function activeAdmins(): Promise<number> {
   return (await q1<{ n: number }>("SELECT count(*)::int AS n FROM app_user WHERE role = 'admin' AND disabled_at IS NULL"))!.n;
 }
 
+/** True when removing or demoting this user would leave the install without a working admin. */
+export async function isLastAdmin(target: User): Promise<boolean> {
+  return target.role === "admin" && !target.disabled && (await activeAdmins()) <= 1;
+}
+
 /** Guard used by role changes, disabling and removal: an install always keeps one working admin. */
 async function keepAnAdmin(target: User, change: string): Promise<void> {
-  if (target.role === "admin" && !target.disabled && (await activeAdmins()) <= 1) {
+  if (await isLastAdmin(target)) {
     throw new UserError(`${target.name} is the only active admin, so they can't be ${change}. Make someone else an admin first.`);
   }
 }

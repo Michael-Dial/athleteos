@@ -18,7 +18,7 @@ import {
 import { invalidate } from "@/lib/cache";
 import { authorizeUrl, bootstrapApplication, createUser, getUser, syncProvider } from "@/lib/ow/api";
 import { ensureOwUser } from "@/lib/ow/provision";
-import { PHONE_CODE_RE, setPhoneApp, setPhoneCode } from "@/lib/domain/phone-code";
+import { PHONE_CODE_RE, setIosAppUrl, setPhoneApp, setPhoneCode } from "@/lib/domain/phone-code";
 import { errorMessage } from "@/lib/domain/errors";
 import { issueToken, revokeToken } from "@/lib/api/tokens";
 import { parsePace } from "@/lib/zones";
@@ -410,6 +410,17 @@ export async function savePhoneCode(fd: FormData) {
   if (!code || !PHONE_CODE_RE.test(code)) redirect(userPage(target, "error=" + encodeURIComponent("Paste the pairing code as issued: 4 to 128 characters, no spaces.")));
   await setPhoneCode(target.athlete_id, code);
   redirect(done(userPage(target, "code=saved")));
+}
+
+/** Admin: the AthleteOS iPhone app's App Store or TestFlight link, shown in setup and invite emails. */
+export async function saveIosApp(fd: FormData) {
+  await requireAdmin();
+  try {
+    await setIosAppUrl(str(fd, "url") ?? "");
+  } catch (e) {
+    redirect(withParam("/settings/backend", "error", errorMessage(e)));
+  }
+  redirect(done("/settings/backend?saved=1"));
 }
 
 /** Admin: the phone sync app every athlete is pointed to (install-wide). */

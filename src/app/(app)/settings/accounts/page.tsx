@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getCtx } from "@/lib/domain/context";
 import { getConnections, listProviders } from "@/lib/ow/api";
 import type { OwConnection, OwProvider } from "@/lib/ow/types";
-import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
+import { getIosAppUrl, getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
 import { requireUser } from "@/lib/current-user";
 import { phoneProvidersFor, platformOf } from "@/lib/platform";
 import { errorMessage } from "@/lib/domain/errors";
@@ -54,11 +54,12 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const tz = ctx.settings.timezone;
   const day = (iso: string | null) => (iso ? fmtDate(localDate(iso, tz), { month: "short", day: "numeric" }) : "not yet");
 
-  const [providers, conns, phoneCode, phoneApp] = await Promise.all([
+  const [providers, conns, phoneCode, phoneApp, iosAppUrl] = await Promise.all([
     attempt(listProviders),
     ctx.ow ? attempt(() => getConnections(ctx.ow!)) : Promise.resolve({ v: [] as OwConnection[], e: null }),
     getPhoneCode(ctx.athlete.id),
     getPhoneApp(),
+    getIosAppUrl(),
   ]);
   const all = conns.v ?? [];
   const enabled = (providers.v ?? []).filter((p) => p.is_enabled);
@@ -103,7 +104,7 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
                   ) : p.provider === "apple" ? (
                     // The AthleteOS iPhone app signs in and starts Apple Health sync itself; no code needed.
                     <ol className="small mt-sm" style={{ paddingLeft: 18, margin: 0 }}>
-                      <li>Install {phoneApp.installUrl ? <a href={phoneApp.installUrl} target="_blank" rel="noreferrer">{phoneApp.name || "the AthleteOS app"}</a> : phoneApp.name || "the AthleteOS app"} on your iPhone and sign in with your AthleteOS email and password.</li>
+                      <li>Install {iosAppUrl ? <a href={iosAppUrl} target="_blank" rel="noreferrer">the AthleteOS iPhone app</a> : "the AthleteOS iPhone app"} and sign in with your AthleteOS email and password.</li>
                       <li>Open More → Connected accounts and turn on {p.name}.</li>
                     </ol>
                   ) : (

@@ -140,3 +140,59 @@ func stateWord(_ raw: String) -> String {
     default: "No data"
     }
 }
+
+/// The one main action on a full-screen step (start, setup): full width, lime
+/// with dark ink as on the web, so it reads the same in both themes.
+struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .padding(.horizontal, 16)
+            .background(Palette.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .foregroundStyle(Palette.accentInk)
+            .opacity(enabled ? (configuration.isPressed ? 0.8 : 1) : 0.45)
+    }
+}
+
+/// The alternative next to a primary action: same size, quieter fill.
+struct SecondaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .padding(.horizontal, 16)
+            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .foregroundStyle(.primary)
+            .opacity(enabled ? (configuration.isPressed ? 0.7 : 1) : 0.45)
+    }
+}
+
+/// An icon and two lines of text, for "what you get" lists on full-screen steps.
+struct ValueRow: View {
+    let symbol: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Image(systemName: symbol)
+                .font(.title3)
+                .foregroundStyle(Palette.accentText)
+                .frame(minWidth: 28)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.headline)
+                Text(detail).font(.subheadline).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}

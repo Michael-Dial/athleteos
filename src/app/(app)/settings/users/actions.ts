@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/current-user";
 import { VIEW_COOKIE } from "@/lib/domain/context";
 import { mailConfigured, sendAccountLink } from "@/lib/mail";
+import { getIosAppUrl } from "@/lib/domain/phone-code";
+import { setRegistrationMode } from "@/lib/registration";
 import { invalidate } from "@/lib/cache";
 import { q1 } from "@/lib/db";
 import { errorMessage } from "@/lib/domain/errors";
@@ -55,7 +57,7 @@ async function deliverLink(admin: User, u: User, kind: "invite" | "reset"): Prom
   if (!(await mailConfigured())) return "notsent";
   try {
     await sendAccountLink(u.email, {
-      kind, url, code, name: u.name, by: admin.name,
+      kind, url, code, name: u.name, by: admin.name, appUrl: (await getIosAppUrl()) || undefined,
       expires: expiresAt.toUTCString().replace(/:\d\d GMT$/, " UTC"),
     });
     return "sent";
@@ -169,4 +171,11 @@ export async function viewAs(fd: FormData) {
 export async function stopViewing() {
   (await cookies()).delete(VIEW_COOKIE);
   redirect("/settings/users");
+}
+
+/** Open sign-up, or invite only. */
+export async function saveRegistration(fd: FormData) {
+  await requireAdmin();
+  await setRegistrationMode(field(fd, "mode") === "invite" ? "invite" : "open");
+  go("/settings/users", { registration: "saved" });
 }

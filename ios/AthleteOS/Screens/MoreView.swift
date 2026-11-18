@@ -19,6 +19,7 @@ struct MoreView: View {
             }
             Section {
                 Button("Sign out", role: .destructive) { confirmSignOut = true }
+                NavigationLink { DeleteAccountView() } label: { Text("Delete account").foregroundStyle(Palette.bad) }
             } footer: {
                 Text("AthleteOS \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""))")
             }
@@ -57,5 +58,50 @@ struct CheckInsView: View {
             .navigationDestination(for: CheckInRoute.self) { CheckInView(client: client, slug: $0.slug, date: $0.date) }
         }
         .navigationTitle("Check-ins")
+    }
+}
+
+/// Deleting your own account, as the App Store requires of an app that creates
+/// them. The server asks for the password again and deletes everything; this
+/// phone then signs out and stops Apple Health sync.
+struct DeleteAccountView: View {
+    @Environment(AppModel.self) private var model
+    @State private var password = ""
+    @State private var confirming = false
+    @State private var busy = false
+    @State private var error: String?
+
+    var body: some View {
+        Form {
+            Section {
+                Text("This deletes your sign-in, plan, check-ins, settings and the device data synced to AthleteOS, and disconnects your wearables from it.")
+                Text("Your watch and ring makers, and Apple Health, keep their own copies. This can't be undone.").foregroundStyle(.secondary)
+            }
+            Section {
+                SecureField("Your password", text: $password).textContentType(.password).submitLabel(.done)
+            } footer: {
+                Text("Asked again so a phone left unlocked can't delete your account.")
+            }
+            if let error { Section { Notice(text: error, kind: .bad) } }
+            Section {
+                Button(busy ? "Deleting…" : "Delete account", role: .destructive) { confirming = true }
+                    .disabled(busy || password.isEmpty)
+            }
+        }
+        .navigationTitle("Delete account")
+        .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Delete your AthleteOS account and all its data?", isPresented: $confirming, titleVisibility: .visible) {
+            Button("Delete account", role: .destructive, action: delete)
+        } message: {
+            Text("This can't be undone.")
+        }
+    }
+
+    private func delete() {
+        busy = true; error = nil
+        Task {
+            defer { busy = false }
+            do { try await model.deleteAccount(password: password) } catch { self.error = error.localizedDescription }
+        }
     }
 }

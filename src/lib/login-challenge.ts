@@ -14,6 +14,8 @@ function newCode(): string {
 
 /** web/token: second factor at sign-in. setup: confirms an address before codes are switched on. */
 export type ChallengePurpose = "web" | "token" | "setup";
+/** register: confirms a new account's address. It has no user yet; the account is created only once the code is right. */
+type AnyPurpose = ChallengePurpose | "register";
 
 export interface Challenge {
   id: string;
@@ -24,6 +26,15 @@ export interface Challenge {
 
 /** Start a challenge; returns the plaintext code for sending (never stored). */
 export async function createChallenge(purpose: ChallengePurpose, userId: number, ip: string, meta: Record<string, string>): Promise<{ id: string; code: string }> {
+  return insertChallenge(purpose, userId, ip, meta);
+}
+
+/** A new account's confirmation code; meta carries the pending account (name, email, password hash). */
+export async function createRegistrationChallenge(ip: string, meta: Record<string, string>): Promise<{ id: string; code: string }> {
+  return insertChallenge("register", null, ip, meta);
+}
+
+async function insertChallenge(purpose: AnyPurpose, userId: number | null, ip: string, meta: Record<string, string>): Promise<{ id: string; code: string }> {
   // Opportunistic cleanup keeps the table to recent rows.
   await q("DELETE FROM auth_challenge WHERE expires_at < now() - interval '1 day'");
   const row = await q1<{ id: string }>(
@@ -41,11 +52,27 @@ export type VerifyResult = { ok: true; challenge: Challenge } | { ok: false; rea
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export async function verifyChallenge(id: string | undefined, code: string, purpose: ChallengePurpose): Promise<VerifyResult> {
+  const r = await check(id, code, purpose);
+  if (!r.ok) return r;
+  return { ok: true, challenge: { id: r.row.id, purpose, userId: r.row.user_id!, meta: r.row.meta } };
+}
+
+export type RegistrationResult = { ok: true; meta: Record<string, string> } | { ok: false; reason: "invalid" | "expired" | "locked" | "unknown" };
+
+export async function verifyRegistrationChallenge(id: string | undefined, code: string): Promise<RegistrationResult> {
+  const r = await check(id, code, "register");
+  return r.ok ? { ok: true, meta: r.row.meta } : r;
+}
+
+type Row = { id: string; purpose: AnyPurpose; user_id: number | null; code_hash: string; expired: boolean; attempts: number; consumed: boolean; meta: Record<string, string> };
+
+async function check(id: string | undefined, code: string, purpose: AnyPurpose): Promise<{ ok: true; row: Row } | { ok: false; reason: "invalid" | "expired" | "locked" | "unknown" }> {
   if (!id || !UUID.test(id)) return { ok: false, reason: "unknown" };
-  const c = await q1<{ id: string; purpose: ChallengePurpose; user_id: number | null; code_hash: string; expired: boolean; attempts: number; consumed: boolean; meta: Record<string, string> }>(
+  const c = await q1<Row>(
     `SELECT id, purpose, user_id, code_hash, expires_at < now() AS expired, attempts, consumed_at IS NOT NULL AS consumed, meta
      FROM auth_challenge WHERE id = $1`, [id]);
-  if (!c || c.purpose !== purpose || c.consumed || c.user_id === null) return { ok: false, reason: "unknown" };
+  // Sign-in and setup codes belong to a user; only a registration's has none.
+  if (!c || c.purpose !== purpose || c.consumed || (c.user_id === null) !== (purpose === "register")) return { ok: false, reason: "unknown" };
   if (c.expired) return { ok: false, reason: "expired" };
   if (c.attempts >= MAX_ATTEMPTS) return { ok: false, reason: "locked" };
   // Count the attempt before comparing, so parallel guesses can't exceed the limit.
@@ -59,7 +86,7 @@ export async function verifyChallenge(id: string | undefined, code: string, purp
   }
   const used = await q1("UPDATE auth_challenge SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL RETURNING id", [id]);
   if (!used) return { ok: false, reason: "unknown" };
-  return { ok: true, challenge: { id: c.id, purpose: c.purpose, userId: c.user_id, meta: c.meta } };
+  return { ok: true, row: c };
 }
 
 export type ResendResult = { ok: true; code: string; userId: number; meta: Record<string, string> } | { ok: false; reason: "unknown" | "too_soon" | "too_many"; waitSec?: number };

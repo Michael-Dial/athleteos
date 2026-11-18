@@ -96,7 +96,7 @@ export async function sendLoginCode(code: string, ctx: { ip: string; purpose: Co
 }
 
 /** An invite or password-reset code, with a link that fills it in. It goes only to the user's own address. */
-export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset"; url: string; code: string; name: string; by: string | null; expires: string }): Promise<void> {
+export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset"; url: string; code: string; name: string; by: string | null; expires: string; appUrl?: string }): Promise<void> {
   const invite = ctx.kind === "invite";
   const subject = invite ? "You're invited to AthleteOS" : "Set a new AthleteOS password";
   // by = null: the person asked for it themselves from the sign-in page.
@@ -107,6 +107,7 @@ export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset
     `Hi ${ctx.name},`, "", lead, "",
     `Your ${invite ? "invite" : "reset"} code: ${ctx.code}`,
     `Open ${ctx.url} or enter the code under "Have an invite code?" on the sign-in page, then choose your password.`,
+    ...(invite && ctx.appUrl ? ["", `On an iPhone? Get the AthleteOS app (${ctx.appUrl}), tap "I have an invite code" and enter the same code.`] : []),
     "", `The code works once and expires ${ctx.expires}.`,
   ].join("\n");
   const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#111">
@@ -116,6 +117,39 @@ export async function sendAccountLink(to: string, ctx: { kind: "invite" | "reset
 <p style="font-size:26px;font-weight:700;letter-spacing:3px;margin:4px 0 14px;font-family:ui-monospace,monospace">${esc(ctx.code)}</p>
 <p><a href="${esc(ctx.url)}" style="display:inline-block;background:#c8f046;color:#0c0d0f;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">Set your password</a></p>
 <p style="color:#555">Or enter the code under &ldquo;Have an invite code?&rdquo; on the sign-in page. It works once and expires ${esc(ctx.expires)}.</p>
-</div>`;
+${invite && ctx.appUrl ? `<p style="color:#555">On an iPhone? <a href="${esc(ctx.appUrl)}">Get the AthleteOS app</a>, tap &ldquo;I have an invite code&rdquo; and enter the same code.</p>\n` : ""}</div>`;
   await sendMail(to, subject, text, html);
+}
+
+/** The code that confirms a new account's address. Nothing exists until it is entered. */
+export async function sendRegistrationCode(to: string, code: string, name: string): Promise<void> {
+  const text = [
+    `Hi ${name},`, "",
+    `Your AthleteOS confirmation code is ${code}`, "",
+    "Enter it where you're creating your account. It expires in 10 minutes.",
+    "If you didn't sign up for AthleteOS, ignore this email; no account is created without the code.",
+  ].join("\n");
+  const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#111">
+<p>Hi ${esc(name)},</p>
+<p>Your AthleteOS confirmation code is</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0 16px">${code}</p>
+<p style="color:#555">Enter it where you're creating your account. It expires in 10 minutes.</p>
+<p style="color:#555">If you didn't sign up for AthleteOS, ignore this email; no account is created without the code.</p>
+</div>`;
+  await sendMail(to, "Confirm your AthleteOS account", text, html);
+}
+
+/** Someone tried to sign up with an address that already has an account: tell its owner, not the form. */
+export async function sendAccountExists(to: string, name: string): Promise<void> {
+  const text = [
+    `Hi ${name},`, "",
+    "Someone tried to create an AthleteOS account with this address, but you already have one.",
+    "If it was you, sign in instead, or use Forgot password on the sign-in page. If it wasn't, ignore this email; nothing changed.",
+  ].join("\n");
+  const html = `<div style="font-family:system-ui,sans-serif;font-size:15px;color:#111">
+<p>Hi ${esc(name)},</p>
+<p>Someone tried to create an AthleteOS account with this address, but you already have one.</p>
+<p style="color:#555">If it was you, sign in instead, or use Forgot password on the sign-in page. If it wasn't, ignore this email; nothing changed.</p>
+</div>`;
+  await sendMail(to, "You already have an AthleteOS account", text, html);
 }
