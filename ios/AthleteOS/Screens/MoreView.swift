@@ -6,6 +6,8 @@ struct MoreView: View {
     let credentials: Credentials
     @Environment(AppModel.self) private var model
     @State private var confirmSignOut = false
+    // The role comes from the server each time, so a demoted admin loses the row.
+    @State private var isAdmin = false
 
     var body: some View {
         List {
@@ -17,6 +19,11 @@ struct MoreView: View {
                 NavigationLink { AccountsView(client: client) } label: { Label("Connected accounts", systemImage: "link") }
                 NavigationLink { CheckInsView(client: client) } label: { Label("Check-ins", systemImage: "checklist") }
             }
+            if isAdmin {
+                Section("Admin") {
+                    NavigationLink { ServicesView(client: client) } label: { Label("Service status", systemImage: "antenna.radiowaves.left.and.right") }
+                }
+            }
             Section {
                 Button("Sign out", role: .destructive) { confirmSignOut = true }
                 NavigationLink { DeleteAccountView() } label: { Text("Delete account").foregroundStyle(Palette.bad) }
@@ -25,6 +32,7 @@ struct MoreView: View {
             }
         }
         .navigationTitle("More")
+        .task { if let me = try? await client.getMe() { isAdmin = me.user.role == .admin } }
         .confirmationDialog("Sign out of AthleteOS on this phone?", isPresented: $confirmSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) { Task { await model.signOut() } }
         } message: {

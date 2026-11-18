@@ -112,6 +112,12 @@ import Testing
     @Test func decodesPushTestPostResponse() throws {
         try Samples.decode(PushTestPostResponse.self, "PushTestPostResponse")
     }
+    @Test func decodesAdminServicesResponse() throws {
+        try Samples.decode(AdminServicesResponse.self, "AdminServicesResponse")
+    }
+    @Test func decodesAdminServicesByServiceTestPostResponse() throws {
+        try Samples.decode(AdminServicesByServiceTestPostResponse.self, "AdminServicesByServiceTestPostResponse")
+    }
     @Test func decodesSettingsResponse() throws {
         try Samples.decode(SettingsResponse.self, "SettingsResponse")
     }

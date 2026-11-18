@@ -3463,6 +3463,65 @@ public struct PushTestPostResponse: Codable, Hashable, Sendable {
     }
 }
 
+public struct AdminServicesResponse: Codable, Hashable, Sendable {
+    public var services: [Service]
+
+    public init(services: [Service]) {
+        self.services = services
+    }
+
+    public struct Service: Codable, Hashable, Sendable {
+        public var id: Id
+        public var name: String
+        public var configured: Bool
+        /// Where it connects, without credentials
+        public var target: String?
+
+        public init(id: Id, name: String, configured: Bool, target: String? = nil) {
+            self.id = id
+            self.name = name
+            self.configured = configured
+            self.target = target
+        }
+
+        public enum Id: String, Codable, Hashable, Sendable, CaseIterable {
+            case ow = "ow"
+            case smtp = "smtp"
+            case unrecognized = "\u{0}unrecognized"
+            public init(from decoder: Decoder) throws {
+                let raw = try decoder.singleValueContainer().decode(String.self)
+                self = Id(rawValue: raw) ?? .unrecognized
+            }
+        }
+    }
+}
+
+public struct AdminServicesByServiceTestPostResponse: Codable, Hashable, Sendable {
+    public var service: Service
+    public var ok: Bool
+    public var message: String
+    public var testedAt: String
+    public var durationMs: Double
+
+    public init(service: Service, ok: Bool, message: String, testedAt: String, durationMs: Double) {
+        self.service = service
+        self.ok = ok
+        self.message = message
+        self.testedAt = testedAt
+        self.durationMs = durationMs
+    }
+
+    public enum Service: String, Codable, Hashable, Sendable, CaseIterable {
+        case ow = "ow"
+        case smtp = "smtp"
+        case unrecognized = "\u{0}unrecognized"
+        public init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            self = Service(rawValue: raw) ?? .unrecognized
+        }
+    }
+}
+
 public struct SettingsResponse: Codable, Hashable, Sendable {
     public var timezone: String
     public var ow: Ow
@@ -4466,6 +4525,16 @@ public extension APIClient {
     /// Send a test notification to every subscribed device
     func postPushTest() async throws -> PushTestPostResponse {
         try await send("POST", "/push/test")
+    }
+
+    /// Admin only: the services AthleteOS depends on (Open Wearables, email) and whether each is set up
+    func getAdminServices() async throws -> AdminServicesResponse {
+        try await send("GET", "/admin/services")
+    }
+
+    /// Admin only: test a service with the settings already saved. Nothing in the request reaches the service, so no password is asked for
+    func postAdminServicesByServiceTest(service: String) async throws -> AdminServicesByServiceTestPostResponse {
+        try await send("POST", "/admin/services/\(APIClient.segment(service))/test")
     }
 
     /// All tuning knobs

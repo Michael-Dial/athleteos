@@ -29,6 +29,9 @@ export interface RouteSpec {
 const Window = (key: string, item: z.ZodType) => z.object({ start: z.string(), end: z.string(), [key]: z.array(item), owError: z.string().nullable().optional() });
 const Token = z.object({ token: z.string().describe("Shown once; store it securely"), id: z.number(), name: z.string(), createdAt: z.string() });
 const Created = z.object({ id: z.number() });
+const ServiceName = z.enum(["ow", "smtp"]);
+const ServiceStateDto = z.object({ id: ServiceName, name: z.string(), configured: z.boolean(), target: z.string().nullable().describe("Where it connects, without credentials") });
+const ServiceTestDto = z.object({ service: ServiceName, ok: z.boolean(), message: z.string(), testedAt: z.string(), durationMs: z.number() });
 const Challenge = z.object({ challengeId: z.string(), delivery: z.literal("email"), destination: z.string().describe("Masked address the code went to"), expiresInSec: z.number() });
 
 export const ROUTES: RouteSpec[] = [
@@ -97,6 +100,10 @@ export const ROUTES: RouteSpec[] = [
   { method: "post", path: "/push/subscriptions", tag: "push", summary: "Register a browser push subscription (PWA). Native apps will use APNs/FCM instead.", body: PushSubscriptionBody, status: 204 },
   { method: "delete", path: "/push/subscriptions", tag: "push", summary: "Remove a push subscription", query: EndpointQuery, status: 204 },
   { method: "post", path: "/push/test", tag: "push", summary: "Send a test notification to every subscribed device", response: z.object({ sent: z.number(), failed: z.number() }) },
+  { method: "get", path: "/admin/services", tag: "admin", summary: "Admin only: the services AthleteOS depends on (Open Wearables, email) and whether each is set up",
+    response: z.object({ services: z.array(ServiceStateDto) }) },
+  { method: "post", path: "/admin/services/{service}/test", tag: "admin", summary: "Admin only: test a service with the settings already saved. Nothing in the request reaches the service, so no password is asked for",
+    response: ServiceTestDto },
   { method: "get", path: "/settings", tag: "settings", summary: "All tuning knobs", response: SettingsSchema },
   { method: "patch", path: "/settings", tag: "settings", summary: "Deep-merge patch; the whole result is validated", body: SettingsPatch, response: SettingsSchema },
 ];
