@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
-import { currentUser } from "@/lib/current-user";
+import { actsAsAdmin } from "@/lib/current-user";
 import { getConnections, getDevices, getDevicesHistory } from "@/lib/ow/api";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
@@ -18,7 +18,7 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
   const showAll = (await searchParams).history === "all";
   const ctx = await getCtx();
   // Device ids are the data backend's own; athletes see names only (CLAUDE.md).
-  const admin = (await currentUser())?.role === "admin";
+  const admin = await actsAsAdmin();
   const tz = ctx.settings.timezone;
   const [devices, history, conns] = await Promise.all([
     getDevices(ctx.ow!).then((v) => ({ v, e: null as string | null })).catch((e) => ({ v: [], e: errorMessage(e) })),

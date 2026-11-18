@@ -2,7 +2,8 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/current-user";
+import { requireAdmin, requireRealAdmin } from "@/lib/current-user";
+import { ADMIN_MODE_COOKIE } from "@/lib/auth";
 import { VIEW_COOKIE } from "@/lib/domain/context";
 import { mailConfigured, sendAccountLink } from "@/lib/mail";
 import { invalidate } from "@/lib/cache";
@@ -156,17 +157,42 @@ export async function removeUser(fd: FormData) {
   go("/settings/users", { removed: u.name });
 }
 
-/** Admin: open another user's dashboards read-only. */
+async function cookieOpts() {
+  return { httpOnly: true, sameSite: "lax" as const, secure: (await headers()).get("x-forwarded-proto") === "https", path: "/" };
+}
+
+/**
+ * Admin: open another user's dashboards read-only. With as_member set, also as
+ * they see them: participant view, so no admin controls or backend ids.
+ */
 export async function viewAs(fd: FormData) {
   const admin = await requireAdmin();
   const u = await target(fd);
   const jar = await cookies();
   if (u.id === admin.id) jar.delete(VIEW_COOKIE);
-  else jar.set(VIEW_COOKIE, String(u.athlete_id), { httpOnly: true, sameSite: "lax", secure: (await headers()).get("x-forwarded-proto") === "https", path: "/" });
+  else jar.set(VIEW_COOKIE, String(u.athlete_id), await cookieOpts());
+  if (fd.get("as_member") === "1") jar.delete(ADMIN_MODE_COOKIE);
   redirect("/");
 }
 
+/** Back to the admin's own dashboards and the Users list they came from, so in Admin view. */
 export async function stopViewing() {
-  (await cookies()).delete(VIEW_COOKIE);
+  await requireRealAdmin();
+  const jar = await cookies();
+  jar.delete(VIEW_COOKIE);
+  jar.set(ADMIN_MODE_COOKIE, "1", { ...(await cookieOpts()), maxAge: ADMIN_MODE_MAX_AGE });
   redirect("/settings/users");
+}
+
+// A year: the switch is a standing preference, like Appearance, and must
+// survive the home-screen app dropping session cookies.
+const ADMIN_MODE_MAX_AGE = 365 * 24 * 3600;
+
+/** Admin: the Participant/Admin switch in Settings. */
+export async function setViewMode(fd: FormData) {
+  await requireRealAdmin();
+  const jar = await cookies();
+  if (fd.get("mode") === "admin") jar.set(ADMIN_MODE_COOKIE, "1", { ...(await cookieOpts()), maxAge: ADMIN_MODE_MAX_AGE });
+  else jar.delete(ADMIN_MODE_COOKIE);
+  redirect("/settings");
 }

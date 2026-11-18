@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, authDisabled } from "./lib/auth";
+import { ADMIN_MODE_COOKIE, SESSION_COOKIE, authDisabled } from "./lib/auth";
 import { publicUrl } from "./lib/http";
 import { sessionUser } from "./lib/user-session";
 
@@ -15,7 +15,9 @@ export async function proxy(req: NextRequest) {
   const user = await sessionUser(req.cookies.get(SESSION_COOKIE)?.value);
   if (user) {
     const path = req.nextUrl.pathname;
-    if (!user.admin && ADMIN_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
+    // An admin in participant view (the default) is turned away like a member.
+    const admin = user.admin && req.cookies.get(ADMIN_MODE_COOKIE)?.value === "1";
+    if (!admin && ADMIN_PATHS.some((p) => path === p || path.startsWith(`${p}/`))) {
       return NextResponse.rewrite(new URL("/not-found-admin-only", req.url));
     }
     return NextResponse.next();

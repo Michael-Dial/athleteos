@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
-import { requireUser } from "@/lib/current-user";
+import { actsAsAdmin } from "@/lib/current-user";
 import { isDue, listDefs, listResponses, listWellness, streak } from "@/lib/domain/questionnaires";
 import { addDays, fmtDate, startOfWeek, todayIn } from "@/lib/dates";
 import { mean, sd } from "@/lib/stats/basic";
@@ -15,7 +15,7 @@ export default async function WellnessPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const ctx = await getCtx();
   // Editing a form's definition is an admin task; everyone answers and toggles forms.
-  const admin = (await requireUser()).role === "admin";
+  const admin = await actsAsAdmin();
   const today = todayIn(ctx.settings.timezone);
   const start = addDays(today, -89);
   const [defs, wellness] = await Promise.all([listDefs(ctx.athlete.id, true), listWellness(ctx.athlete.id, start, today)]);
