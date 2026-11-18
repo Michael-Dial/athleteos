@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getCtx } from "@/lib/domain/context";
-import { currentUser } from "@/lib/current-user";
+import { actsAsAdmin } from "@/lib/current-user";
 import { getTimeseries } from "@/lib/ow/api";
 import type { OwTimeSeriesSample } from "@/lib/ow/types";
 import { addDays, diffDays, isISODate, todayIn } from "@/lib/dates";
@@ -25,7 +25,7 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const ctx = await getCtx();
   // Data source ids are the backend's own; only an admin sees them (CLAUDE.md).
-  const admin = (await currentUser())?.role === "admin";
+  const admin = await actsAsAdmin();
   const tz = ctx.settings.timezone;
   const today = todayIn(tz);
   const type = sp.type && isSeriesType(sp.type) ? sp.type : "heart_rate";

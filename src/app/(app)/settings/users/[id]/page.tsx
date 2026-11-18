@@ -74,7 +74,12 @@ export default async function UserPage({ params, searchParams }: { params: Promi
           <h2 style={{ margin: "4px 0 0" }}>{u.name}{isMe && <span className="small muted"> · you</span>}</h2>
           <p className="small muted" style={{ margin: 0 }}>{u.email} · {u.role === "admin" ? "Admin" : "Member"}</p>
         </div>
-        {!isMe && !u.disabled && <form action={viewAs}>{hidden}<button className="btn" type="submit">View dashboards</button></form>}
+        {!isMe && !u.disabled && (
+          <div className="row" style={{ gap: 8 }}>
+            <form action={viewAs}>{hidden}<button className="btn" type="submit">View dashboards</button></form>
+            <form action={viewAs}>{hidden}<input type="hidden" name="as_member" value="1" /><button className="btn" type="submit">View as {u.name} sees it</button></form>
+          </div>
+        )}
       </div>
 
       {sp.error && <Notice kind="bad">{sp.error}</Notice>}

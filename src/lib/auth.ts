@@ -2,6 +2,12 @@
 // runs in proxy.ts and route handlers. Password checks live in signin.ts.
 
 export const SESSION_COOKIE = "aos_session";
+/**
+ * An admin's "see it as a participant" switch. It only narrows what the admin
+ * sees and may do (never widens it), so it needs no signature: a member who
+ * sets it by hand gets exactly what they already had.
+ */
+export const MEMBER_VIEW_COOKIE = "aos_as_member";
 const SESSION_DAYS = 30;
 
 function secret(): string {

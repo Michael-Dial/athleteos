@@ -3,14 +3,15 @@ import { TabBar, TopNav } from "@/components/nav";
 import { IconLogo, IconSettings } from "@/components/icons";
 import { ResponsiveTables } from "@/components/responsive-tables";
 import { getCtx } from "@/lib/domain/context";
-import { stopViewing } from "./settings/users/actions";
+import { memberView } from "@/lib/current-user";
+import { stopMemberView, stopViewing } from "./settings/users/actions";
 
 export const dynamic = "force-dynamic";
 
 // Appearance and sign-out live in Settings, as on iOS; the bar carries only
 // the brand (and, on wide screens, the section links and Settings).
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { viewing } = await getCtx();
+  const [{ viewing }, asMember] = await Promise.all([getCtx(), memberView()]);
   return (
     <>
       <header className="topbar">
@@ -22,10 +23,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      {viewing && (
+      {viewing ? (
         <div className="view-banner" role="status">
-          <span>Viewing <b>{viewing.userName}</b>&apos;s dashboards, read-only.</span>
+          <span>Viewing <b>{viewing.userName}</b>&apos;s dashboards{asMember ? " as they see them" : ""}, read-only.</span>
           <form action={stopViewing}><button className="btn sm" type="submit">Back to mine</button></form>
+        </div>
+      ) : asMember && (
+        <div className="view-banner" role="status">
+          <span>Seeing the app as a participant does. Admin settings and controls are hidden.</span>
+          <form action={stopMemberView}><button className="btn sm" type="submit">Back to admin</button></form>
         </div>
       )}
       <main className="main">{children}</main>

@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { SESSION_COOKIE, authDisabled } from "./auth";
+import { MEMBER_VIEW_COOKIE, SESSION_COOKIE, authDisabled } from "./auth";
 import { q1 } from "./db";
 import { sessionUserId } from "./user-session";
 import { userById, type User } from "./users";
@@ -31,8 +31,31 @@ export async function requireUser(): Promise<User> {
   return u;
 }
 
-/** Admin-only pages and actions. Members get a plain 404, so admin features don't announce themselves. */
+/**
+ * True while an admin has switched to seeing the app as a participant
+ * (Settings → Admin → See it as a participant). Admin pages, actions and
+ * controls then behave exactly as they do for a member.
+ */
+export const memberView = cache(async (): Promise<boolean> => {
+  const u = await currentUser();
+  return u?.role === "admin" && (await cookies()).get(MEMBER_VIEW_COOKIE)?.value === "1";
+});
+
+/** Whether to show admin-only controls: an admin who isn't seeing the app as a participant. */
+export async function actsAsAdmin(): Promise<boolean> {
+  const u = await currentUser();
+  return u?.role === "admin" && !(await memberView());
+}
+
+/** Admin-only pages and actions. Members (and an admin seeing the app as one) get a plain 404, so admin features don't announce themselves. */
 export async function requireAdmin(): Promise<User> {
+  const u = await requireUser();
+  if (u.role !== "admin" || (await memberView())) notFound();
+  return u;
+}
+
+/** The admin role itself, ignoring the participant view: only for switching that view off and on. */
+export async function requireRealAdmin(): Promise<User> {
   const u = await requireUser();
   if (u.role !== "admin") notFound();
   return u;

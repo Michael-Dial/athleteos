@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRUST_DAYS, maskEmail } from "@/lib/auth";
-import { requireUser } from "@/lib/current-user";
+import { actsAsAdmin, requireUser } from "@/lib/current-user";
 import { smtpConfig } from "@/lib/mail";
 import { MIN_PASSWORD_LENGTH, codesForcedOff } from "@/lib/signin";
 import { Card, Notice, StatePill } from "@/components/ui";
@@ -28,7 +28,7 @@ type SP = { error?: string; password?: string; signedout?: string; forgot?: stri
 
 export default async function SecurityPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const [user, smtp] = await Promise.all([requireUser(), smtpConfig()]);
+  const [user, smtp, admin] = await Promise.all([requireUser(), smtpConfig(), actsAsAdmin()]);
   const forcedOff = codesForcedOff();
   const on = user.login_codes && !forcedOff;
   const done = sp.password ? DONE.password : sp.signedout ? DONE.signedout : sp.forgot ? DONE.forgot : sp.email ? DONE.email : sp.codes ? DONE[sp.codes] : null;
@@ -72,7 +72,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
               Sign-in needs your password plus a 6-digit code sent to <b>{maskEmail(user.email)}</b>. Codes expire after 10 minutes and allow 5 tries. Devices you trust skip the code for {TRUST_DAYS} days. App sign-in asks for a code too.
             </p>
             {forcedOff && <Notice>Codes are switched off for everyone on this server (LOGIN_2FA=off), whatever is chosen here.</Notice>}
-            {!smtp && <Notice kind="info">Email isn&apos;t set up on this server yet, so codes can&apos;t be sent.{user.role === "admin" ? <> Set it up in <Link href="/settings/credentials">Credentials</Link>.</> : " Ask your admin."}</Notice>}
+            {!smtp && <Notice kind="info">Email isn&apos;t set up on this server yet, so codes can&apos;t be sent.{admin ? <> Set it up in <Link href="/settings/credentials">Credentials</Link>.</> : " Ask your admin."}</Notice>}
             {smtp && !forcedOff && !confirming && (on ? (
               <form action={turnOffEmailCodes} className="stack">
                 <PasswordField />
@@ -115,7 +115,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
         </Card>
       </div>
 
-      {user.role !== "admin" && (
+      {!admin && (
         <p className="small muted">Admins of this AthleteOS can view your dashboards (read-only) and manage your account. They can&apos;t see your password.</p>
       )}
     </div>

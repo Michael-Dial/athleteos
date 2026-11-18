@@ -5,7 +5,7 @@ import { getCtx } from "@/lib/domain/context";
 import { getConnections, listProviders } from "@/lib/ow/api";
 import type { OwConnection, OwProvider } from "@/lib/ow/types";
 import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
-import { requireUser } from "@/lib/current-user";
+import { actsAsAdmin } from "@/lib/current-user";
 import { phoneProvidersFor, platformOf } from "@/lib/platform";
 import { errorMessage } from "@/lib/domain/errors";
 import { fmtDate, localDate } from "@/lib/dates";
@@ -36,8 +36,7 @@ function statusOf(provider: string, conns: OwConnection[]): Status {
 
 export default async function AccountsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
-  const [ctx, user] = await Promise.all([getCtx(), requireUser()]);
-  const admin = user.role === "admin";
+  const [ctx, admin] = await Promise.all([getCtx(), actsAsAdmin()]);
 
   if (!ctx.owConfigured) {
     return (

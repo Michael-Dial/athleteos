@@ -2,7 +2,8 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/current-user";
+import { requireAdmin, requireRealAdmin } from "@/lib/current-user";
+import { MEMBER_VIEW_COOKIE } from "@/lib/auth";
 import { VIEW_COOKIE } from "@/lib/domain/context";
 import { mailConfigured, sendAccountLink } from "@/lib/mail";
 import { invalidate } from "@/lib/cache";
@@ -156,17 +157,44 @@ export async function removeUser(fd: FormData) {
   go("/settings/users", { removed: u.name });
 }
 
-/** Admin: open another user's dashboards read-only. */
+async function cookieOpts() {
+  return { httpOnly: true, sameSite: "lax" as const, secure: (await headers()).get("x-forwarded-proto") === "https", path: "/" };
+}
+
+/**
+ * Admin: open another user's dashboards read-only. With as_member set, also as
+ * they see them: no admin controls, backend ids or admin settings.
+ */
 export async function viewAs(fd: FormData) {
   const admin = await requireAdmin();
   const u = await target(fd);
   const jar = await cookies();
+  const opts = await cookieOpts();
   if (u.id === admin.id) jar.delete(VIEW_COOKIE);
-  else jar.set(VIEW_COOKIE, String(u.athlete_id), { httpOnly: true, sameSite: "lax", secure: (await headers()).get("x-forwarded-proto") === "https", path: "/" });
+  else jar.set(VIEW_COOKIE, String(u.athlete_id), opts);
+  if (fd.get("as_member") === "1") jar.set(MEMBER_VIEW_COOKIE, "1", opts);
   redirect("/");
 }
 
+/** Back to the admin's own dashboards, as admin: it ends both kinds of viewing. */
 export async function stopViewing() {
-  (await cookies()).delete(VIEW_COOKIE);
+  await requireRealAdmin();
+  const jar = await cookies();
+  jar.delete(VIEW_COOKIE);
+  jar.delete(MEMBER_VIEW_COOKIE);
   redirect("/settings/users");
+}
+
+/** Admin: see the app as a participant does, on the admin's own dashboards. */
+export async function startMemberView() {
+  await requireAdmin();
+  (await cookies()).set(MEMBER_VIEW_COOKIE, "1", await cookieOpts());
+  redirect("/");
+}
+
+/** Leave the participant view; keeps viewing whichever athlete was open. */
+export async function stopMemberView() {
+  await requireRealAdmin();
+  (await cookies()).delete(MEMBER_VIEW_COOKIE);
+  redirect("/settings");
 }

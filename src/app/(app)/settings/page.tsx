@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { requireUser } from "@/lib/current-user";
+import { actsAsAdmin, requireUser } from "@/lib/current-user";
+import { startMemberView } from "./users/actions";
 import { getCtx } from "@/lib/domain/context";
 import { authDisabled } from "@/lib/auth";
 import { AppearancePicker } from "@/components/theme-toggle";
@@ -22,7 +23,7 @@ function Row({ href, label, sub }: { href: string; label: string; sub?: string }
 }
 
 export default async function SettingsHome() {
-  const [user, ctx, jar] = await Promise.all([requireUser(), getCtx(), cookies()]);
+  const [user, ctx, jar, admin] = await Promise.all([requireUser(), getCtx(), cookies(), actsAsAdmin()]);
   const saved = jar.get("aos_theme")?.value;
   const appearance = saved === "light" || saved === "dark" ? saved : "system";
   return (
@@ -60,13 +61,21 @@ export default async function SettingsHome() {
         </ul>
       </section>
 
-      {user.role === "admin" && (
+      {admin && (
         <section>
           <h2 className="group-title">Admin</h2>
           <ul className="group">
             <Row href="/settings/users" label="Users" sub="Invite people, roles, linked accounts" />
             <Row href="/settings/credentials" label="Credentials" sub="Device-data server, email" />
             <Row href="/settings/backend" label="Data backend" sub="Application, phone app" />
+            <li>
+              <form action={startMemberView}>
+                <button type="submit" className="group-row">
+                  <span className="stack" style={{ gap: 0, textAlign: "left" }}><span>See it as a participant</span><span className="small muted">Your dashboards without admin settings or controls</span></span>
+                  <IconRight size={18} className="muted" />
+                </button>
+              </form>
+            </li>
           </ul>
         </section>
       )}
