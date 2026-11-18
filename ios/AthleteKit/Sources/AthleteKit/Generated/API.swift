@@ -71,6 +71,97 @@ public struct AuthInvitePostBody: Codable, Hashable, Sendable {
     }
 }
 
+public struct AuthRegistrationResponse: Codable, Hashable, Sendable {
+    public var mode: Mode
+    public var available: Bool
+    public var reason: String?
+
+    public init(mode: Mode, available: Bool, reason: String? = nil) {
+        self.mode = mode
+        self.available = available
+        self.reason = reason
+    }
+
+    public enum Mode: String, Codable, Hashable, Sendable, CaseIterable {
+        case `open` = "open"
+        case invite = "invite"
+        case unrecognized = "\u{0}unrecognized"
+        public init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            self = Mode(rawValue: raw) ?? .unrecognized
+        }
+    }
+}
+
+public struct AuthRegisterPostResponse: Codable, Hashable, Sendable {
+    public var challengeId: String
+    /// Masked address the code went to
+    public var destination: String
+    public var expiresInSec: Double
+
+    public init(challengeId: String, destination: String, expiresInSec: Double) {
+        self.challengeId = challengeId
+        self.destination = destination
+        self.expiresInSec = expiresInSec
+    }
+}
+
+public struct AuthRegisterPostBody: Codable, Hashable, Sendable {
+    /// The person's name, shown on their dashboards
+    public var name: String
+    /// Becomes the sign-in address once the emailed code confirms it
+    public var email: String
+    /// At least 12 characters
+    public var password: String
+    /// This device's name, shown in Settings so its token can be revoked
+    public var device: String
+
+    public init(name: String, email: String, password: String, device: String) {
+        self.name = name
+        self.email = email
+        self.password = password
+        self.device = device
+    }
+}
+
+public struct AuthRegisterVerifyPostResponse: Codable, Hashable, Sendable {
+    /// Shown once; store it securely
+    public var token: String
+    public var id: Double
+    public var name: String
+    public var createdAt: String
+    public var athlete: Athlete
+
+    public init(token: String, id: Double, name: String, createdAt: String, athlete: Athlete) {
+        self.token = token
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+        self.athlete = athlete
+    }
+
+    public struct Athlete: Codable, Hashable, Sendable {
+        public var id: Double
+        public var name: String
+
+        public init(id: Double, name: String) {
+            self.id = id
+            self.name = name
+        }
+    }
+}
+
+public struct AuthRegisterVerifyPostBody: Codable, Hashable, Sendable {
+    public var challengeId: String
+    /// The 6-digit code from the email
+    public var code: String
+
+    public init(challengeId: String, code: String) {
+        self.challengeId = challengeId
+        self.code = code
+    }
+}
+
 public struct AuthTokensResponse: Codable, Hashable, Sendable {
     public var tokens: [Token]
 
@@ -275,11 +366,14 @@ public struct MeResponse: Codable, Hashable, Sendable {
         public var id: Double
         public var email: String
         public var role: Role
+        /// First-run setup finished or skipped, on the web or in an app. Absent from servers older than first-run setup in the app; treat that as set up
+        public var onboarded: Bool?
 
-        public init(id: Double, email: String, role: Role) {
+        public init(id: Double, email: String, role: Role, onboarded: Bool? = nil) {
             self.id = id
             self.email = email
             self.role = role
+            self.onboarded = onboarded
         }
 
         public enum Role: String, Codable, Hashable, Sendable, CaseIterable {
@@ -321,6 +415,15 @@ public struct MeResponse: Codable, Hashable, Sendable {
             let raw = try decoder.singleValueContainer().decode(String.self)
             self = Auth(rawValue: raw) ?? .unrecognized
         }
+    }
+}
+
+public struct MeDeletePostBody: Codable, Hashable, Sendable {
+    /// The account's current password
+    public var password: String
+
+    public init(password: String) {
+        self.password = password
     }
 }
 
@@ -4135,6 +4238,21 @@ public extension APIClient {
         try await send("POST", "/auth/invite", body: body)
     }
 
+    /// Whether new accounts can sign up here, and if not, why (invite only, or email not set up)
+    func getAuthRegistration() async throws -> AuthRegistrationResponse {
+        try await send("GET", "/auth/registration")
+    }
+
+    /// Sign up: emails a 6-digit code to confirm the address (then call /auth/register/verify). The same answer whether or not the address already has an account
+    func postAuthRegister(body: AuthRegisterPostBody) async throws -> AuthRegisterPostResponse {
+        try await send("POST", "/auth/register", body: body)
+    }
+
+    /// Sign up, step two: the emailed code creates the member account and returns a token for this device
+    func postAuthRegisterVerify(body: AuthRegisterVerifyPostBody) async throws -> AuthRegisterVerifyPostResponse {
+        try await send("POST", "/auth/register/verify", body: body)
+    }
+
     /// List active tokens
     func getAuthTokens() async throws -> AuthTokensResponse {
         try await send("GET", "/auth/tokens")
@@ -4173,6 +4291,16 @@ public extension APIClient {
     /// Signed-in user, their athlete, timezone, today's date and device-data status
     func getMe() async throws -> MeResponse {
         try await send("GET", "/me")
+    }
+
+    /// Mark first-run setup finished (or skipped) for the signed-in user
+    func postMeOnboarded() async throws {
+        try await sendIgnoringBody("POST", "/me/onboarded")
+    }
+
+    /// Delete the signed-in user's own account, their athlete's data and their device-data account. Asks for the password again
+    func postMeDelete(body: MeDeletePostBody) async throws {
+        try await sendIgnoringBody("POST", "/me/delete", body: body)
     }
 
     /// Home screen: readiness, today's plan, due forms, last night per metric (all devices)

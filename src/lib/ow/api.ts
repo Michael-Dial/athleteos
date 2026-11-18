@@ -100,6 +100,16 @@ export async function getUser(userId: string): Promise<OwUser> {
   return owJson<OwUser>(`/users/${enc(userId)}`);
 }
 
+/** Deletes the user and their data in OW. Already gone counts as done. */
+export async function deleteOwUser(userId: string): Promise<void> {
+  try {
+    await owJson<unknown>(`/users/${enc(userId)}`, { method: "DELETE" });
+  } catch (e) {
+    if (e instanceof OwError && e.status === 404) return;
+    throw e;
+  }
+}
+
 export async function createUser(firstName: string, lastName: string): Promise<OwUser> {
   return owJson<OwUser>("/users", {
     method: "POST",

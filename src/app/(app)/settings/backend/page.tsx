@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/current-user";
 import { listProviders, storedApplication } from "@/lib/ow/api";
-import { getPhoneApp } from "@/lib/domain/phone-code";
+import { getIosAppUrl, getPhoneApp } from "@/lib/domain/phone-code";
 import { owConfig } from "@/lib/ow/client";
 import { errorMessage } from "@/lib/domain/errors";
 import { Card, Notice } from "@/components/ui";
-import { bootstrapOwApplication, savePhoneApp } from "../../actions";
+import { bootstrapOwApplication, saveIosApp, savePhoneApp } from "../../actions";
 
 export const metadata: Metadata = { title: "Data backend" };
 
@@ -35,7 +35,7 @@ export default async function BackendPage({ searchParams }: { searchParams: Prom
     );
   }
 
-  const [providers, app, phoneApp] = await Promise.all([attempt(listProviders), attempt(storedApplication), getPhoneApp()]);
+  const [providers, app, phoneApp, iosAppUrl] = await Promise.all([attempt(listProviders), attempt(storedApplication), getPhoneApp(), getIosAppUrl()]);
   const enabled = (providers.v ?? []).filter((p) => p.is_enabled);
   const unavailable = enabled.filter((p) => p.has_cloud_api && !p.credentials_configured);
 
@@ -63,7 +63,14 @@ export default async function BackendPage({ searchParams }: { searchParams: Prom
           <p className="small muted mt-sm">Registers an “AthleteOS” application under your developer account. Its secret is shown by OW only once, so AthleteOS stores it.</p>
         </Card>
 
-        <Card title="Phone app" hint="shown in the athlete's setup steps">
+        <Card title="AthleteOS iPhone app" hint="offered in setup, Connected accounts and invite emails">
+          <form action={saveIosApp} className="stack">
+            <label className="field">App Store or TestFlight link<input name="url" type="url" defaultValue={iosAppUrl} placeholder="https://apps.apple.com/app/…" /><span className="help">Empty hides the app from athletes. It signs in with their own email; no pairing code.</span></label>
+            <div><button className="btn primary" type="submit">Save iPhone app</button></div>
+          </form>
+        </Card>
+
+        <Card title="Phone sync app" hint="a separate sync app that pairs with a code, e.g. for Android">
           <form action={savePhoneApp} className="stack">
             <label className="field">App name<input name="name" defaultValue={phoneApp.name} maxLength={60} /><span className="help">Empty shows &ldquo;the sync app&rdquo;.</span></label>
             <label className="field">Install link<input name="installUrl" type="url" defaultValue={phoneApp.installUrl} placeholder="https://testflight.apple.com/join/…" /><span className="help">An https link: App Store, TestFlight or Play.</span></label>

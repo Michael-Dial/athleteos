@@ -7,7 +7,7 @@ import {
 } from "./dto";
 import { CoverageDto, IllnessDto, IntensityDto, ReviewDto, TrendsDto, ZonesDto } from "./dto-dashboards";
 import {
-  AnnotationPatch, ConnectBody, InviteRedeem, TokenVerifyRequest, ZonesQuery, CoverageQuery, IllnessQuery, ReviewQuery, TrendsQuery, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
+  AnnotationPatch, ConnectBody, DeleteAccountRequest, InviteRedeem, RegisterRequest, TokenVerifyRequest, ZonesQuery, CoverageQuery, IllnessQuery, ReviewQuery, TrendsQuery, AnswersBody, DateQuery, EndpointQuery, PushSubscriptionBody, ReadinessQuery, SettingsPatch, TokenCreate, TokenRequest, WindowQuery,
 } from "./schemas";
 
 // The route table is written once here and drives the OpenAPI document; a
@@ -38,6 +38,12 @@ export const ROUTES: RouteSpec[] = [
   { method: "post", path: "/auth/token/verify", tag: "auth", public: true, summary: "Second step: exchange the emailed 6-digit code for a token", body: TokenVerifyRequest, response: Token, status: 201 },
   { method: "post", path: "/auth/invite", tag: "auth", public: true, summary: "Accept an invite (or reset) code in the app: sets the password and returns a token for this device", body: InviteRedeem,
     response: Token.extend({ athlete: z.object({ id: z.number(), name: z.string() }) }), status: 201 },
+  { method: "get", path: "/auth/registration", tag: "auth", public: true, summary: "Whether new accounts can sign up here, and if not, why (invite only, or email not set up)",
+    response: z.object({ mode: z.enum(["open", "invite"]), available: z.boolean(), reason: z.string().nullable() }) },
+  { method: "post", path: "/auth/register", tag: "auth", public: true, summary: "Sign up: emails a 6-digit code to confirm the address (then call /auth/register/verify). The same answer whether or not the address already has an account",
+    body: RegisterRequest, response: Challenge.omit({ delivery: true }), status: 202 },
+  { method: "post", path: "/auth/register/verify", tag: "auth", public: true, summary: "Sign up, step two: the emailed code creates the member account and returns a token for this device", body: TokenVerifyRequest,
+    response: Token.extend({ athlete: z.object({ id: z.number(), name: z.string() }) }), status: 201 },
   { method: "get", path: "/auth/tokens", tag: "auth", summary: "List active tokens", response: z.object({ tokens: z.array(z.object({ id: z.number(), name: z.string(), prefix: z.string(), createdAt: z.string().nullable(), lastUsedAt: z.string().nullable() })) }) },
   { method: "post", path: "/auth/tokens", tag: "auth", summary: "Create a token for the signed-in athlete", body: TokenCreate, response: Token, status: 201 },
   { method: "delete", path: "/auth/tokens/{id}", tag: "auth", summary: "Revoke a token", status: 204 },
@@ -51,7 +57,9 @@ export const ROUTES: RouteSpec[] = [
   { method: "post", path: "/accounts/{provider}/sync", tag: "accounts", summary: "Ask a connected cloud provider for new data now", response: z.object({ requested: z.boolean() }) },
   { method: "post", path: "/wearables/sdk-token", tag: "accounts", summary: "Phone health-store sync session for the athlete's own data: a token pair for the sync SDK, which talks to {server}{syncPath}",
     response: z.object({ owUserId: z.string(), accessToken: z.string(), refreshToken: z.string(), expiresIn: z.number().nullable(), syncPath: z.string() }) },
-  { method: "get", path: "/me", tag: "athlete", summary: "Signed-in user, their athlete, timezone, today's date and device-data status", response: z.object({ user: z.object({ id: z.number(), email: z.string(), role: z.enum(["admin", "member"]) }), athlete: z.object({ id: z.number(), name: z.string() }), timezone: z.string(), today: z.string(), openWearables: z.object({ configured: z.boolean(), linked: z.boolean() }), auth: z.enum(["token", "session"]) }) },
+  { method: "get", path: "/me", tag: "athlete", summary: "Signed-in user, their athlete, timezone, today's date and device-data status", response: z.object({ user: z.object({ id: z.number(), email: z.string(), role: z.enum(["admin", "member"]), onboarded: z.boolean().optional().describe("First-run setup finished or skipped, on the web or in an app. Absent from servers older than first-run setup in the app; treat that as set up") }), athlete: z.object({ id: z.number(), name: z.string() }), timezone: z.string(), today: z.string(), openWearables: z.object({ configured: z.boolean(), linked: z.boolean() }), auth: z.enum(["token", "session"]) }) },
+  { method: "post", path: "/me/onboarded", tag: "athlete", summary: "Mark first-run setup finished (or skipped) for the signed-in user", status: 204 },
+  { method: "post", path: "/me/delete", tag: "athlete", summary: "Delete the signed-in user's own account, their athlete's data and their device-data account. Asks for the password again", body: DeleteAccountRequest, status: 204 },
   { method: "get", path: "/today", tag: "athlete", summary: "Home screen: readiness, today's plan, due forms, last night per metric (all devices)", query: DateQuery,
     response: z.object({ date: z.string(), readiness: ReadinessDto, plan: z.array(PlanSessionDto), checkIn: z.object({ due: z.array(z.object({ slug: z.string(), name: z.string(), schedule: z.string(), kind: z.string() })), wellnessComposite: z.number().nullable() }), lastNight: z.record(z.enum(["sleep", "hrv", "rhr", "respiratory_rate", "spo2"]), LastNightDto) }) },
   { method: "get", path: "/readiness", tag: "athlete", summary: "Readiness with every pillar, baselines and trend series", query: ReadinessQuery, response: ReadinessDto },

@@ -16,6 +16,17 @@ export const InviteRedeem = z.object({
   name: z.string().trim().min(1).max(80).describe("This device's name, shown in Settings so it can be revoked"),
 });
 
+export const RegisterRequest = z.object({
+  name: z.string().trim().min(1).max(80).describe("The person's name, shown on their dashboards"),
+  email: z.string().trim().min(3).max(254).describe("Becomes the sign-in address once the emailed code confirms it"),
+  password: z.string().min(1).max(200).describe("At least 12 characters"),
+  device: z.string().trim().min(1).max(80).describe("This device's name, shown in Settings so its token can be revoked"),
+});
+
+export const DeleteAccountRequest = z.object({
+  password: z.string().min(1).max(200).describe("The account's current password"),
+});
+
 export const ConnectBody = z.object({
   returnTo: z.enum(["app", "web"]).default("app").describe("app: OAuth returns to athleteos://accounts/connected; web: to Settings → Connected accounts"),
 });

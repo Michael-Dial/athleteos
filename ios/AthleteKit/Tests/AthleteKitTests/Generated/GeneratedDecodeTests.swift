@@ -10,6 +10,15 @@ import Testing
     @Test func decodesAuthInvitePostResponse() throws {
         try Samples.decode(AuthInvitePostResponse.self, "AuthInvitePostResponse")
     }
+    @Test func decodesAuthRegistrationResponse() throws {
+        try Samples.decode(AuthRegistrationResponse.self, "AuthRegistrationResponse")
+    }
+    @Test func decodesAuthRegisterPostResponse() throws {
+        try Samples.decode(AuthRegisterPostResponse.self, "AuthRegisterPostResponse")
+    }
+    @Test func decodesAuthRegisterVerifyPostResponse() throws {
+        try Samples.decode(AuthRegisterVerifyPostResponse.self, "AuthRegisterVerifyPostResponse")
+    }
     @Test func decodesAuthTokensResponse() throws {
         try Samples.decode(AuthTokensResponse.self, "AuthTokensResponse")
     }

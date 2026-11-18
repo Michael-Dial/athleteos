@@ -8,12 +8,18 @@ struct CheckInView: View {
     let client: APIClient
     let slug: String
     let date: String
+    /// Shown above the questions, e.g. why first-run setup asks for this.
+    var intro: String? = nil
+    /// Called after saving instead of dismissing, when the form is a step inside another flow.
+    var onDone: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
 
     struct Loaded: Sendable { let def: QuestionnairesBySlugResponse; let existing: [String: JSONScalar] }
 
     var body: some View {
-        LoadingView(load: load) { l in CheckInForm(client: client, def: l.def, date: date, initial: l.existing) { dismiss() } }
+        LoadingView(load: load) { l in
+            CheckInForm(client: client, def: l.def, date: date, initial: l.existing, intro: intro) { if let onDone { onDone() } else { dismiss() } }
+        }
             .navigationTitle(Fmt.shortDay(date))
             .navigationBarTitleDisplayMode(.inline)
     }
@@ -30,13 +36,15 @@ private struct CheckInForm: View {
     let client: APIClient
     let def: QuestionnairesBySlugResponse
     let date: String
+    let intro: String?
     let done: () -> Void
     @State private var answers: [String: JSONScalar]
     @State private var saving = false
     @State private var error: String?
 
-    init(client: APIClient, def: QuestionnairesBySlugResponse, date: String, initial: [String: JSONScalar], done: @escaping () -> Void) {
+    init(client: APIClient, def: QuestionnairesBySlugResponse, date: String, initial: [String: JSONScalar], intro: String? = nil, done: @escaping () -> Void) {
         self.client = client
+        self.intro = intro
         self.def = def
         self.date = date
         self.done = done
@@ -49,7 +57,8 @@ private struct CheckInForm: View {
 
     var body: some View {
         Form {
-            if let d = def.description { Section { Text(d).foregroundStyle(.secondary) } }
+            if let intro { Section { Text(intro).foregroundStyle(.secondary) } }
+            else if let d = def.description { Section { Text(d).foregroundStyle(.secondary) } }
             ForEach(def.items, id: \.key) { item in
                 Section {
                     ItemInput(item: item, value: binding(item.key))

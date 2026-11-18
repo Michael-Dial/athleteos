@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IconLogo } from "@/components/icons";
 import { installPasswordSet, needsFirstAdmin } from "@/lib/signin";
+import { registrationStatus } from "@/lib/registration";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -14,9 +15,9 @@ const ERRORS: Record<string, string> = {
   codelocked: "Too many wrong codes. Sign in again for a new one.",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; email?: string }> }) {
-  const { error, next, email } = await searchParams;
-  const [first, installPw] = await Promise.all([needsFirstAdmin(), installPasswordSet()]);
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string; email?: string; deleted?: string }> }) {
+  const { error, next, email, deleted } = await searchParams;
+  const [first, installPw, reg] = await Promise.all([needsFirstAdmin(), installPasswordSet(), registrationStatus()]);
   return (
     <main className="auth-wrap">
       <form action="/api/auth/login" method="post" className="card auth-card stack-lg">
@@ -27,6 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             First sign-in: enter your email and this install&apos;s password. That email becomes your sign-in and you become the admin, with your existing data.
           </p>
         )}
+        {deleted && <p className="small" role="status" style={{ color: "var(--good)" }}>Your account and its data were deleted.</p>}
         <input type="hidden" name="next" value={next ?? "/"} />
         <label className="field">
           Email
@@ -42,6 +44,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <a href="/forgot" className="auth-link">Forgot password?</a>
           <a href="/invite" className="auth-link">Have an invite code?</a>
         </div>
+        {/* Before the first admin exists, the first sign-in claims the install; sign-up waits until then. */}
+        {reg.available && !first && <a href="/register" className="btn" style={{ minHeight: 44 }}>Create an account</a>}
       </form>
     </main>
   );

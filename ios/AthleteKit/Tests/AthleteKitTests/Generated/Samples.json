@@ -35,6 +35,52 @@
    }
   }
  },
+ "AuthRegistrationResponse": {
+  "max": {
+   "mode": "open",
+   "available": true,
+   "reason": "2026-11-17"
+  },
+  "min": {
+   "mode": "open",
+   "available": true,
+   "reason": null
+  }
+ },
+ "AuthRegisterPostResponse": {
+  "max": {
+   "challengeId": "2026-11-17",
+   "destination": "2026-11-17",
+   "expiresInSec": 1.5
+  },
+  "min": {
+   "challengeId": "2026-11-17",
+   "destination": "2026-11-17",
+   "expiresInSec": 1.5
+  }
+ },
+ "AuthRegisterVerifyPostResponse": {
+  "max": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17",
+   "athlete": {
+    "id": 1.5,
+    "name": "2026-11-17"
+   }
+  },
+  "min": {
+   "token": "2026-11-17",
+   "id": 1.5,
+   "name": "2026-11-17",
+   "createdAt": "2026-11-17",
+   "athlete": {
+    "id": 1.5,
+    "name": "2026-11-17"
+   }
+  }
+ },
  "AuthTokensResponse": {
   "max": {
    "tokens": [
@@ -136,7 +182,8 @@
    "user": {
     "id": 1.5,
     "email": "2026-11-17",
-    "role": "admin"
+    "role": "admin",
+    "onboarded": true
    },
    "athlete": {
     "id": 1.5,

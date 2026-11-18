@@ -7,7 +7,7 @@ import { getConnections, listProviders } from "@/lib/ow/api";
 import type { OwConnection } from "@/lib/ow/types";
 import { phoneProvidersFor, platformOf } from "@/lib/platform";
 import { getDef } from "@/lib/domain/questionnaires";
-import { getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
+import { getIosAppUrl, getPhoneApp, getPhoneCode } from "@/lib/domain/phone-code";
 import { vapidKeys } from "@/lib/push/webpush";
 import { todayIn } from "@/lib/dates";
 import { ReadinessGauge } from "@/components/viz";
@@ -32,7 +32,7 @@ function Frame({ step, children, actions }: { step: Step; children: React.ReactN
   return (
     <main className="onboard">
       <div className="onboard-top">
-        {i > 0 ? <Link href={`/welcome?step=${STEPS[i - 1]}`} className="link-btn" style={{ display: "inline-flex", alignItems: "center" }}>Back</Link> : <span className="brand"><IconLogo size={22} />AthleteOS</span>}
+        {i > 0 ? <Link href={`/welcome?step=${STEPS[i - 1]}`} className="link-btn" style={{ display: "inline-flex", alignItems: "center", minWidth: 44 }}>Back</Link> : <span className="brand"><IconLogo size={22} />AthleteOS</span>}
         <div className="onboard-dots" aria-label={`Step ${i + 1} of ${STEPS.length}`} role="img">{STEPS.map((s, j) => <i key={s} className={j === i ? "on" : undefined} />)}</div>
         <form action={finishOnboarding}><button className="link-btn" type="submit">Skip setup</button></form>
       </div>
@@ -76,11 +76,12 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
     const h = await headers();
     const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
     const platform = platformOf(h.get("user-agent"));
-    const [providers, conns, phoneCode, phoneApp] = await Promise.all([
+    const [providers, conns, phoneCode, phoneApp, iosAppUrl] = await Promise.all([
       ctx.owConfigured ? attempt(listProviders) : null,
       ctx.ow ? attempt(() => getConnections(ctx.ow!)) : null,
       getPhoneCode(ctx.athlete.id),
       getPhoneApp(),
+      getIosAppUrl(),
     ]);
     const enabled = (providers ?? []).filter((p) => p.is_enabled);
     const phone = phoneProvidersFor(enabled.filter((p) => !p.has_cloud_api), platform);
@@ -104,9 +105,12 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
                   <b>{p.name}</b>
                   {active.has(p.provider) ? <span className="small" style={{ color: "var(--good)" }}>Connected</span>
                     : phoneCode.state === "set" ? <span className="small ink2">Install {appName}, open it and enter <code className="mono" style={{ userSelect: "all" }}>{phoneCode.code}</code></span>
+                    /* The AthleteOS iPhone app turns on Apple Health in its own setup, signed in as this person; no code. */
+                    : p.provider === "apple" && iosAppUrl ? <span className="small ink2">Get the AthleteOS iPhone app and sign in as {user.email}. It asks to turn on Apple Health.</span>
                     : <span className="small muted">Your admin is setting this up. It appears under Settings → Connected accounts when it&apos;s ready.</span>}
                 </div>
                 {phoneCode.state === "set" && !active.has(p.provider) && phoneApp.installUrl && <a className="btn sm" href={phoneApp.installUrl} target="_blank" rel="noreferrer">Get app</a>}
+                {phoneCode.state !== "set" && !active.has(p.provider) && p.provider === "apple" && iosAppUrl && <a className="btn sm" href={iosAppUrl} target="_blank" rel="noreferrer">Get app</a>}
               </div>
             ))}
             {cloud.map((p) => (
@@ -156,6 +160,21 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
     );
   }
 
+  const [iosAppUrl, h] = await Promise.all([getIosAppUrl(), headers()]);
+  // On an iPhone the app does more than a Home Screen page (Apple Health sync), so it comes first when there is one to offer.
+  if (iosAppUrl && platformOf(h.get("user-agent")) === "ios") {
+    return (
+      <Frame step={step} actions={<form action={finishOnboarding}><button className="btn primary" type="submit" style={{ width: "100%" }}>Finish</button></form>}>
+        <h1>Get the iPhone app</h1>
+        <p className="ink2">It syncs Apple Health in the background, including from an Apple Watch, and has the same dashboards. Sign in with {user.email} and the password you just chose.</p>
+        <a className="btn" href={iosAppUrl} target="_blank" rel="noreferrer" style={{ minHeight: 44 }}>Get AthleteOS for iPhone</a>
+        <details className="card">
+          <summary className="small">Or put this website on your Home Screen</summary>
+          <div className="mt-sm"><InstallSteps /></div>
+        </details>
+      </Frame>
+    );
+  }
   return (
     <Frame step={step} actions={<form action={finishOnboarding}><button className="btn primary" type="submit" style={{ width: "100%" }}>Finish</button></form>}>
       <h1>Put AthleteOS on your Home Screen</h1>

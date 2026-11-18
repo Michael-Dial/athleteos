@@ -5,6 +5,9 @@ import { maskEmail } from "@/lib/auth";
 import { MIN_PASSWORD_LENGTH } from "@/lib/signin";
 import { formatCode, normalizeCode, peekLink } from "@/lib/users";
 import { q1 } from "@/lib/db";
+import { headers } from "next/headers";
+import { platformOf } from "@/lib/platform";
+import { getIosAppUrl } from "@/lib/domain/phone-code";
 
 export const metadata: Metadata = { title: "Set your password" };
 
@@ -20,6 +23,9 @@ export default async function InvitePage({ params, searchParams }: { params: Pro
   const link = await peekLink(decodeURIComponent(token));
   const code = normalizeCode(decodeURIComponent(token));
   // Said without naming the backend: the person just sees their history is ready.
+  // On an iPhone with the app available, the same code can be redeemed there instead (athleteos://invite fills it in).
+  const [h, iosAppUrl] = await Promise.all([headers(), getIosAppUrl()]);
+  const offerApp = !!link && link.kind === "invite" && !!iosAppUrl && platformOf(h.get("user-agent")) === "ios";
   const ready = link ? Boolean((await q1<{ ow_user_id: string | null }>("SELECT ow_user_id FROM athlete WHERE id = $1", [link.user.athlete_id]))?.ow_user_id) : false;
   return (
     <main className="auth-wrap">
@@ -48,6 +54,15 @@ export default async function InvitePage({ params, searchParams }: { params: Pro
             </label>
             {error && ERRORS[error] && <p className="field-error" role="alert">{ERRORS[error]}</p>}
             <button className="btn primary" type="submit" style={{ minHeight: 44 }}>{link.kind === "invite" ? "Set password and sign in" : "Save password and sign in"}</button>
+            {offerApp && code && (
+              <div className="stack" style={{ gap: 6 }}>
+                <p className="small muted">Or set it up in the iPhone app:</p>
+                <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+                  <a className="btn" href={`athleteos://invite?code=${formatCode(code)}`}>Open in the app</a>
+                  <a className="btn" href={iosAppUrl} target="_blank" rel="noreferrer">Get the app</a>
+                </div>
+              </div>
+            )}
           </form>
         )}
       </div>
