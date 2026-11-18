@@ -5,6 +5,7 @@ import { owConfig } from "@/lib/ow/client";
 import { smtpConfig } from "@/lib/mail";
 import { requireAdmin } from "@/lib/current-user";
 import { Card, Notice, StatePill } from "@/components/ui";
+import { ConnectionTest } from "@/components/connection-test";
 import { discardUnreadable, saveCredentials, sendTestEmail } from "../security-actions";
 
 export const metadata: Metadata = { title: "Credentials" };
@@ -91,6 +92,7 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
             <p className="small muted">Saving makes one signed-in request to Open Wearables first and refuses settings it rejects. Link the athlete&apos;s Open Wearables user under <Link href="/settings/backend">Data backend</Link>; athletes connect devices under <Link href="/settings/accounts">Connected accounts</Link>.</p>
             <SaveRow test />
           </form>
+          <ConnectionTest group="ow" configured={Boolean(ow)} />
         </Card>
         <Card title="Email (SMTP)" action={<StatePill state={smtp ? "ok" : "nodata"} label={smtp ? "Set up" : "Not set up"} />}>
           <form action={saveCredentials} className="stack" id="smtp">
@@ -99,6 +101,7 @@ export default async function CredentialsPage({ searchParams }: { searchParams: 
             <p className="small muted">Used for sign-in codes and invites. Saving connects and logs in to the mail server first, without sending anything. Brevo: host smtp-relay.brevo.com, port 587, your SMTP login and an SMTP key.</p>
             <SaveRow test />
           </form>
+          <ConnectionTest group="smtp" configured={Boolean(smtp)} />
           <form action={sendTestEmail} className="row mt" style={{ alignItems: "flex-end", borderTop: "1px solid var(--line)", paddingTop: 12 }}>
             <input type="hidden" name="back" value="credentials" />
             <label className="field" style={{ flex: 1 }}>Send a test to<input name="to" type="email" autoComplete="email" defaultValue={admin.email} required /></label>
